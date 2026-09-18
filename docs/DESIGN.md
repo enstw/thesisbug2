@@ -1,0 +1,175 @@
+# thesisbug2 — design
+
+Status: **draft for review**, 2026-09-18. Nothing below is implemented yet. Decisions marked *Decided* were agreed with the maintainer; items under § Open questions are not.
+
+## Why a second generation
+
+`thesisbug-template` models each piece of coursework as a permanent git branch of the template repo. Framework files and coursework share one history, and that single fact causes three recurring problems:
+
+1. **Frequent cherry-picks.** Every framework fix on `main` has to be cherry-picked into each live work branch, and conflicts land in files the author never touched.
+1. **No continuity inside a course.** A midterm paper and the final paper for the same course are unrelated branches. Sources fetched and audited for one are invisible to the other.
+1. **Everything is mixed together.** Infrastructure, agent workflow, source transcripts, status logs, and agent directions live side by side in one tree, so neither a human nor an agent can tell at a glance which files are the framework's and which are the author's.
+
+thesisbug2 separates the two histories. The framework becomes its own repository. Coursework lives in one repository **per course**, which mounts the framework read-only and updates it with a pull.
+
+## Goals and non-goals
+
+Goals:
+
+1. Updating the framework inside a course is one command and never produces a merge conflict with coursework.
+1. Successive units of one course share a source library, including the audit verdicts already earned.
+1. A course repo's tree makes ownership obvious: framework files are under one directory that coursework never writes to.
+1. A unit handed in last semester still rebuilds to the same PDF, because the course repo records which framework version it used.
+1. Every agent workflow (skills, protocols, gates, evals) ships with the framework, so a new course starts with the full toolchain.
+
+Non-goals:
+
+1. Migrating the existing `thesisbug-template` work branches. They keep working on the old template; nothing forces a move.
+1. A cross-course personal library. Sources are shared within a course only. Revisit when the same source is demonstrably re-fetched across courses.
+1. Backward compatibility with the `work/` + `WORK.json`-at-repo-root layout.
+
+## The two kinds of repository
+
+```mermaid
+flowchart LR
+    F["thesisbug2<br>(this repo, public)<br>skills · scripts · templates · protocols · evals"]
+    C1["course repo A<br>(private)"]
+    C2["course repo B<br>(private)"]
+    T["thesis repo<br>(private, one unit)"]
+    F -- "git submodule at .framework/" --> C1
+    F -- "git submodule at .framework/" --> C2
+    F -- "git submodule at .framework/" --> T
+```
+
+*Decided:* the framework is mounted as a **git submodule** at `.framework/` in each course repo.
+
+Alternatives considered:
+
+| Option | Why not |
+| :--- | :--- |
+| A gitignored nested clone in each course | Cloning the course on another machine does not bring the framework back, and nothing records which framework version a unit was built with. |
+| One shared framework checkout per machine | A change to the preamble or a CSL file would silently alter the output of units already handed in. |
+| Git subtree | Puts framework history back into the course repo, which is the mixing this design exists to remove. |
+
+The submodule pins a framework commit in the course repo. That pin is what makes goal 4 hold. Updating is `git -C .framework pull` followed by committing the new pointer; a wrapper (`./fw update`) does both. `course-init` sets `submodule.recurse=true` locally so an ordinary `git pull` of the course also moves `.framework/` to the pinned commit.
+
+Framework fixes discovered during coursework are made **inside `.framework/`** (it is a full clone), committed, and pushed to thesisbug2. Other courses receive them on their next update. This replaces cherry-picking.
+
+## Course repository layout
+
+*Decided:* one git repository per course, `main` only, private.
+
+```
+<course>/
+├── AGENTS.md                    # thin: course context + pointer to .framework/AGENTS.md
+├── COURSE.md                    # instructor, citation style, grading requirements, schedule
+├── STATUS.md                    # course-level index: one line per unit
+├── .framework/                  # submodule — coursework never writes here
+├── .agents/skills -> .framework/.agents/skills     # committed symlink (Codex, agy)
+├── .claude/skills -> .framework/.agents/skills     # committed symlink (Claude Code)
+├── library/                     # sources shared by two or more units
+│   ├── references.bib
+│   └── refs/   { <key>.md, audit/<key>.jsonl, archive/, MANIFEST.tsv }
+├── notes/                       # lecture notes, transcripts, non-cited material
+├── units/
+│   ├── 01-homework-<topic>/     { WORK.json, PROGRESS.md, homework.qmd }
+│   ├── 02-presentation-<topic>/ { WORK.json, PROGRESS.md, deck.html, asset/ }
+│   └── 03-paper-<topic>/        { WORK.json, PROGRESS.md, paper.qmd, chapters/, references.bib, refs/ }
+└── _output/                     # gitignored build products, named after the unit
+```
+
+Rules:
+
+1. **A unit is a directory that contains `WORK.json`.** Scripts locate the current unit by walking up from the working directory to the nearest `WORK.json`, the way git finds `.git`. Skills say "the unit directory" instead of `work/`.
+1. **Unit names are `NN-<type>-<topic>`.** The number gives chronological order; the type is one of `preparation`, `homework`, `paper`, `journal`, `presentation`, `thesis`.
+1. **Status has two levels.** `STATUS.md` is the course index. Each unit's `PROGRESS.md` is the working log for that unit.
+1. **A thesis is a course repo with one unit.** No special case.
+1. **Milestone tags** are `<unit>/<label>`, for example `03-paper-final/draft-v1`.
+1. **Committed symlinks** replace `link-skills.sh`. Both agent skill directories point into the submodule, so a framework update updates every agent's skills at once.
+
+### Working in parallel
+
+Branch-per-work gave isolation for free; a single `main` does not. Unit directories do not overlap, and per-key audit logs never conflict, so the realistic collision is two agents appending to the same `references.bib`. When two units genuinely need simultaneous agents, use `git worktree`. This is a known cost of the design, accepted because it is rare.
+
+## Sources: two tiers, one home per source
+
+*Decided:* a source's files exist in **exactly one place** within a course repo — either one unit's `refs/` or `library/refs/`.
+
+```mermaid
+flowchart LR
+    A[new source] --> B["units/NN/refs/<br>+ the unit's references.bib"]
+    B -->|used by this unit only| C[stays in the unit]
+    B -->|a second unit wants to cite it| D["refs promote &lt;key&gt;"]
+    D --> E["library/refs/<br>+ library/references.bib"]
+    E --> F[citable from every unit]
+```
+
+Rules:
+
+1. **New sources land in the unit.** Topic scouting and literature scans pull in many sources that are never cited. Defaulting to the library would bury the shared sources in noise.
+1. **Keys are unique across the whole course repo.** `check-citations` fails when a key appears in two units, or in a unit and the library, and tells the author to promote. This is how a duplicate fetch is caught.
+1. **`refs promote <key>` is one `git mv`.** It moves `<key>.md`, `audit/<key>.jsonl`, the bib entry, and the `MANIFEST.tsv` line into `library/`. Audit history travels with the file.
+1. **Assigned course readings go straight into `library/`.** They will be cited by more than one unit.
+1. **The two verdict kinds have different scope.**
+   - `identity` (is this file the cited work itself?) is a fact about the source. After promotion every unit inherits it; nothing is re-audited.
+   - `support` (does the source back this claim?) is about one claim in one unit. Every `support` line carries a `unit` field, and `check-bib` for unit U counts only lines where `unit == U`.
+1. **Builds read both tiers.** `build` writes the unit's `_quarto.yml` with `bibliography: [<course>/library/references.bib, references.bib]`. Lookup order is unit first, then library.
+1. **The quality ratchet is per unit.** `required_bib_level` lives in the unit's `WORK.json`. The library has no level of its own; `check-bib --library` reports its overall state.
+1. **Units without citations have no `refs/`.** It is created on the first fetch.
+1. **Originals are not in git.** `refs-snapshot` keeps one GitHub Release per course repo (the old template kept one per branch), pinned by the committed `MANIFEST.tsv` files.
+
+## Course repos on GitHub
+
+| Item | Convention | Reason |
+| :--- | :--- | :--- |
+| Visibility | always private | `refs/<key>.md` are full-text transcripts of copyrighted works |
+| Name | `<term>-<course>`, e.g. `1142-asia-pacific-security` | sorts chronologically |
+| Topic | `thesisbug-course` | `gh repo list --topic thesisbug-course` enumerates every course for a pull-all script |
+| Framework | submodule at `.framework/`, HTTPS URL | works with the maintainer's existing credential setup; the framework is public, so no credential is needed to read it |
+| End of term | GitHub *Archive* (read-only) | frozen but still cloneable; the pinned submodule keeps it rebuildable |
+
+`course-init`, shipped by the framework, creates a course in one command:
+
+1. Create `~/homework/<course>/` and write the skeleton (`AGENTS.md`, `COURSE.md`, `STATUS.md`, `library/`, `units/`, `notes/`, `.gitignore`).
+1. Add the `.framework/` submodule and the two skill symlinks.
+1. Set `submodule.recurse=true` in the local git config.
+1. `gh repo create <owner>/<course> --private --source . --push`, then add the topic.
+
+The skeleton exists only in the framework and is generated by the script. A GitHub *template repository* is deliberately not used: it would be a second copy of the skeleton to keep in sync.
+
+## What ports from `thesisbug-template`
+
+| Ports as-is | Needs rewriting |
+| :--- | :--- |
+| The 15 skills (text updated from `work/` to "the unit directory" and `library/`) | Path resolution in every script (nearest `WORK.json`) |
+| `assets/templates/`, CSL files, `multibib.lua`, house-style assets | `init` → `unit-init` (creates a unit on `main`; no branch) |
+| `check-citations.py`, `check-bib.py`, `score-bib.py` core logic | `build` (output named after the unit; two-tier bibliography) |
+| `apply-edits.py`, `lint-readability.py`, `count-zh.py`, `check-zh-variants.py`, `plantuml2svg.py`, `yt2sub` | `refs-snapshot` (one Release per course repo) |
+| The nine skill eval scenarios and fixtures | `AGENTS.md` (framework) and the course `AGENTS.md` skeleton |
+| `docs/bib-lifecycle.md` | New: `course-init`, `refs promote`, `fw update`, duplicate-key check |
+
+### Audit required before each port (this repo is public)
+
+`thesisbug-template` is private; thesisbug2 is public. Each item below must be cleared before it is copied in:
+
+1. **ENSFont** (`.ttf`, `.woff2`) — confirm the font's license permits redistribution. If it does not, the framework fetches it at install time instead of bundling it.
+1. **`writing-protocol.md`** — contains the maintainer's university, programme, and professional background. Generalise it; personal context belongs in a course repo's `COURSE.md`.
+1. **Sample decks and generated images** under `assets/templates/presentation/samples/` — check for third-party imagery and coursework content.
+1. **Skill text** — `safe-edit` and `gpt-review` carry thesis-specific hypothesis labels and chapter lists. Replace with placeholders.
+1. **CSL files** — CC-BY-SA; keep their headers intact and note the license in the README.
+1. **Git history** — port by copying files into fresh commits, not by importing history, so nothing from private work branches can come along.
+
+## Open questions
+
+1. **APA-zh split bibliography.** The old APA-zh mode splits the bib into `references-zh.bib` and `references-en.bib`. With two tiers that becomes four files. The proposed fix is a single bib with a `langid` field, grouped by the Lua filter at build time. Unproven until tested against a real APA-zh paper.
+1. **Windows.** Committed symlinks need developer mode on Windows. The maintainer's machines are macOS and Linux; decide whether Windows is supported or documented as unsupported.
+1. **How units reference each other.** A final paper that extends a midterm paper may want to quote it. Nothing here forbids a relative include, but no convention is defined yet.
+
+## Roadmap
+
+1. Review and settle this document.
+1. Port skills and assets, clearing the public-port audit item by item.
+1. Rewrite path resolution, `unit-init`, and `build`; run the nine eval scenarios as the regression check.
+1. Write `course-init`, `fw update`, and `refs promote`; add eval scenarios for promotion and the duplicate-key check.
+1. Start one real course on thesisbug2 and fix what that reveals.
+1. Only then consider moving any existing work from `thesisbug-template`.

@@ -1,0 +1,19 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+
+# Agent-local state (machine-specific, never committed)
+.claude/
+.antigravitycli/
+.opencode/
+.gstack/
+.context/
+
+# Build output
+_output/
+__pycache__/
+*.pyc
+
+# Secrets
+.env*

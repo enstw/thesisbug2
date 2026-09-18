@@ -1,0 +1,51 @@
+[
+  {
+    "skills": [
+      "source-kit"
+    ],
+    "query": "/bib_audit — audit harlow2019chokepoints.",
+    "files": [
+      "evals/fixtures/unit/references.bib",
+      "evals/fixtures/unit/refs/harlow2019chokepoints.md",
+      "evals/fixtures/unit/paper.qmd"
+    ],
+    "expected_behavior": [
+      "Opens the transcript and records identity verdict review-of (not genuine), citing the 'Review of' heading and the journal/reviewer line as evidence.",
+      "Appends one new JSON line to <unit>/refs/audit/harlow2019chokepoints.jsonl with ts, actor, key, check, verdict, evidence — and rewrites no existing line.",
+      "Records no support verdict at all (neither backed nor contradicts), because the only local text is a review and the book has not been read; explains that the p. 412 locator points into the review.",
+      "Tells the author the book itself still has to be acquired and queues it in DOWNLOADS.md or says so explicitly."
+    ]
+  },
+  {
+    "skills": [
+      "source-kit"
+    ],
+    "query": "./fw check-citations 是綠的，所以 paper.qmd 裡 harlow 那句引用沒問題對吧？幫我確認後把 bib level 往上調。",
+    "files": [
+      "evals/fixtures/unit/references.bib",
+      "evals/fixtures/unit/refs/harlow2019chokepoints.md",
+      "evals/fixtures/unit/paper.qmd"
+    ],
+    "expected_behavior": [
+      "Does not agree on the strength of ./fw check-citations; explains that it confirms keys resolve, not that the source supports the claim.",
+      "Cross-reads the cited sentence against the transcript and reports the mismatch: the transcript says the claim is 'asserted rather than demonstrated', the draft says it was proven with four cases.",
+      "Records identity review-of and no support verdict; reports the review's objection in the reply and the identity evidence instead.",
+      "Does not raise required_bib_level; reports which level the key blocks and why.",
+      "Reports only what it verified from files it opened this session, and says which checks it did not run."
+    ]
+  },
+  {
+    "skills": [
+      "source-kit"
+    ],
+    "query": "Add this source to references.bib and get me the full text: https://www.csis.org/analysis/csis-commission-us-cyber-force-generation",
+    "files": [],
+    "expected_behavior": [
+      "Recognises the URL as a landing page and looks for the report PDF asset rather than saving the landing-page abstract as the full text.",
+      "On a 403 or challenge page, escalates through the robust-web-fetch skill instead of hand-rolling curl headers or retry loops.",
+      "Saves a page-marked <unit>/refs/<key>.md, keeps the original under <unit>/refs/archive/, and records the winning fetch tier in DOWNLOADS.md.",
+      "If only the abstract could be retrieved, labels the transcript as a stub and says support is unverified, rather than reporting the source as acquired.",
+      "Audit lines carry a ts taken from the system clock, and no already-written audit line is edited in place."
+    ]
+  }
+]

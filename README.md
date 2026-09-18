@@ -4,7 +4,7 @@
 
 AI-agent framework for Traditional Chinese academic coursework — one repo per course, shared skills, audited sources.
 
-> **Status: design stage.** The architecture is written down in [`docs/DESIGN.md`](docs/DESIGN.md) and is under review. The skills, scripts, and templates have not been ported yet, so the install steps below describe the intended flow and do not work today. The [roadmap](#roadmap) shows what exists.
+> **Status: early port.** The architecture in [`docs/DESIGN.md`](docs/DESIGN.md) is settled and the 15 agent skills are in `.agents/skills/`. The scripts, templates, and `course-init` are not here yet, so the install steps below describe the intended flow and do not work today. The [roadmap](#roadmap) shows what exists.
 
 ## What it is
 
@@ -38,6 +38,8 @@ flowchart LR
 | librsvg | embeds SVG figures in PDF output | `brew install librsvg` |
 | [uv](https://docs.astral.sh/uv/) | runs the Python scripts and their dependencies without a manual venv | `brew install uv` |
 | An agent CLI: Claude Code, Codex, or Antigravity | the skills are written for these | see each vendor |
+
+macOS and Linux only. Course repos rely on symlinks committed to git, which Windows handles only in developer mode, so Windows is not supported.
 
 ### Start a course *(planned — not implemented yet)*
 
@@ -90,8 +92,9 @@ A new source lands in the unit that fetched it. When a second unit wants to cite
 ## Roadmap
 
 - [x] Architecture written down — [`docs/DESIGN.md`](docs/DESIGN.md)
-- [ ] Design reviewed and settled
-- [ ] Skills and templates ported, each cleared for publication in a public repo
+- [x] Design reviewed and settled
+- [x] Agent skills ported and cleared for publication
+- [ ] Quarto templates, CSL files, and protocols ported (protocols generalised first)
 - [ ] Scripts rewritten for the unit layout (`unit-init`, `build`, two-tier bibliography)
 - [ ] `course-init`, `fw update`, `refs promote`
 - [ ] First real course run on the framework
@@ -102,4 +105,4 @@ The project is at the design stage and the design is the thing to comment on. Op
 
 ## License
 
-MIT — see [`LICENSE`](LICENSE). Citation style files, once ported, remain under their own CC-BY-SA licenses, stated in each file's header.
+MIT — see [`LICENSE`](LICENSE), with two exceptions that keep their own licenses: the bundled ENS Font is under the SIL Open Font License 1.1 ([`OFL.txt`](.agents/skills/house-style/assets/fonts/OFL.txt) beside the font files), and citation style files, once ported, remain CC-BY-SA as stated in each file's header.

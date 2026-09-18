@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>[簡報標題] — 導讀簡報</title>
+<meta name="description" content="[副標題]。以 deck-stage 簡報引擎呈現，含講者備註。" />
+
+<!-- 三層資產（由 deck-svg 在建檔時組裝，皆為本地檔、可離線）：
+     · asset/tokens.css      ← house-style：字型 @font-face + 色盤 token（換主題只改這裡）
+     · asset/deck.css        ← deck-svg：版面／元件／動態（手寫投影片的詞彙）
+     · asset/deck-stage.js   ← deck-runtime：投影片引擎（換頁、列印、講者視窗）
+     · asset/ENSFont{,-Bold}.woff2 ← house-style：全字集中文字型（Regular＋Bold）
+     手寫的部分只有底下 <deck-stage> 內的投影片與 speaker-notes。 -->
+<link rel="stylesheet" href="asset/tokens.css" />
+<link rel="stylesheet" href="asset/deck.css" />
+</head>
+<body>
+
+<deck-stage width="1920" height="1080">
+
+  <!-- ============ 0 · 標題 ============ -->
+  <section class="slide hero" data-label="標題">
+    <div class="railtop"></div>
+    <div class="hero__layers" aria-hidden="true">
+      <div class="grid-layer"></div>
+      <svg class="art aurora" viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMid slice" style="position:absolute;inset:0;opacity:.9;color:var(--accent)">
+        <defs>
+          <radialGradient id="nodeG" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="currentColor" stop-opacity=".85"/>
+            <stop offset="100%" stop-color="currentColor" stop-opacity="0"/>
+          </radialGradient>
+        </defs>
+        <g fill="none" stroke="rgba(255,255,255,.13)" stroke-width="1.5">
+          <path class="flow" d="M300 300 L860 540"/>
+          <path class="flow" style="animation-delay:-.6s" d="M860 540 L1480 300"/>
+          <path class="flow" style="animation-delay:-1.2s" d="M860 540 L1040 880"/>
+          <path class="flow" style="animation-delay:-.9s" d="M1480 300 L1680 700"/>
+          <path class="flow" style="animation-delay:-1.6s" d="M300 300 L420 800"/>
+        </g>
+        <g>
+          <g class="pulse">  <circle cx="300"  cy="300" r="58" fill="url(#nodeG)"/></g>
+          <g class="pulse b"><circle cx="860"  cy="540" r="72" fill="url(#nodeG)"/></g>
+          <g class="pulse c"><circle cx="1480" cy="300" r="54" fill="url(#nodeG)"/></g>
+          <g class="pulse">  <circle cx="1040" cy="880" r="50" fill="url(#nodeG)"/></g>
+          <g class="pulse b"><circle cx="1680" cy="700" r="46" fill="url(#nodeG)"/></g>
+          <g class="pulse c"><circle cx="420"  cy="800" r="42" fill="url(#nodeG)"/></g>
+        </g>
+      </svg>
+    </div>
+    <div class="hero__inner">
+      <h1 class="rise">[簡報標題]</h1>
+      <p class="hero__sub rise d1">[副標題]</p>
+      <p class="hero__meta rise d2"><strong>導讀人：[作者]</strong><br>[日期]</p>
+    </div>
+    <span class="hero__hint"><kbd>→</kbd> 換頁　<kbd>P</kbd> 講者視窗</span>
+  </section>
+
+  <!-- ============ 1 · 導讀範圍 ============ -->
+  <section class="slide" style="--chapter:var(--c1)" data-label="導讀範圍">
+    <div class="railtop"></div>
+    <div class="topbar"><span class="eyebrow rise">導論 · 導讀範圍</span><span class="chap rise"><b>[簡報標題]</b></span></div>
+    <div class="content">
+      <h2 class="title rise" style="margin-bottom:36px">今天要讀的</h2>
+      <ul class="clean lead-size">
+        <li class="rise d1">[文獻一]</li>
+        <li class="rise d2">[文獻二]</li>
+        <li class="rise d3">[文獻三]</li>
+        <li class="rise d4"><strong>共同主題</strong>　[把幾份文獻串起來的問題意識]</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ============ 2 · 作者背景 ============ -->
+  <section class="slide" style="--chapter:var(--c2)" data-label="作者背景">
+    <div class="railtop"></div>
+    <div class="topbar"><span class="eyebrow rise">脈絡 · 作者背景</span><span class="chap rise"><b>作者背景</b></span></div>
+    <div class="content">
+      <div class="cols split">
+        <div class="colblock rise d1">
+          <h3>作者與寫作脈絡</h3>
+          <p class="lead">[作者是誰、在什麼學術或實務脈絡下寫成這份文獻。]</p>
+        </div>
+        <div class="colblock rise d2">
+          <h3>文獻位置</h3>
+          <ul class="clean">
+            <li>[學術領域]</li>
+            <li>[時代背景]</li>
+            <li>[論爭中的位置]</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 3 · 核心論點 ============ -->
+  <section class="slide" style="--chapter:var(--c2)" data-label="核心論點">
+    <div class="railtop"></div>
+    <div class="topbar"><span class="eyebrow rise">內容 · 核心論點</span><span class="chap rise"><b>核心論點</b></span></div>
+    <div class="content">
+      <div class="grid two">
+        <div class="card rise d1">
+          <span class="tag">文獻一</span><h3>[主要主張]</h3>
+          <ul class="clean"><li>[要點一]</li><li>[要點二]</li></ul>
+        </div>
+        <div class="card rise d2" style="--chapter:var(--c3)">
+          <span class="tag">文獻二</span><h3>[主要主張]</h3>
+          <ul class="clean"><li>[要點一]</li><li>[要點二]</li></ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 4 · 跨文獻整合 ============ -->
+  <section class="slide" style="--chapter:var(--c3)" data-label="跨文獻整合">
+    <div class="railtop"></div>
+    <div class="topbar"><span class="eyebrow rise">分析 · 跨文獻整合</span><span class="chap rise"><b>跨文獻整合</b></span></div>
+    <div class="content">
+      <ul class="clean lead-size">
+        <li class="rise d1"><strong>共同點</strong>　[在此撰寫]</li>
+        <li class="rise d2"><strong>分歧</strong>　[在此撰寫]</li>
+        <li class="rise d3"><strong>互補</strong>　[在此撰寫]</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ============ 5 · 關鍵概念 ============ -->
+  <section class="slide" style="--chapter:var(--c3)" data-label="關鍵概念">
+    <div class="railtop"></div>
+    <div class="topbar"><span class="eyebrow rise">內容 · 關鍵概念</span><span class="chap rise"><b>關鍵概念</b></span></div>
+    <div class="content">
+      <ul class="clean lead-size">
+        <li class="rise d1"><strong>[術語一]</strong>　[定義]</li>
+        <li class="rise d2"><strong>[術語二]</strong>　[定義]</li>
+        <li class="rise d3"><strong>[術語三]</strong>　[定義]</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ============ 6 · 個人評析 ============ -->
+  <section class="slide" style="--chapter:var(--c4)" data-label="個人評析">
+    <div class="railtop"></div>
+    <div class="topbar"><span class="eyebrow rise">觀點 · 個人評析</span><span class="chap rise"><b>個人評析</b></span></div>
+    <div class="content">
+      <ul class="clean lead-size">
+        <li class="rise d1">[從你的專業視角提出的批判一]</li>
+        <li class="rise d2">[批判二]</li>
+        <li class="rise d3">[批判三]</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ============ 7 · 討論問題 ============ -->
+  <section class="slide" style="--chapter:var(--c4)" data-label="討論問題">
+    <div class="railtop"></div>
+    <div class="topbar"><span class="eyebrow rise">收束 · 討論問題</span><span class="chap rise"><b>討論問題</b></span></div>
+    <div class="content">
+      <h2 class="title rise" style="margin-bottom:40px">討論問題</h2>
+      <ol class="num">
+        <li class="rise d1">[問題一]</li>
+        <li class="rise d2">[問題二]</li>
+        <li class="rise d3">[問題三]</li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- ============ 8 · Q & A ============ -->
+  <section class="slide finale" style="--chapter:var(--c1)" data-label="Q&A">
+    <div class="railtop"></div>
+    <div class="content">
+      <h2 class="rise">Q &amp; A</h2>
+      <p class="onesentence rise d1">導讀人：[作者]　·　[日期]</p>
+    </div>
+  </section>
+
+</deck-stage>
+
+<script type="application/json" id="speaker-notes">
+[
+"開場。自我介紹，說明這次導讀的文獻與為何選讀。提醒聽眾報告長度與結構。",
+"導讀範圍。\n・列出今天涵蓋的文獻，並點出貫穿它們的共同主題。\n・讓同學知道彼此的關聯，而非各自獨立。",
+"作者背景。\n・左：作者是誰、在什麼脈絡下寫成。\n・右：這份文獻在學術領域、時代與論爭中的位置。背景決定了它的問題意識。",
+"核心論點。\n・兩張卡片分別概述各文獻的主要主張與支撐要點。\n・先講清楚作者自己怎麼說，評析留到後面。",
+"跨文獻整合。\n・共同點、分歧、互補三條線索把文獻織在一起。\n・這是導讀真正的加值所在。",
+"關鍵概念。\n・逐一定義術語，必要時中英並列。\n・這些是後續討論的共同語彙。",
+"個人評析。\n・從你的專業視角提出批判：方法、證據、適用範圍或盲點。\n・標明哪些是作者觀點、哪些是你的判斷。",
+"討論問題。\n・拋出三個能引發課堂討論的問題。\n・可預先想好帶動討論的切入角度。",
+"Q & A。\n・開放提問與討論。\n・準備好回應可能的反詰。"
+]
+</script>
+
+<script src="asset/deck-stage.js"></script>
+<script src="asset/presenter-stage.js"></script>
+<script>
+  /* 數字滾動：標上 data-to 的元素在該頁出現時動畫到目標值，遵守 prefers-reduced-motion。 */
+  (function () {
+    var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var deck = document.querySelector('deck-stage');
+    if (!deck) return;
+    deck.addEventListener('slidechange', function (e) {
+      var slide = e.detail && e.detail.slide;
+      if (!slide || !slide.querySelectorAll) return;
+      slide.querySelectorAll('[data-to]').forEach(function (el) {
+        if (el.dataset.counted) return; el.dataset.counted = '1';
+        var to = parseFloat(el.dataset.to), dec = (el.dataset.to.split('.')[1] || '').length;
+        if (reduce) { el.textContent = to.toFixed(dec); return; }
+        var s = null, dur = 1200;
+        (function step(t) {
+          if (s === null) s = t;
+          var p = Math.min((t - s) / dur, 1);
+          el.textContent = (to * (0.5 - Math.cos(Math.PI * p) / 2)).toFixed(dec);
+          if (p < 1) requestAnimationFrame(step);
+        })(performance.now());
+      });
+    });
+  })();
+</script>
+</body>
+</html>

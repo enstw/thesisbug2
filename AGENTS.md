@@ -4,7 +4,16 @@ thesisbug2 is an AI-agent framework for Traditional Chinese academic coursework.
 
 ## Current state
 
-The repository is at the design stage. [`docs/DESIGN.md`](docs/DESIGN.md) is the source of truth for the architecture and for what is decided versus open. No skills, scripts, or templates have been ported yet. Read the design document before proposing or making changes.
+[`docs/DESIGN.md`](docs/DESIGN.md) is the source of truth for the architecture and for what is decided. Read it before proposing or making changes.
+
+What exists so far:
+
+- **The 15 agent skills** are ported into `.agents/skills/`, rewritten for the course layout: unit paths are written `<unit>/…`, shared sources `library/…`, and every command is `./fw <command>`. They were cleared against the public-port audit (thesis-specific values replaced with slots to fill; the font ships with its OFL text).
+- **Nothing the skills call exists yet.** `./fw`, every script behind it, the Quarto templates, and `course-init` are still to be written or ported. A skill that says `./fw check-citations <unit>` describes the target, so do not report a gate as run until its script is here. The roadmap in `docs/DESIGN.md` gives the order.
+
+### Skill evals
+
+`flow-check`, `source-kit`, and `safe-edit` carry `evals/evals.json` (three scenarios each: a query, fixture files, expected behaviours) and invented fixtures with planted defects, described in each `evals/fixtures/README.md`. There is no runner. To check a skill after editing it, build a scratch course repo, copy the fixture in as `units/01-paper-eval/`, copy `.agents/skills/` in **without any `evals/` directory** (leaving it in hands the agent the answers), give a fresh-context agent only the query, and compare what it did — and what `git status` in the scratch repo shows — with `expected_behavior`. Add a scenario when a real session shows a skill failing, rather than guessing at failures in advance.
 
 The predecessor is `thesisbug-template` (private), usually checked out beside this repo at `../thesisbug-template`. Skills, scripts, and templates are ported from there.
 

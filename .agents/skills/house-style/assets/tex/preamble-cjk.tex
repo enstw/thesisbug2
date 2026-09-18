@@ -1,0 +1,33 @@
+% house-style — CJK + xelatex font fragment (shared by beamer/paper engines).
+% Set Path to wherever the engine stages house-style fonts at build time.
+% === CJK & Font Setup ===
+\usepackage{xeCJK}
+\setmainfont[
+  Path=../assets/fonts/,
+  Extension=.ttf,
+  BoldFont=ENSFont-Bold
+]{ENSFont-Regular}
+\setCJKmainfont[
+  Path=../assets/fonts/,
+  Extension=.ttf,
+  BoldFont=ENSFont-Bold
+]{ENSFont-Regular}
+\setsansfont[
+  Path=../assets/fonts/,
+  Extension=.ttf,
+  BoldFont=ENSFont-Bold
+]{ENSFont-Regular}
+\setCJKsansfont[
+  Path=../assets/fonts/,
+  Extension=.ttf,
+  BoldFont=ENSFont-Bold
+]{ENSFont-Regular}
+
+% === Chinese Line Breaking ===
+\XeTeXlinebreaklocale "zh"
+\XeTeXlinebreakskip = 0pt plus 1pt
+
+% === Beamer (metropolis) only: skip section divider pages ===
+\makeatletter
+\@ifundefined{metroset}{}{\metroset{sectionpage=none}}
+\makeatother

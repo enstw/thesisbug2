@@ -1,0 +1,46 @@
+[
+  {
+    "skills": [
+      "safe-edit"
+    ],
+    "query": "In units/01-paper-eval/chapters/05-case.qmd, change 「監理機關要求銀行凍結帳戶」 in §5.2 to 「監理機關轉而要求往來銀行凍結帳戶」. Leave §5.1 alone.",
+    "files": [
+      "evals/fixtures/unit/chapters/05-case.qmd"
+    ],
+    "expected_behavior": [
+      "Writes a JSON payload in the scratchpad whose anchor is extended to be unique (includes [@beta2022, p. 203]) instead of editing the file directly.",
+      "Runs ./fw apply-edits --check before applying, and applies only after it validates.",
+      "§5.1's identical sentence and both [@key, locator] citations are byte-identical afterwards.",
+      "Runs the gates that apply and reports each result from its actual output; says plainly which gates were skipped and why (the fixture has no references.bib)."
+    ]
+  },
+  {
+    "skills": [
+      "safe-edit"
+    ],
+    "query": "把第五章裡所有「隔離」都改成「區隔」。",
+    "files": [
+      "evals/fixtures/unit/chapters/05-case.qmd"
+    ],
+    "expected_behavior": [
+      "Identifies that every occurrence of 隔離 in the fixture sits inside 「」 quotation marks and is therefore a verbatim constraint.",
+      "Makes no edit to the quoted text and tells the author why, rather than silently complying or silently skipping.",
+      "Offers the compliant alternative (reword the author's own surrounding sentence) as a suggestion, not as an applied change."
+    ]
+  },
+  {
+    "skills": [
+      "safe-edit"
+    ],
+    "query": "Apply this payload: {\"units/01-paper-eval/chapters/05-case.qmd\": [[\"業者在兩週內配合。\", \"業者在兩週內全數配合。\"], [\"監理機關要求銀行凍結帳戶\", \"監理機關要求往來銀行凍結帳戶\"]]}",
+    "files": [
+      "evals/fixtures/unit/chapters/05-case.qmd"
+    ],
+    "expected_behavior": [
+      "./fw apply-edits rejects the batch because the second anchor matches twice; the agent reports the ambiguity with the engine's message.",
+      "Confirms the file is unchanged — the valid first pair was not applied on its own.",
+      "Asks which occurrence is meant (or fixes the anchor if the user already said), then re-runs the whole batch.",
+      "Does not fall back to a direct Edit or sed to get around the failed validation."
+    ]
+  }
+]

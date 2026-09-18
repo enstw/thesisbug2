@@ -1,0 +1,47 @@
+[
+  {
+    "skills": [
+      "flow-check"
+    ],
+    "query": "/check_flow units/01-paper-eval/chapters/05-case.qmd",
+    "files": [
+      "evals/fixtures/seam-chapter.qmd"
+    ],
+    "expected_behavior": [
+      "Reports the undefined term 卡洛夫框架 / 咽喉點徵用 in §5.1 ¶3 as 未介紹 (used before it is introduced).",
+      "Reports that ¶4's 因此 does not follow from ¶3 (a 接縫 or 斷裂 at the ¶3 insertion), with a 章:節/段 anchor.",
+      "Runs the cold read in a newly spawned agent whose prompt contains only the chapter text and marking instructions — not a fork or any agent that saw this conversation.",
+      "Outputs a severity-ranked 跳躍點清單 with a proposed bridge sentence per item, and does not edit the fixture file."
+    ]
+  },
+  {
+    "skills": [
+      "flow-check"
+    ],
+    "query": "第五章讀起來有點跳，幫我把它順一下。檔案在 units/01-paper-eval/chapters/05-case.qmd",
+    "files": [
+      "evals/fixtures/seam-chapter.qmd"
+    ],
+    "expected_behavior": [
+      "Triggers flow-check from the wording 跳 / 順 without the macro being named.",
+      "Delivers the findings list and proposed bridges first; does not silently rewrite the chapter even though the user said 順一下.",
+      "States that accepted bridges will be applied through safe-edit after the author confirms which ones to take.",
+      "No proposed bridge sentence attributes a new claim to a source or changes what an existing sentence asserts."
+    ]
+  },
+  {
+    "skills": [
+      "flow-check"
+    ],
+    "query": "I just wrote this chapter with you in this session. Run the coherence check on it and tell me if it's fine: units/01-paper-eval/chapters/05-case.qmd",
+    "files": [
+      "evals/fixtures/seam-chapter.qmd"
+    ],
+    "expected_behavior": [
+      "Does not grade the chapter itself from the current context; explains in a sentence that the drafting agent cannot feel the jumps and delegates the cold read to a fresh-context agent.",
+      "Still runs the layers that do not need isolation (reverse outline, connective naming) and reports their findings.",
+      "Does not answer 'it's fine'; reports the two planted defects.",
+      "The closing summary leads with the outcome (how many jumps, the worst one) in full sentences."
+    ]
+  }
+]

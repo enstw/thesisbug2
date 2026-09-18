@@ -1,0 +1,47 @@
+/* ============================================================
+   house-style — DESIGN TOKENS (theme: font + palette)
+   The single source of the deck look. Engines link this as
+   asset/tokens.css; the font ships beside it as asset/ENSFont.woff2.
+   Swap the theme by editing token VALUES only — layout/motion
+   live in each engine (e.g. deck-svg asset/deck.css), not here.
+   Upstream of the ui-ux-pro-max design system.
+   ============================================================ */
+  @font-face {
+    font-family: 'ENS Font';
+    src: url('ENSFont.woff2') format('woff2');
+    font-weight: 100 500;
+    font-style: normal;
+    font-display: swap;
+  }
+  @font-face {
+    font-family: 'ENS Font';
+    src: url('ENSFont-Bold.woff2') format('woff2');
+    font-weight: 600 900;
+    font-style: normal;
+    font-display: swap;
+  }
+
+  :root {
+    --ink:        #06080f;
+    --ink-2:      #0c1019;
+    --ink-3:      #141a28;
+    --hair:       rgba(255,255,255,.10);
+    --hair-soft:  rgba(255,255,255,.06);
+
+    --text:       #f3f5fa;
+    --body:       #c5ccdb;
+    --muted:      #8b93a7;
+
+    --accent:      #e7ad46;
+    --accent-soft: rgba(231,173,70,.16);
+
+    --c1: #e7ad46;  /* 章節 1 — 金 */
+    --c2: #2dd4bf;  /* 章節 2 — 青 */
+    --c3: #34d399;  /* 章節 3 — 翠綠 */
+    --c4: #5b9dff;  /* 章節 4 — azure */
+
+    --chapter: var(--accent); /* 每張投影片以 style="--chapter:var(--cN)" 覆寫 */
+    --font: 'ENS Font', "PingFang TC", "Noto Sans CJK TC", system-ui, sans-serif;
+    --ease: cubic-bezier(.16,.84,.32,1);
+    --shadow-lg: 0 22px 60px rgba(0,0,0,.55);
+  }

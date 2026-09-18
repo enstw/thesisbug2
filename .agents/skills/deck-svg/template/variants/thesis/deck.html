@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>[簡報標題] — 簡報</title>
+<meta name="description" content="[副標題]。以 deck-stage 簡報引擎呈現，含講者備註。" />
+
+<!-- 三層資產（由 deck-svg 在建檔時組裝，皆為本地檔、可離線）：
+     · asset/tokens.css      ← house-style：字型 @font-face + 色盤 token（換主題只改這裡）
+     · asset/deck.css        ← deck-svg：版面／元件／動態（手寫投影片的詞彙）
+     · asset/deck-stage.js   ← deck-runtime：投影片引擎（換頁、列印、講者視窗）
+     · asset/ENSFont{,-Bold}.woff2 ← house-style：全字集中文字型（Regular＋Bold）
+     手寫的部分只有底下 <deck-stage> 內的投影片與 speaker-notes。 -->
+<link rel="stylesheet" href="asset/tokens.css" />
+<link rel="stylesheet" href="asset/deck.css" />
+</head>
+<body>
+
+<deck-stage width="1920" height="1080">
+
+  <!-- ============ 0 · 標題 ============ -->
+  <section class="slide hero" data-label="標題">
+    <div class="railtop"></div>
+    <div class="hero__layers" aria-hidden="true">
+      <div class="grid-layer"></div>
+      <svg class="art aurora" viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMid slice" style="position:absolute;inset:0;opacity:.9;color:var(--accent)">
+        <defs>
+          <radialGradient id="nodeG" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="currentColor" stop-opacity=".85"/>
+            <stop offset="100%" stop-color="currentColor" stop-opacity="0"/>
+          </radialGradient>
+        </defs>
+        <g fill="none" stroke="rgba(255,255,255,.13)" stroke-width="1.5">
+          <path class="flow" d="M300 300 L860 540"/>
+          <path class="flow" style="animation-delay:-.6s" d="M860 540 L1480 300"/>
+          <path class="flow" style="animation-delay:-1.2s" d="M860 540 L1040 880"/>
+          <path class="flow" style="animation-delay:-.9s" d="M1480 300 L1680 700"/>
+          <path class="flow" style="animation-delay:-1.6s" d="M300 300 L420 800"/>
+        </g>
+        <g>
+          <g class="pulse">  <circle cx="300"  cy="300" r="58" fill="url(#nodeG)"/></g>
+          <g class="pulse b"><circle cx="860"  cy="540" r="72" fill="url(#nodeG)"/></g>
+          <g class="pulse c"><circle cx="1480" cy="300" r="54" fill="url(#nodeG)"/></g>
+          <g class="pulse">  <circle cx="1040" cy="880" r="50" fill="url(#nodeG)"/></g>
+          <g class="pulse b"><circle cx="1680" cy="700" r="46" fill="url(#nodeG)"/></g>
+          <g class="pulse c"><circle cx="420"  cy="800" r="42" fill="url(#nodeG)"/></g>
+        </g>
+      </svg>
+    </div>
+    <div class="hero__inner">
+      <h1 class="rise">[簡報標題]</h1>
+      <p class="hero__sub rise d1">[副標題]</p>
+      <p class="hero__meta rise d2"><strong>[作者]</strong><br>[日期]</p>
+    </div>
+    <span class="hero__hint"><kbd>→</kbd> 換頁　<kbd>P</kbd> 講者視窗</span>
+  </section>
+
+  <!-- ============ 1 · 研究背景 ============ -->
+  <section class="slide" style="--chapter:var(--c1)" data-label="研究背景">
+    <div class="railtop"></div>
+    <div class="topbar"><span class="eyebrow rise">緒論 · 研究背景</span><span class="chap rise"><b>[簡報標題]</b></span></div>
+    <div class="content">
+      <h2 class="kicker rise d1">[以一句話點出本研究關注的<span class="hl">核心張力</span>或現象]</h2>
+      <p class="lead rise d2">[在此撰寫研究背景：問題從何而來、為何此刻重要。把細節、引用與佐證留在講稿備註。]</p>
+      <p class="lead muted mt rise d3">[補充一句承接到研究問題的過渡。]</p>
+    </div>
+  </section>
+
+  <!-- ============ 2 · 研究問題 ============ -->
+  <section class="slide" style="--chapter:var(--c2)" data-label="研究問題">
+    <div class="railtop"></div>
+    <div class="topbar"><span class="eyebrow rise">緒論 · 研究問題</span><span class="chap rise"><b>研究問題</b></span></div>
+    <div class="content">
+      <h2 class="title rise" style="margin-bottom:40px">研究問題</h2>
+      <ul class="clean lead-size">
+        <li class="rise d1"><strong>問題一</strong>　[在此撰寫]</li>
+        <li class="rise d2"><strong>問題二</strong>　[在此撰寫]</li>
+        <li class="rise d3"><strong>問題三</strong>　[在此撰寫]</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ============ 3 · 文獻回顧 ============ -->
+  <section class="slide" style="--chapter:var(--c2)" data-label="文獻回顧">
+    <div class="railtop"></div>
+    <div class="topbar"><span class="eyebrow rise">脈絡 · 文獻回顧</span><span class="chap rise"><b>文獻回顧</b></span></div>
+    <div class="content">
+      <div class="grid two">
+        <div class="card rise d1">
+          <span class="tag">傳統觀點</span><h3>既有研究怎麼說</h3>
+          <ul class="clean"><li>[要點一]</li><li>[要點二]</li></ul>
+        </div>
+        <div class="card rise d2" style="--chapter:var(--c3)">
+          <span class="tag">本研究切入</span><h3>留下的缺口</h3>
+          <ul class="clean"><li>[要點一]</li><li>[要點二]</li></ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 4 · 分析框架 ============ -->
+  <section class="slide" style="--chapter:var(--c3)" data-label="分析框架">
+    <div class="railtop"></div>
+    <div class="topbar"><span class="eyebrow rise">方法 · 分析框架</span><span class="chap rise"><b>分析框架</b></span></div>
+    <div class="content">
+      <h2 class="title rise" style="margin-bottom:44px">分析框架</h2>
+      <div class="flowdiag">
+        <div class="flownode rise d1"><h3>研究問題</h3><p>[要回答什麼]</p></div>
+        <div class="flowarrow rise d1">→</div>
+        <div class="flownode rise d2"><h3>理論概念</h3><p>[用什麼透鏡]</p></div>
+        <div class="flowarrow rise d2">→</div>
+        <div class="flownode rise d3"><h3>案例 / 資料</h3><p>[看什麼證據]</p></div>
+        <div class="flowarrow rise d3">→</div>
+        <div class="flownode rise d4"><h3>分析發現</h3><p>[推出什麼]</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 5 · 研究設計 ============ -->
+  <section class="slide" style="--chapter:var(--c3)" data-label="研究設計">
+    <div class="railtop"></div>
+    <div class="topbar"><span class="eyebrow rise">方法 · 研究設計</span><span class="chap rise"><b>研究設計</b></span></div>
+    <div class="content">
+      <ul class="clean lead-size">
+        <li class="rise d1"><strong>資料來源</strong>　[在此撰寫]</li>
+        <li class="rise d2"><strong>方法</strong>　[在此撰寫]</li>
+        <li class="rise d3"><strong>比較維度</strong>　[在此撰寫]</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ============ 6 · 初步發現 ============ -->
+  <section class="slide" style="--chapter:var(--c4)" data-label="初步發現">
+    <div class="railtop"></div>
+    <div class="topbar"><span class="eyebrow rise">結果 · 初步發現</span><span class="chap rise"><b>初步發現</b></span></div>
+    <div class="content">
+      <h2 class="title rise" style="margin-bottom:40px">初步發現</h2>
+      <div class="grid three">
+        <div class="card rise d1"><span class="tag">發現一</span><p>[在此撰寫]</p></div>
+        <div class="card rise d2"><span class="tag">發現二</span><p>[在此撰寫]</p></div>
+        <div class="card rise d3"><span class="tag">發現三</span><p>[在此撰寫]</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 7 · 結論 ============ -->
+  <section class="slide finale" style="--chapter:var(--c1)" data-label="結論">
+    <div class="railtop"></div>
+    <div class="content">
+      <span class="eyebrow rise" style="margin-bottom:24px">結論</span>
+      <h2 class="rise d1">一句話的貢獻</h2>
+      <p class="onesentence rise d2">[在此用一句話概括本研究的核心結論與貢獻。]</p>
+    </div>
+  </section>
+
+  <!-- ============ 8 · Q & A ============ -->
+  <section class="slide finale" style="--chapter:var(--c1)" data-label="Q&A">
+    <div class="railtop"></div>
+    <div class="content">
+      <h2 class="rise">Q &amp; A</h2>
+      <p class="onesentence rise d1">[作者]　·　[日期]</p>
+    </div>
+  </section>
+
+</deck-stage>
+
+<script type="application/json" id="speaker-notes">
+[
+"開場。自我介紹並用一句話說明今天要回答的問題。提醒聽眾這場報告的時間長度與大致結構。",
+"研究背景。\n・說明問題的來源與此刻的重要性。\n・把關鍵引用、數據與佐證放在這裡口頭補充，投影片只留主軸。",
+"研究問題。\n・逐一唸出三個問題，說明彼此的關係（遞進？並列？）。\n・讓聽眾知道後面哪一段回答哪一題。",
+"文獻回顧。\n・左欄：既有研究的主流觀點。\n・右欄：它們留下的缺口，正是本研究切入之處。對照講清楚「為什麼還需要這篇」。",
+"分析框架。\n・沿著箭頭說明：從研究問題，經理論概念與案例／資料，推導到分析發現。\n・這是全篇方法論的骨架。",
+"研究設計。\n・資料來源、方法、比較維度逐項交代。\n・說明為何此設計能回答前面的研究問題。",
+"初步發現。\n・三張卡片各講一個發現，先講結果再講意義。\n・若有量化數據，可改用 stats 區塊（.stat 的 .n 支援 data-to 數字滾動）。",
+"結論。\n・用一句話收束貢獻，呼應開場的研究問題。\n・可順帶點出限制與後續研究方向。",
+"Q & A。\n・留白等待提問。\n・預先準備兩三個可能被問到的問題與回答。"
+]
+</script>
+
+<script src="asset/deck-stage.js"></script>
+<script src="asset/presenter-stage.js"></script>
+<script>
+  /* 數字滾動：.stat .n 標上 data-to="47.2" 即在該頁出現時動畫到目標值。
+     遵守 prefers-reduced-motion。沒有 data-to 元素時此段不做任何事。 */
+  (function () {
+    var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var deck = document.querySelector('deck-stage');
+    if (!deck) return;
+    deck.addEventListener('slidechange', function (e) {
+      var slide = e.detail && e.detail.slide;
+      if (!slide || !slide.querySelectorAll) return;
+      slide.querySelectorAll('[data-to]').forEach(function (el) {
+        if (el.dataset.counted) return; el.dataset.counted = '1';
+        var to = parseFloat(el.dataset.to), dec = (el.dataset.to.split('.')[1] || '').length;
+        if (reduce) { el.textContent = to.toFixed(dec); return; }
+        var s = null, dur = 1200;
+        (function step(t) {
+          if (s === null) s = t;
+          var p = Math.min((t - s) / dur, 1);
+          el.textContent = (to * (0.5 - Math.cos(Math.PI * p) / 2)).toFixed(dec);
+          if (p < 1) requestAnimationFrame(step);
+        })(performance.now());
+      });
+    });
+  })();
+</script>
+</body>
+</html>

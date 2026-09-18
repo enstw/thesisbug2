@@ -1,0 +1,95 @@
+#!/usr/bin/env python3
+"""fw — the one entry point a course repo uses to run framework commands.
+
+    ./fw <command> [<unit>] [options]     e.g. ./fw check-citations units/03-paper-final
+    ./fw update                           pull .framework/ and commit the new pin
+    ./fw help                             list commands
+
+course-init writes a two-line ./fw at the course root that execs this file.
+Running everything through one dispatcher keeps skills short and means no
+skill or script has to know where the framework is mounted.
+"""
+
+from __future__ import annotations
+
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+HERE = Path(__file__).resolve().parent
+PEP723 = "# /// script"
+
+
+def commands() -> dict[str, Path]:
+    found = {}
+    for p in sorted(HERE.iterdir()):
+        if p.name.startswith(("_", ".")) or p.name == "fw" or p.is_dir():
+            continue
+        if p.suffix in (".py", ".sh") or os.access(p, os.X_OK):
+            found[p.stem if p.suffix in (".py", ".sh") else p.name] = p
+    return found
+
+
+def find_course_root() -> Path | None:
+    here = Path.cwd().resolve()
+    for d in (here, *here.parents):
+        if (d / ".framework").exists() or (d / "units").is_dir():
+            return d
+    return None
+
+
+def update(root: Path) -> int:
+    fwdir = root / ".framework"
+    if not fwdir.exists():
+        print("no .framework/ here — this is not a course repo", file=sys.stderr)
+        return 2
+    before = subprocess.run(["git", "-C", str(fwdir), "rev-parse", "--short", "HEAD"],
+                            capture_output=True, text=True).stdout.strip()
+    # ff-only: coursework never commits inside .framework/, so anything else
+    # means someone is mid-edit on the framework and should finish that first.
+    r = subprocess.run(["git", "-C", str(fwdir), "pull", "--ff-only", "origin", "main"])
+    if r.returncode:
+        return r.returncode
+    after = subprocess.run(["git", "-C", str(fwdir), "rev-parse", "--short", "HEAD"],
+                           capture_output=True, text=True).stdout.strip()
+    if before == after:
+        print(f"framework already current ({after})")
+        return 0
+    subprocess.run(["git", "-C", str(root), "add", ".framework"], check=True)
+    subprocess.run(["git", "-C", str(root), "commit", "-m",
+                    f"chore(framework): update {before} → {after}"], check=True)
+    print(f"framework {before} → {after}, pin committed")
+    return 0
+
+
+def main() -> int:
+    argv = sys.argv[1:]
+    cmds = commands()
+    if not argv or argv[0] in ("help", "-h", "--help"):
+        print(__doc__.strip(), "\n\ncommands:\n  update\n  " + "\n  ".join(cmds))
+        return 0
+    name, rest = argv[0], argv[1:]
+    root = find_course_root()
+    if name == "update":
+        return update(root) if root else 2
+    if name not in cmds:
+        print(f"unknown command: {name}\navailable: update, " + ", ".join(cmds), file=sys.stderr)
+        return 2
+    script = cmds[name]
+    env = dict(os.environ)
+    if root:
+        env["FW_COURSE_ROOT"] = str(root)
+    if script.suffix == ".py":
+        head = script.read_text(encoding="utf-8", errors="ignore")[:400]
+        # Scripts that declare dependencies (PEP 723) run under uv, which
+        # provisions them; the rest need only the standard library.
+        runner = ["uv", "run", "--quiet", "--script"] if PEP723 in head else [sys.executable]
+        cmd = [*runner, str(script), *rest]
+    else:
+        cmd = [str(script), *rest]
+    return subprocess.run(cmd, env=env).returncode
+
+
+if __name__ == "__main__":
+    sys.exit(main())

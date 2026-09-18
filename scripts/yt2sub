@@ -1,0 +1,160 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# yt2sub — transcribe a YouTube URL (or local audio file) to plain text.
+#
+# Strategy: try YouTube's own captions first (near-instant, no GPU/CPU cost),
+# and fall back to Whisper ASR only when captions are unavailable. For a local
+# audio file there are no captions, so it goes straight to Whisper.
+#
+#   yt2sub <youtube-url|audio-file> [output-dir]
+#   yt2sub --whisper <url|file> [output-dir]   # skip captions, force ASR
+#
+# Env knobs:
+#   YT2SUB_LANGS   caption language preference list (default below). Each is
+#                  tried in order; the first track that exists wins. Override
+#                  e.g. YT2SUB_LANGS="ja,en" for a Japanese talk.
+#   WHISPER_MODEL  faster-whisper model for the fallback (default large-v3-turbo)
+
+MODEL="${WHISPER_MODEL:-large-v3-turbo}"
+SUB_LANGS="${YT2SUB_LANGS:-en,en-US,en-GB,zh-Hant,zh-TW,zh-Hans,zh,ja,ko}"
+FORCE_WHISPER=0
+
+usage() {
+    echo "Usage: $0 [--whisper] <youtube-url|audio-file> [output-dir]" >&2
+    exit 1
+}
+
+case "${1:-}" in
+    --whisper|--force-whisper) FORCE_WHISPER=1; shift ;;
+    -h|--help) usage ;;
+esac
+[ $# -ge 1 ] || usage
+
+SOURCE="$1"
+OUTDIR="$(cd "${2:-.}" && pwd)"
+TMPDIR="$(mktemp -d)"
+trap 'rm -rf "$TMPDIR"' EXIT
+
+have() { command -v "$1" &>/dev/null; }
+
+# --- VTT -> plain text -------------------------------------------------------
+# YouTube auto-captions emit a "rolling" copy of each line carrying inline word
+# timestamps (e.g. "hello<00:00:10.719><c> everyone</c>"). The clean,
+# non-overlapping transcript is exactly the set of finalized lines that DON'T
+# carry those <00:..> stamps — so we keep those and drop the rolling copies.
+# Manual subtitles have no rolling copies, so every cue line is kept.
+clean_vtt() {
+    python3 - "$1" <<'PY'
+import re, sys, pathlib
+lines = pathlib.Path(sys.argv[1]).read_text(encoding="utf-8", errors="replace").splitlines()
+out = []
+for ln in lines:
+    s = ln.strip()
+    if not s or s.startswith(("WEBVTT", "Kind:", "Language:")) or "-->" in s:
+        continue
+    if re.search(r"<\d{2}:\d{2}:\d{2}", s):   # rolling copy -> skip
+        continue
+    s = re.sub(r"<[^>]*>", "", s).strip()     # strip residual <c></c> etc.
+    if s and (not out or out[-1] != s):       # drop consecutive duplicates
+        out.append(s)
+print(" ".join(out))
+PY
+}
+
+# --- Caption-first path (URL only) ------------------------------------------
+# Tries each language separately and stops at the first hit. One request per
+# language is gentler on YouTube's timedtext endpoint than a single multi-lang
+# request (which tends to 429), and lets the preference order actually decide.
+try_captions() {
+    have yt-dlp && have python3 || return 1
+    local lang vtt=""
+    for lang in ${SUB_LANGS//,/ }; do
+        rm -f "$TMPDIR"/*.vtt 2>/dev/null || true
+        yt-dlp --js-runtimes node --skip-download --write-subs --write-auto-subs \
+               --sub-langs "$lang" --sub-format vtt \
+               -o "$TMPDIR/%(title)s.%(ext)s" "$SOURCE" >/dev/null 2>&1 || true
+        vtt="$(find "$TMPDIR" -name '*.vtt' | head -1)"
+        [ -n "$vtt" ] && break
+    done
+    [ -n "$vtt" ] || return 1
+    local base; base="$(basename "$vtt")"; base="${base%.*}"; base="${base%.*}"  # drop .vtt and .<lang>
+    local output="$OUTDIR/${base}.txt"
+    clean_vtt "$vtt" > "$output"
+    [ -s "$output" ] || return 1
+    printf '%s' "$output"
+}
+
+is_url=1; [ -f "$SOURCE" ] && is_url=0
+
+if [ "$is_url" -eq 1 ] && [ "$FORCE_WHISPER" -eq 0 ]; then
+    echo "Trying YouTube captions ($SUB_LANGS)..." >&2
+    if OUTPUT="$(try_captions)"; then
+        echo "(via captions)" >&2
+        echo "Done: $OUTPUT"
+        exit 0
+    fi
+    echo "No usable captions; falling back to Whisper ASR..." >&2
+fi
+
+# --- Whisper ASR path --------------------------------------------------------
+missing=()
+have ffmpeg || missing+=("ffmpeg (macOS: brew install ffmpeg / Ubuntu: sudo apt install ffmpeg)")
+[ "$is_url" -eq 1 ] && { have yt-dlp || missing+=("yt-dlp (uv tool install yt-dlp)"); }
+if [ ${#missing[@]} -gt 0 ]; then
+    echo "ERROR: missing dependencies for the Whisper fallback:" >&2
+    for dep in "${missing[@]}"; do echo "  - $dep" >&2; done
+    exit 1
+fi
+
+VENV_DIR="$HOME/tools/yt2sub/venv"
+PYTHON_BIN="$VENV_DIR/bin/python"
+if [ ! -f "$PYTHON_BIN" ]; then
+    echo "ERROR: Python venv with faster-whisper is missing." >&2
+    echo "Please create it by running:" >&2
+    echo "  uv venv \"$VENV_DIR\"" >&2
+    echo "  uv pip install --python \"$PYTHON_BIN\" faster-whisper" >&2
+    exit 1
+fi
+
+# --- Resolve WAV ---
+if [ "$is_url" -eq 0 ]; then
+    BASENAME="$(basename "$SOURCE" | sed 's/\.[^.]*$//')"
+    WAV="$TMPDIR/${BASENAME}.wav"
+    echo "Converting to 16 kHz mono WAV..." >&2
+    ffmpeg -hide_banner -loglevel warning -i "$SOURCE" -ar 16000 -ac 1 "$WAV"
+else
+    echo "Downloading audio..." >&2
+    yt-dlp -x --audio-format wav \
+        --js-runtimes node \
+        --postprocessor-args "ffmpeg:-ar 16000 -ac 1" \
+        -o "$TMPDIR/%(title)s.%(ext)s" \
+        "$SOURCE"
+    WAV="$(find "$TMPDIR" -name '*.wav' | head -1)"
+    if [ -z "$WAV" ]; then
+        echo "Error: no WAV file produced" >&2
+        exit 1
+    fi
+    BASENAME="$(basename "$WAV" .wav)"
+fi
+
+OUTPUT="$OUTDIR/${BASENAME}.txt"
+
+# --- Transcribe ---
+echo "Transcribing with Whisper ($MODEL)..." >&2
+SOURCE_WAV="$WAV" OUTPUT_FILE="$OUTPUT" MODEL_NAME="$MODEL" \
+"$PYTHON_BIN" -c "
+import os, sys
+from faster_whisper import WhisperModel
+model = WhisperModel(os.environ['MODEL_NAME'], device='cpu', compute_type='int8')
+segments, info = model.transcribe(os.environ['SOURCE_WAV'], vad_filter=True)
+print(f'Detected language: {info.language} ({info.language_probability:.2f}); duration {info.duration:.1f}s', file=sys.stderr)
+with open(os.environ['OUTPUT_FILE'], 'w') as f:
+    for s in segments:
+        pct = s.end / info.duration * 100
+        print(f'  [{s.start:.1f}s -> {s.end:.1f}s] ({pct:.0f}%) {s.text.strip()}', file=sys.stderr)
+        f.write(s.text.strip() + '\n')
+"
+
+echo "(via whisper)" >&2
+echo "Done: $OUTPUT"

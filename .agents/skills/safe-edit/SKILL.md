@@ -113,7 +113,7 @@ The readability gate reads `<unit>/chapters/*.qmd` plus the work's entry file
 - A genuinely new claim from an already-backed fulltext is allowed in body
   chapters, but each quote must be grep-verified against the
   source's `refs/<key>.md` transcript (in the unit, or in `library/` once
-  promoted), the locator mapped via the `[Page N]` markers, and a `support`
+  promoted), the locator mapped via the `[Page N start]` markers, and a `support`
   entry carrying this unit's name appended to the source's
   `refs/audit/<key>.jsonl`, recording what was verified.
 - Party or conflicted sources keep their framing markers (指控／認定／官方所稱／

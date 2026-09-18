@@ -9,7 +9,10 @@ thesisbug2 is an AI-agent framework for Traditional Chinese academic coursework.
 What exists so far:
 
 - **The 15 agent skills** are ported into `.agents/skills/`, rewritten for the course layout: unit paths are written `<unit>/…`, shared sources `library/…`, and every command is `./fw <command>`. They were cleared against the public-port audit (thesis-specific values replaced with slots to fill; the font ships with its OFL text).
-- **Nothing the skills call exists yet.** `./fw`, every script behind it, the Quarto templates, and `course-init` are still to be written or ported. A skill that says `./fw check-citations <unit>` describes the target, so do not report a gate as run until its script is here. The roadmap in `docs/DESIGN.md` gives the order.
+- **`scripts/fw` and the gates behind it** work: `apply-edits`, `check-bib`, `check-citations`, `check-zh-variants`, `count-zh`, `lint-readability`, `plantuml2svg`, `yt2sub`. `scripts/_paths.py` is the only place that knows the course layout (course root, nearest `WORK.json`, `library/`); a script that builds such a path itself is a bug. A script that needs third-party packages declares them in a PEP 723 header and `fw` runs it under `uv`; the rest use the standard library only.
+- **Not here yet:** `unit-init`, `build`, `refs` (promote), `refs-snapshot`, `course-init`, and the Quarto templates. Skills already name some of these (`./fw build`, `./fw refs promote`), so do not report one as run until `./fw help` lists it. The roadmap in `docs/DESIGN.md` gives the order.
+
+To try a script without a real course, make a scratch directory with `units/<name>/WORK.json`, symlink this repo in as `.framework`, and add the two-line `fw` shim (`exec "$(dirname "$0")/.framework/scripts/fw" "$@"`).
 
 ### Skill evals
 

@@ -4,7 +4,7 @@
 
 AI-agent framework for Traditional Chinese academic coursework — one repo per course, shared skills, audited sources.
 
-> **Status: early port.** The architecture in [`docs/DESIGN.md`](docs/DESIGN.md) is settled and the 15 agent skills are in `.agents/skills/`. The scripts, templates, and `course-init` are not here yet, so the install steps below describe the intended flow and do not work today. The [roadmap](#roadmap) shows what exists.
+> **Status: early port.** The architecture in [`docs/DESIGN.md`](docs/DESIGN.md) is settled, the 15 agent skills are in `.agents/skills/`, and the `fw` dispatcher with the checking gates is in `scripts/`. The Quarto templates, `unit-init`, `build`, and `course-init` are not here yet, so the install steps below describe the intended flow and do not work today. The [roadmap](#roadmap) shows what exists.
 
 ## What it is
 
@@ -95,8 +95,9 @@ A new source lands in the unit that fetched it. When a second unit wants to cite
 - [x] Design reviewed and settled
 - [x] Agent skills ported and cleared for publication
 - [ ] Quarto templates, CSL files, and protocols ported (protocols generalised first)
-- [ ] Scripts rewritten for the unit layout (`unit-init`, `build`, two-tier bibliography)
-- [ ] `course-init`, `fw update`, `refs promote`
+- [x] `fw` dispatcher and the gates: citations and source backing across both tiers, batch edits, readability, 簡繁 variants, 字數
+- [ ] `unit-init` and `build` (two-tier bibliography, APA-zh grouping by `langid`)
+- [ ] `course-init`, `refs promote`, `refs-snapshot` (`fw update` is done)
 - [ ] First real course run on the framework
 
 ## Contributing

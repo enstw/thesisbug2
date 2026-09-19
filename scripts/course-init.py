@@ -100,6 +100,43 @@ def slugify(title: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-")
 
 
+SLUG_PROMPT = ("You name git repositories. Reply with one line only: a lowercase English "
+               "kebab-case slug of 2 to 4 words for the university course named in the message. "
+               "No term, no number, no punctuation, no explanation.")
+
+
+def ai_slug(title: str) -> str:
+    """Ask a local Claude Code CLI to translate a non-ASCII course name.
+
+    Turning 亞太安全專題 into asia-pacific-security is translation, which no
+    rule does well. The call has every tool switched off and saves no session,
+    and its answer is only ever a suggestion the author confirms: it names a
+    GitHub repository, which is awkward to rename later. Any failure — no CLI,
+    not logged in, timeout, an answer that is not a slug — means no suggestion.
+    """
+    if not shutil.which("claude"):
+        return ""
+    print("  asking the local claude CLI for a slug suggestion …")
+    try:
+        r = subprocess.run(
+            ["claude", "-p", "--model", "haiku", "--tools", "", "--no-session-persistence",
+             "--system-prompt", SLUG_PROMPT, title],
+            stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=60)
+    except (OSError, subprocess.TimeoutExpired):
+        return ""
+    lines = r.stdout.strip().splitlines()
+    answer = lines[-1].strip().strip("`") if r.returncode == 0 and lines else ""
+    return answer if re.fullmatch(r"[a-z0-9]+(-[a-z0-9]+){0,5}", answer) else ""
+
+
+def term_code(term: str) -> str:
+    """'115 學年度第 1 學期' or '115-1' → '1151', so course repos sort by term."""
+    if re.fullmatch(r"\d{4}", term.strip()):
+        return term.strip()
+    m = re.search(r"(\d{2,4})\D+([1-3])(?!\d)", term)
+    return m.group(1) + m.group(2) if m else ""
+
+
 def run(cmd: list[str], cwd: Path | None = None, check: bool = True, quiet: bool = False):
     r = subprocess.run(cmd, cwd=cwd, text=True, capture_output=quiet)
     if check and r.returncode:
@@ -175,15 +212,19 @@ def main() -> None:
     while interactive and not title:
         print("  the course name is the one required field")
         title = ask("Course name")
+    term = field(a.term, "Term, e.g. 114 學年度第 2 學期 (optional)", "")
+    suggestion = ""
+    if not a.slug and interactive:             # unattended runs must name the repo themselves
+        name = slugify(title) or ai_slug(title)
+        suggestion = "-".join(x for x in (term_code(term), name) if x) if name else ""
     slug = field(a.slug, "Course slug — directory and repo name, e.g. 1142-asia-pacific-security",
-                 slugify(title))
+                 suggestion)
     while not re.fullmatch(r"[a-z0-9][a-z0-9._-]*", slug or ""):
         if a.slug or not interactive:          # given as an argument: fail, don't loop
             sys.exit(slug_rule)
         print("  " + slug_rule)
         slug = ask("Course slug")
     title = title or slug
-    term = field(a.term, "Term (optional)", "")
     instructor = field(a.instructor, "Instructor (optional)", "")
     default_author = (account.get("author")
                       or run(["git", "config", "user.name"], check=False, quiet=True).stdout.strip())

@@ -174,8 +174,13 @@ def main() -> None:
     shutil.copy2(SHARED / "PROGRESS.md", unit / "PROGRESS.md")
     if a.type in CITATION_TYPES and not (unit / "references.bib").exists():
         # One bib per tier, APA-zh included: entries carry langid and the
-        # build groups 中文／西文. refs/ is created by the first fetch.
+        # build groups 中文／西文.
         shutil.copy2(SHARED / "references.bib", unit / "references.bib")
+    if a.type in CITATION_TYPES:
+        # refs/DOWNLOADS.md and refs/README.md carry the fetch conventions the
+        # source-kit skill points at; without them the first fetch has nowhere
+        # to record which tier won.
+        copy_tree(SHARED / "refs", unit / "refs")
 
     import os
     fill_placeholders(unit, work, os.path.relpath(FRAMEWORK, unit))

@@ -51,7 +51,7 @@ bash <(curl -fsSL https://raw.githubusercontent.com/enstw/thesisbug2/main/instal
 
 It asks for the course details, then does the rest:
 
-1. **Collects the fields** — course slug (directory and repo name, e.g. `1142-asia-pacific-security`), course name, term, instructor, your name as it appears on submitted work, institution, field, and citation style (`apa`, `apa-zh`, `chicago-fullnote`).
+1. **Collects the fields** — only the course name and its slug (directory and repo name, e.g. `1142-asia-pacific-security`) are required. Term, instructor, your name as it appears on submitted work, institution, field, and citation style (`apa`, `apa-zh`, `chicago-fullnote`) can be left empty and filled in `COURSE.md` later.
 1. **Creates the repository** — `~/homework/<slug>/`, `git init`, first commit, then a **private** GitHub repository under your account, pushed and tagged with the `thesisbug-course` topic.
 1. **Mounts the framework** — this repository as a shallow git submodule at `.framework/`, with `submodule.recurse` on so a plain `git pull` keeps it at the version the course pins.
 1. **Sets up the agent directives** — `AGENTS.md` (pointing agents at the framework's guide, `COURSE.md`, and `STATUS.md`), `CLAUDE.md` and `GEMINI.md` pointers, and `.claude/skills` + `.agents/skills` linked to the framework's skills, plus `COURSE.md`, `STATUS.md`, `./fw`, `library/`, `notes/`, `units/`.
@@ -64,13 +64,26 @@ bash <(curl -fsSL https://raw.githubusercontent.com/enstw/thesisbug2/main/instal
   --author "Your Name" --field "國際關係" --citation apa-zh --yes
 ```
 
+What is the same for every course — your name, institution, field, citation style — is typed once per machine. The first interactive run offers to save it (`--save-defaults` does so unattended) to `~/.config/thesisbug2/config.ini`, which you can also write by hand:
+
+```ini
+[defaults]
+author = 碩專二 王小明
+institution = ○○大學 ○○碩士在職專班
+field = 國際關係
+citation = apa-zh
+# optional, hand-set only: parent = ~/homework, owner = <github owner>
+```
+
+A flag beats the file, and the file beats the built-in default; in a terminal its values show up as the prompt defaults. The file is per machine and is read only when a course is created — after that the course's own `COURSE.md` is what units and agents read.
+
 `--no-github` creates the course locally only; `--parent <dir>` puts it somewhere other than `~/homework`; `--help` lists the rest. Already have the framework cloned? `scripts/course-init.py` is the same program.
 
 ### Start a unit
 
 ```bash
 cd ~/homework/1142-asia-pacific-security
-./fw unit-init --type paper --name final --title "…" --author "…"     # add --citation apa-zh for APA-zh-TW
+./fw unit-init --type paper --name final --title "…"     # author and citation style default from COURSE.md
 ./fw build final                                                        # → _output/NN-paper-final.pdf
 ```
 

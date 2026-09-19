@@ -92,7 +92,10 @@ and audit logs (`audit/*.jsonl`) stay in git.
   never re-push over it silently.
 
 Two live tracking files are scaffolded into `<unit>/refs/` — they hold the full
-conventions, so follow them rather than duplicating here:
+conventions, so follow them rather than duplicating here. If a unit lacks them
+(it predates the scaffold, or sources are landing in `library/refs/` first),
+copy them from `.framework/assets/scaffold/refs/` before the first fetch, so
+the fetch has somewhere to record what it learned:
 
 - **`DOWNLOADS.md`** — the job queue: what's still to fetch, why each blocked
   entry is blocked, Wayback snapshot IDs, and which robust-web-fetch tier won.

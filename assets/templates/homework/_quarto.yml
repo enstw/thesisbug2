@@ -1,0 +1,24 @@
+project:
+  type: default
+  output-dir: _output
+  render:
+    - homework.qmd
+
+title: "[作業標題]"
+author: "[作者]"
+date: "[日期]"
+
+format:
+  pdf:
+    documentclass: article
+    pdf-engine: xelatex
+    papersize: a4
+    include-in-header:
+      - {{FW}}/assets/templates/homework/preamble.tex
+    toc: false
+    number-sections: false
+    colorlinks: true
+    linkcolor: black
+    urlcolor: blue
+
+lang: zh-Hant

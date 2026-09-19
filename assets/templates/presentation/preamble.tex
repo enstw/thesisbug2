@@ -1,0 +1,86 @@
+% === CJK & Font Setup ===
+\usepackage{xeCJK}
+\setmainfont[
+  Path={{FW}}/assets/fonts/,
+  Extension=.ttf,
+  BoldFont=ENSFont-Bold
+]{ENSFont-Regular}
+\setCJKmainfont[
+  Path={{FW}}/assets/fonts/,
+  Extension=.ttf,
+  BoldFont=ENSFont-Bold
+]{ENSFont-Regular}
+\setsansfont[
+  Path={{FW}}/assets/fonts/,
+  Extension=.ttf,
+  BoldFont=ENSFont-Bold
+]{ENSFont-Regular}
+\setCJKsansfont[
+  Path={{FW}}/assets/fonts/,
+  Extension=.ttf,
+  BoldFont=ENSFont-Bold
+]{ENSFont-Regular}
+
+% === Chinese Line Breaking ===
+\XeTeXlinebreaklocale "zh"
+\XeTeXlinebreakskip = 0pt plus 1pt
+
+% === Beamer (metropolis) only: skip section divider pages ===
+\makeatletter
+\@ifundefined{metroset}{}{\metroset{sectionpage=none}}
+\makeatother
+
+% === Custom metropolis + Darmstadt headline + Boadilla footline ===
+% Top: miniframes-style section navigation dots (from Darmstadt)
+% Bottom: three-box infolines footer with teal gradient (Boadilla layout)
+% Keeps metropolis's frametitle and inner theme intact.
+\definecolor{ensFootL}{HTML}{D8E3E6}  % light
+\definecolor{ensFootM}{HTML}{6B8A93}  % mid
+\definecolor{ensFootR}{HTML}{23414B}  % dark (matches mDarkTeal family)
+\makeatletter
+\@ifundefined{metroset}{}{%
+  \setbeamertemplate{headline}{%
+    \begin{beamercolorbox}[wd=\paperwidth,ht=3.7ex,dp=0pt]{section in head/foot}%
+      \vbox to 3.7ex{\vskip0pt\insertnavigation{\paperwidth}\vss}%
+    \end{beamercolorbox}%
+    \vskip1pt%
+  }%
+  \setbeamercolor{title in head/foot}{bg=ensFootL, fg=black}%
+  \setbeamercolor{author in head/foot}{bg=ensFootM, fg=black}%
+  \setbeamercolor{date in head/foot}{bg=ensFootR, fg=white}%
+  \setbeamertemplate{footline}{%
+    \leavevmode%
+    \hbox{%
+      \begin{beamercolorbox}[wd=.333333\paperwidth,ht=2.5ex,dp=1ex,center]{title in head/foot}%
+        \usebeamerfont{title in head/foot}\insertshorttitle%
+      \end{beamercolorbox}%
+      \begin{beamercolorbox}[wd=.333333\paperwidth,ht=2.5ex,dp=1ex,center]{author in head/foot}%
+        \usebeamerfont{author in head/foot}\insertshortauthor%
+      \end{beamercolorbox}%
+      \begin{beamercolorbox}[wd=.333334\paperwidth,ht=2.5ex,dp=1ex,right]{date in head/foot}%
+        \usebeamerfont{date in head/foot}\insertshortdate{}\hspace*{2em}%
+        \insertframenumber{} / \inserttotalframenumber\hspace*{2ex}%
+      \end{beamercolorbox}%
+    }%
+    \vskip0pt%
+  }%
+}
+\makeatother
+
+% === Beamer only: shrink slide footnotes + reference-list font ===
+% Beamer renders both at the body size by default, which overruns slides for
+% Chicago full-note citations and a per-talk reference list. Drop them to
+% \tiny. Guarded on \setbeamerfont so this no-ops under the article-class
+% draft.qmd, which also includes this preamble.
+\makeatletter
+\@ifundefined{setbeamerfont}{}{%
+  % slide-bottom footnote citations
+  \setbeamerfont{footnote}{size=\tiny}%
+  % reference list (bibliography) entries
+  \setbeamerfont{bibliography item}{size=\tiny}%
+  \setbeamerfont{bibliography entry author}{size=\tiny}%
+  \setbeamerfont{bibliography entry title}{size=\tiny}%
+  \setbeamerfont{bibliography entry location}{size=\tiny}%
+  \setbeamerfont{bibliography entry note}{size=\tiny}%
+}
+\makeatother

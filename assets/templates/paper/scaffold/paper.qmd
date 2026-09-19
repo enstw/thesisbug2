@@ -1,0 +1,28 @@
+# 摘要 {.unnumbered}
+
+[待完成中文摘要]
+
+**關鍵詞**：[關鍵詞一]、[關鍵詞二]、[關鍵詞三]、[關鍵詞四]、[關鍵詞五]
+
+# Abstract {.unnumbered}
+
+[Write the English abstract here.]
+
+**Keywords**: [keyword 1], [keyword 2], [keyword 3], [keyword 4], [keyword 5]
+
+{{< include chapters/01-introduction.qmd >}}
+
+{{< include chapters/02-literature-review.qmd >}}
+
+{{< include chapters/03-methodology.qmd >}}
+
+{{< include chapters/04-analysis.qmd >}}
+
+{{< include chapters/05-conclusion.qmd >}}
+
+\newpage
+
+# 參考文獻 {.unnumbered}
+
+::: {#refs}
+:::

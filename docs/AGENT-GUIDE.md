@@ -1,0 +1,81 @@
+# Agent guide — working in a course repo
+
+You are in a course repository that mounts the thesisbug2 framework at `.framework/`. This file is the framework's half of your instructions; the course's own `AGENTS.md`, `COURSE.md`, and `STATUS.md` are the other half, and they win where they are more specific.
+
+## Starting a session
+
+1. Read `COURSE.md` (who the instructor is, the citation style, what is graded) and `STATUS.md` (one line per unit).
+1. If the request names or implies a unit, read that unit's `WORK.json` and `PROGRESS.md` before doing anything else. They say what the unit is and where it stopped.
+1. If the user's first message already says what they want, do that. Ask which unit only when the request could apply to more than one.
+
+## Layout
+
+```
+<course>/
+├── AGENTS.md  COURSE.md  STATUS.md
+├── .framework/        # the framework — read it, run it, do not write coursework into it
+├── library/           # references.bib + refs/ shared by two or more units
+├── notes/             # lecture notes, transcripts, material that is not cited
+└── units/NN-<type>-<topic>/     # one assignment: WORK.json, PROGRESS.md, the manuscript, references.bib, refs/
+```
+
+A **unit** is any directory containing `WORK.json`. Skills write unit paths as `<unit>/…` and shared paths as `library/…`.
+
+## Commands
+
+Run everything from the course root through the dispatcher:
+
+```bash
+./fw help                              # the commands that exist in this framework version
+./fw <command> [<unit>] [options]      # e.g. ./fw check-citations units/03-paper-final
+./fw update                            # pull the framework and commit the new pinned version
+```
+
+`<unit>` may be a path or a bare unit name. Without it, the unit is the nearest `WORK.json` above your working directory; from the course root `fw` lists the units and stops rather than guessing. A skill may name a command that this framework version does not have yet — `./fw help` is the truth, so say a gate was not run when its command is missing; never report it as passed.
+
+## Skills
+
+The framework's skills are linked into `.claude/skills/` and `.agents/skills/`. Invoke the skill for the job — the procedure lives there, not here.
+
+| Stage | Skill |
+| :--- | :--- |
+| Choosing a topic | `topic-scout` |
+| Finding, fetching, and auditing sources | `source-kit` |
+| Multi-spot edits to manuscript text | `safe-edit` |
+| Terminology (Traditional Chinese, Taiwan usage) | `fix-terms` |
+| Argument flow and coherence | `flow-check` |
+| Citation consistency | `cite-check` |
+| External cross-model review, at milestones | `gpt-review` |
+| Slide decks | `deck-svg` (live HTML) or `deck-image` (one image per slide), on `house-style` and `deck-runtime` |
+| Figures, 字數, transcripts | `diagram`, `count-zh`, `yt2sub` |
+
+Lint order for a manuscript: **fix-terms → flow-check → cite-check**, with gpt-review after that at milestones. Accepted findings land through safe-edit.
+
+## Sources live in one of two tiers
+
+A source's files exist in exactly one place: the unit that fetched it (`<unit>/refs/`, `<unit>/references.bib`) or, once a second unit wants it, `library/`. Look in `library/` and the other units before fetching anything; keys are unique across the course. `source-kit` has the full procedure, including the append-only audit logs (`refs/audit/<key>.jsonl`) and why a `support` verdict carries the unit's name while an `identity` verdict does not. The state machine is in `.framework/docs/bib-lifecycle.md`.
+
+Raw originals (`*.pdf`, `*.epub`, `*.html`) are never committed. Transcripts and audit logs are.
+
+## Communication contract
+
+Each rule has a reason; apply the reason when a case is not listed.
+
+- **Report from evidence.** Before writing a status line into `PROGRESS.md`, `STATUS.md`, a commit message, or a reply, check each claim against a command result or a file you saw this session. Say "not yet verified" where that is the truth. This is graded work: a confident but unverified "all citations backed" is worse than an honest gap, because nobody re-checks a claim that sounds finished.
+- **Pause only where the author is genuinely needed:** a destructive or irreversible step (deleting unit content, force-push, rewriting an audit line), a real scope change, or a judgment only the author can make (which topic, whether a disputed claim stays in). Routine reversible steps that follow from the request — running a gate, fetching a source — need no permission. If a question comes up, finish everything that does not depend on the answer, then ask at the end of that turn.
+- **Stay inside the request.** Something else worth fixing is a suggestion for the closing summary, not an edit. In manuscript text this matters doubly: unrequested rewording can detach a claim from its `[@key, locator]`.
+- **A handed-in unit is frozen.** A later unit that builds on it copies the text it needs and records `"extends"` in its `WORK.json`; it never edits or live-includes the earlier unit, because that would change what already-graded work rebuilds to.
+- **Write the closing summary for someone who did not watch.** Outcome first, then what you need from the author. Full sentences; re-introduce any label you coined while working.
+- **Reply in the author's language.** Traditional Chinese output uses Taiwan usage; `fix-terms` has the rules.
+
+## The framework directory
+
+`.framework/` is a git submodule pinned to one commit, so a unit handed in last term still rebuilds the same way. Coursework never writes into it. If you find a framework bug while doing coursework, tell the author; when they want it fixed, make the change inside `.framework/` as its own commit, push it to the framework's remote, then `./fw update` in the course. Read `.framework/AGENTS.md` before editing the framework — it is a public repository and the course is private, so nothing from the course may be copied into it.
+
+## Figures
+
+SVG first. Author PlantUML source beside the manuscript and render with `./fw plantuml2svg <in>.plantuml <out>.svg`; commit both. Quarto embeds the SVG in PDF builds and decks embed it directly. Generated raster imagery is only for what SVG cannot express.
+
+## Git
+
+One branch, `main`. Commit coursework to the course repo as you go, one logical change per commit. Tag milestones as `<unit>/<label>`, for example `03-paper-final/draft-v1`. Push only when the author asks.

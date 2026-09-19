@@ -1,0 +1,28 @@
+project:
+  type: default
+  output-dir: _output
+  render:
+    - paper.qmd
+
+title: "[論文標題]"
+subtitle: "[副標題]"
+author: "[作者]"
+date: "[日期]"
+
+format:
+  pdf:
+    documentclass: article
+    pdf-engine: xelatex
+    papersize: a4
+    include-in-header:
+      - {{FW}}/assets/templates/journal/preamble.tex
+    toc: false
+    number-sections: true
+    colorlinks: true
+    linkcolor: black
+    urlcolor: blue
+    citecolor: black
+
+bibliography: references.bib
+csl: {{FW}}/assets/chicago-fullnote-bibliography.csl
+lang: zh-Hant

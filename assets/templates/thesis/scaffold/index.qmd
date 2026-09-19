@@ -1,0 +1,11 @@
+# 摘要 {.unnumbered}
+
+[待完成中文摘要]
+
+**關鍵詞**：[關鍵詞一]、[關鍵詞二]、[關鍵詞三]
+
+# Abstract {.unnumbered}
+
+[Write English abstract here]
+
+**Keywords**: [Keyword 1], [Keyword 2], [Keyword 3]

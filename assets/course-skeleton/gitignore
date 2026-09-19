@@ -1,0 +1,25 @@
+# Build output
+_output/
+**/_quarto.yml
+**/.quarto/
+*_files/
+
+# Raw source originals are kept in a GitHub Release, not in git
+# (see .framework/docs/bib-lifecycle.md); transcripts and audit logs are committed.
+**/refs/archive/
+**/refs/*.pdf
+**/refs/*.epub
+**/refs/*.html
+**/refs/*.htm
+**/refs/*.docx
+
+# Agent-local and OS files
+.claude/*
+!.claude/skills
+.antigravitycli/
+.gstack/
+.context/
+generated-images/
+.DS_Store
+__pycache__/
+.env*

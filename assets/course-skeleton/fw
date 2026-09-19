@@ -1,0 +1,3 @@
+#!/bin/sh
+# Forwards to the framework dispatcher. Written by course-init; do not edit.
+exec "$(dirname "$0")/.framework/scripts/fw" "$@"

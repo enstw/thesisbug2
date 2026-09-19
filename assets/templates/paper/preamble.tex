@@ -1,0 +1,37 @@
+% === CJK & Font Setup ===
+\usepackage{xeCJK}
+\setmainfont[
+  Path={{FW}}/assets/fonts/,
+  Extension=.ttf,
+  BoldFont=ENSFont-Bold
+]{ENSFont-Regular}
+\setCJKmainfont[
+  Path={{FW}}/assets/fonts/,
+  Extension=.ttf,
+  BoldFont=ENSFont-Bold
+]{ENSFont-Regular}
+
+% === Chinese Line Breaking ===
+\XeTeXlinebreaklocale "zh"
+\XeTeXlinebreakskip = 0pt plus 1pt
+
+% === Line Spacing ===
+\usepackage{setspace}
+\onehalfspacing
+
+% === Page Margins ===
+\usepackage[top=2.54cm, bottom=2.54cm, left=2.54cm, right=2.54cm]{geometry}
+
+% === Header & Footer ===
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0pt}
+
+% === APA-zh option (POC) ===
+% The default is APA 7th (arabic-numbered sections). To switch the document to
+% the APA-zh Traditional-Chinese house look (壹/貳/參… sections, 一/二/三…
+% subsections), add the \renewcommand block from
+% assets/templates/paper/citation-style.md §1 here, and set the csl in
+% _quarto.yml to {{FW}}/assets/apa-zh-TW.csl.

@@ -1,0 +1,42 @@
+project:
+  type: default
+  output-dir: _output
+  render:
+    - paper.qmd
+
+title: "[論文標題]"
+subtitle: "[副標題]"
+author: "[作者]"
+date: "[日期]"
+
+# APA-zh (Traditional-Chinese localization). Selected when WORK.json has
+# "citation": "apa-zh" — ./fw build loads THIS file instead of _quarto.yml.
+# Splits the reference list into 中文文獻 / 西文文獻 via the multibib filter;
+# each source lives in references-zh.bib or references-en.bib.
+citeproc: false          # let the multibib filter run citeproc per bibliography
+validate-yaml: false     # allow the bibliography map below
+filters:
+  - {{FW}}/assets/multibib.lua
+
+bibliography:
+  zh: references-zh.bib
+  en: references-en.bib
+csl: {{FW}}/assets/apa-zh-TW.csl
+
+# zh-TW + stroke collation → the 中文文獻 list auto-sorts by 筆畫 (unicode-collation).
+lang: zh-TW-u-co-stroke
+
+format:
+  pdf:
+    documentclass: article
+    pdf-engine: xelatex
+    papersize: a4
+    fontsize: 12pt
+    include-in-header:
+      - {{FW}}/assets/templates/paper/preamble.tex
+    toc: false
+    number-sections: true
+    colorlinks: true
+    linkcolor: black
+    urlcolor: blue
+    citecolor: black

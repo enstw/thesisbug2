@@ -1,0 +1,39 @@
+project:
+  type: default
+  output-dir: _output
+  render:
+    - paper.qmd
+
+title: "[論文標題]"
+subtitle: "[副標題]"
+author: "[作者]"
+date: "[日期]"
+
+format:
+  pdf:
+    documentclass: article
+    pdf-engine: xelatex
+    papersize: a4
+    fontsize: 12pt
+    include-in-header:
+      - {{FW}}/assets/templates/paper/preamble.tex
+    toc: false
+    number-sections: true
+    colorlinks: true
+    linkcolor: black
+    urlcolor: blue
+    citecolor: black
+
+bibliography: references.bib
+
+# Citation style.
+#   Default — APA 7th: automatic, single alphabetical reference list.
+#   Option — APA-zh-TW (中文/西文 split, 筆畫 sort, 全形 punctuation): a
+#     first-class variant, selected at init (./fw unit-init --citation apa-zh).
+#     build reads "citation": "apa-zh" from WORK.json and loads
+#     _quarto-apa-zh.yml INSTEAD of this file — do not hand-edit the csl line
+#     (<unit>/_quarto.yml is regenerated on every build). Details:
+#     assets/templates/paper/citation-style.md.
+csl: {{FW}}/assets/apa.csl
+
+lang: zh-Hant

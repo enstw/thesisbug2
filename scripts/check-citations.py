@@ -65,7 +65,10 @@ def find_cited_keys(unit: Path) -> dict[str, list[str]]:
     for qmd in sorted(unit.rglob("*.qmd")):
         if any(part.startswith(("_", ".")) for part in qmd.relative_to(unit).parts):
             continue
-        for m in CITATION_RE.finditer(qmd.read_text(encoding="utf-8")):
+        # Commented-out text is not part of the manuscript (scaffolds keep their
+        # citation example in a comment).
+        text = re.sub(r"<!--.*?-->", "", qmd.read_text(encoding="utf-8"), flags=re.S)
+        for m in CITATION_RE.finditer(text):
             key = m.group(1).rstrip(".:")
             if key.startswith(CROSSREF_PREFIXES):
                 continue

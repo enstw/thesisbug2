@@ -4,7 +4,7 @@
 
 AI-agent framework for Traditional Chinese academic coursework — one repo per course, shared skills, audited sources.
 
-> **Status: early port.** The architecture in [`docs/DESIGN.md`](docs/DESIGN.md) is settled, the 15 agent skills are in `.agents/skills/`, and the `fw` dispatcher with the checking gates is in `scripts/`. The Quarto templates, `unit-init`, `build`, and `course-init` are not here yet, so the install steps below describe the intended flow and do not work today. The [roadmap](#roadmap) shows what exists.
+> **Status: early port.** The architecture in [`docs/DESIGN.md`](docs/DESIGN.md) is settled, the 15 agent skills are in `.agents/skills/`, and `scripts/` has the `fw` dispatcher, `unit-init`, `build`, and the checking gates, with the Quarto templates in `assets/templates/`. `course-init` is not here yet, so a course repo still has to be assembled by hand (see `AGENTS.md`); the steps below marked *planned* do not work today. The [roadmap](#roadmap) shows what exists.
 
 ## What it is
 
@@ -50,14 +50,17 @@ git clone https://github.com/enstw/thesisbug2 ~/homework/thesisbug2
 
 `course-init` will create `~/homework/1142-asia-pacific-security/`, write the course skeleton, mount this framework at `.framework/`, link the agent skill directories, and create a **private** GitHub repository for the course.
 
-### Start a unit *(planned)*
+### Start a unit
 
 ```bash
 cd ~/homework/1142-asia-pacific-security
-.framework/scripts/unit-init --type paper --title "…" --author "…"
+./fw unit-init --type paper --name final --title "…" --author "…"     # add --citation apa-zh for APA-zh-TW
+./fw build final                                                        # → _output/NN-paper-final.pdf
 ```
 
-### Update the framework inside a course *(planned)*
+Types: `preparation`, `homework`, `paper`, `journal`, `thesis`, `presentation` (`--variant thesis|reading-guide`). `unit-init` runs one build so you know the unit renders before you start writing.
+
+### Update the framework inside a course
 
 ```bash
 ./fw update        # pulls .framework/ and commits the new pinned version
@@ -94,9 +97,10 @@ A new source lands in the unit that fetched it. When a second unit wants to cite
 - [x] Architecture written down — [`docs/DESIGN.md`](docs/DESIGN.md)
 - [x] Design reviewed and settled
 - [x] Agent skills ported and cleared for publication
-- [ ] Quarto templates, CSL files, and protocols ported (protocols generalised first)
+- [x] Quarto templates, CSL files, fonts ported
+- [ ] Writing protocols ported (they must be generalised first)
 - [x] `fw` dispatcher and the gates: citations and source backing across both tiers, batch edits, readability, 簡繁 variants, 字數
-- [ ] `unit-init` and `build` (two-tier bibliography, APA-zh grouping by `langid`)
+- [x] `unit-init` and `build` (two-tier bibliography, APA-zh 中文／西文 grouping by `langid`)
 - [ ] `course-init`, `refs promote`, `refs-snapshot` (`fw update` is done)
 - [ ] First real course run on the framework
 

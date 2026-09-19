@@ -1,6 +1,9 @@
 # Build output
 _output/
 **/_quarto.yml
+**/_preamble.tex
+**/_bib-zh.bib
+**/_bib-en.bib
 **/.quarto/
 *_files/
 

@@ -7,7 +7,9 @@ abstract: |
 
 # 前言
 
-[待完成。範例引用：[@author_keyword_year, p. 15]]
+[待完成]
+
+<!-- 引用寫法範例：[@author_keyword_year, p. 15]（key 需先存在於 references.bib 或 library/references.bib） -->
 
 # 文獻回顧
 

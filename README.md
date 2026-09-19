@@ -64,7 +64,7 @@ bash <(curl -fsSL https://raw.githubusercontent.com/enstw/thesisbug2/main/instal
   --author "Your Name" --field "國際關係" --citation apa-zh --yes
 ```
 
-What is the same for every course — your name, institution, field, citation style — is typed once per machine. The first interactive run offers to save it (`--save-defaults` does so unattended) to `~/.config/thesisbug2/config.ini`, which you can also write by hand:
+What is the same for every course — your name, institution, field, citation style, and the base path your courses live under — is typed once per machine. The first interactive run offers to save it (`--save-defaults` does so unattended) to `~/.config/thesisbug2/config.ini`, which you can also write by hand:
 
 ```ini
 [defaults]
@@ -72,12 +72,13 @@ author = 碩專二 王小明
 institution = ○○大學 ○○碩士在職專班
 field = 國際關係
 citation = apa-zh
-# optional, hand-set only: parent = ~/homework, owner = <github owner>
+base_path = ~/homework          # courses are created at <base_path>/<slug>
+# optional, hand-set only: owner = <github owner>
 ```
 
 A flag beats the file, and the file beats the built-in default; in a terminal its values show up as the prompt defaults. The file is per machine and is read only when a course is created — after that the course's own `COURSE.md` is what units and agents read.
 
-`--no-github` creates the course locally only; `--parent <dir>` puts it somewhere other than `~/homework`; `--help` lists the rest. Already have the framework cloned? `scripts/course-init.py` is the same program.
+`--no-github` creates the course locally only; `--base-path <dir>` puts it somewhere other than the configured base path (`~/homework` when nothing is configured); the course directory itself is always created by the installer and named after the slug, so directory, GitHub repo, and every path in the course agree; `--help` lists the rest. Already have the framework cloned? `scripts/course-init.py` is the same program.
 
 ### Start a unit
 

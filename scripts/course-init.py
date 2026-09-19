@@ -5,7 +5,8 @@
 
 Asks for whatever it was not given (when run in a terminal), then:
 
-  1. creates <parent>/<slug>/ and `git init`s it
+  1. creates <base path>/<slug>/ and `git init`s it — the directory is always
+     named after the slug, so directory, repo, and paths agree
   2. mounts the framework as a shallow git submodule at .framework/
   3. writes the course skeleton — AGENTS.md, COURSE.md, STATUS.md,
      .gitignore, ./fw, library/, notes/, units/ — with your answers filled in
@@ -18,7 +19,8 @@ Only the course name and the slug are required; every other field may be left
 empty and filled in COURSE.md later.
 
 What is the same for every course you create — your name on submitted work,
-institution, field, citation style, parent directory, GitHub owner — can live
+institution, field, citation style, the base path courses are created under,
+GitHub owner — can live
 in a per-account file, so it is typed once per machine:
 
     ~/.config/thesisbug2/config.ini      ($XDG_CONFIG_HOME is honoured)
@@ -27,12 +29,12 @@ in a per-account file, so it is typed once per machine:
     author = 碩專二 王小明
     institution = …
     citation = apa-zh
+    base_path = ~/homework
 
 A flag beats the file, the file beats the built-in default. In a terminal the
 file's values appear as the prompt defaults, and the first run offers to write
 the file from your answers; --save-defaults does the same without asking.
-Only author, institution, field and citation are written that way; `parent`
-and `owner` are read from the file but set by hand.
+`owner` is read from the file but only ever set by hand.
 
 Standard library only, so it can run before anything is installed:
 install.sh downloads and runs this file. Every prompt has a flag, so an agent
@@ -57,7 +59,7 @@ CITATIONS = ("apa", "apa-zh", "chicago-fullnote")
 POINTER = "See [AGENTS.md](AGENTS.md).\n"
 # What stays the same from one course to the next. The course-specific fields
 # (title, term, instructor) are deliberately not saveable.
-ACCOUNT_KEYS = ("author", "institution", "field", "citation", "parent", "owner")
+ACCOUNT_KEYS = ("author", "institution", "field", "citation", "base_path", "owner")
 
 
 def config_path() -> Path:
@@ -83,8 +85,7 @@ def load_account() -> dict[str, str]:
 
 def save_account(values: dict[str, str]) -> Path:
     path = config_path()
-    # Merge over what is there: parent and owner are only ever set by hand,
-    # and a one-off --parent must not become the default for every later course.
+    # Merge over what is there, so a hand-set owner survives a rewrite.
     cp = configparser.ConfigParser(interpolation=None)
     cp["defaults"] = {**load_account(), **{k: v for k, v in values.items() if v}}
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -176,13 +177,15 @@ def main() -> None:
     ap.add_argument("--institution", help="institution / programme")
     ap.add_argument("--field", help="discipline, used by review prompts, e.g. 國際關係")
     ap.add_argument("--citation", choices=CITATIONS)
-    ap.add_argument("--parent", help="where to create the course directory (default: ~/homework)")
+    ap.add_argument("--base-path", "--parent", dest="base_path",
+                    help="directory that holds your courses; the course is created at "
+                         "<base path>/<slug> (default: ~/homework)")
     ap.add_argument("--owner", help="GitHub owner (default: the authenticated gh user)")
     ap.add_argument("--no-github", action="store_true", help="create the local repo only")
     ap.add_argument("--framework-url", default=FRAMEWORK_URL, help=argparse.SUPPRESS)
     ap.add_argument("--yes", action="store_true", help="don't prompt; use defaults for anything not given")
     ap.add_argument("--save-defaults", action="store_true",
-                    help=f"write author/institution/field/citation to {config_path()}")
+                    help=f"write author/institution/field/citation/base_path to {config_path()}")
     a = ap.parse_args()
 
     interactive = sys.stdin.isatty() and not a.yes
@@ -232,15 +235,16 @@ def main() -> None:
     institution = field(a.institution, "Institution / programme (optional)", account.get("institution", ""))
     discipline = field(a.field, "Field, for review prompts (optional)", account.get("field", ""))
     citation = field(a.citation, "Citation style", account.get("citation", "apa"), CITATIONS)
-    parent_text = field(a.parent, "Create it under", account.get("parent", "~/homework"))
-    parent = Path(parent_text).expanduser()
+    base_text = field(a.base_path, "Base path — the directory that holds your courses",
+                      account.get("base_path", "~/homework"))
+    parent = Path(base_text).expanduser()
     owner = a.owner or account.get("owner") or user
 
     answers = {"author": author, "institution": institution, "field": discipline,
-               "citation": citation}
+               "citation": citation, "base_path": base_text}
     save = a.save_defaults
     if interactive and not save and not config_path().exists():
-        save = ask(f"Save your name, institution, field and citation style as defaults for "
+        save = ask(f"Save your name, institution, field, citation style and base path as defaults for "
                    f"future courses ({config_path()})?", "y", ("y", "n")) == "y"
     if save:
         print(f"defaults written to {save_account(answers)}")

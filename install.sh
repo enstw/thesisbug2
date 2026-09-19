@@ -41,8 +41,10 @@ trap 'rm -rf "$tmp"' EXIT
 curl -fsSL "$RAW/scripts/course-init.py" -o "$tmp/course-init.py" \
   || fail "could not download course-init.py from $RAW"
 
-# Read answers from the terminal even when this script itself came through a pipe.
-if [ -t 0 ] || [ ! -r /dev/tty ]; then
+# Read answers from the terminal even when this script itself came through a
+# pipe. /dev/tty can exist yet fail to open when there is no controlling
+# terminal (an agent, CI), so try opening it rather than testing the file.
+if [ -t 0 ] || ! (exec < /dev/tty) 2>/dev/null; then
   python3 "$tmp/course-init.py" "$@"
 else
   python3 "$tmp/course-init.py" "$@" < /dev/tty

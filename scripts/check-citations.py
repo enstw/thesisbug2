@@ -102,9 +102,11 @@ def main() -> None:
         all_bibs.append(unit_bib)
     all_bibs = [b for b in all_bibs if b.is_file()]
 
-    if not unit_bib.is_file() and not lib_bib.is_file():
-        print(f"ERROR: no {BIB_NAME} in {rel(unit, root)}/ or library/")
+    if not all_bibs:
+        print(f"ERROR: no {BIB_NAME} anywhere in this course")
         sys.exit(1)
+    # A unit with no bib of its own is fine: it may cite only the library —
+    # or a source still sitting in another unit, which BROKEN then points at.
 
     where: dict[str, list[Path]] = {}
     entries: dict[str, dict] = {}

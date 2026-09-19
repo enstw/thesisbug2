@@ -79,8 +79,8 @@ Markdown (`<unit>/refs/<citation_key>.md`) is the preferred form.
 **Originals are not tracked in git.** The raw fulltext files (`*.pdf`, `*.epub`,
 `*.html`) under `<unit>/refs/` are gitignored; their bytes live in a GitHub
 Release managed by `./fw refs-snapshot`, pinned by the committed
-`MANIFEST.tsv` beside the originals (path + sha256 + release tag; one Release
-per course repo). Transcripts (`*.md`)
+`library/refs/MANIFEST.tsv` (one manifest and one Release for the whole course:
+path relative to the course root + sha256 + release tag). Transcripts (`*.md`)
 and audit logs (`audit/*.jsonl`) stay in git.
 
 - After fetching a new original: `./fw refs-snapshot push`, then commit

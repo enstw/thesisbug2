@@ -130,7 +130,7 @@ Rules:
 
 1. **New sources land in the unit.** Topic scouting and literature scans pull in many sources that are never cited. Defaulting to the library would bury the shared sources in noise.
 1. **Keys are unique across the whole course repo.** `check-citations` fails when a key appears in two units, or in a unit and the library, and tells the author to promote. This is how a duplicate fetch is caught.
-1. **`refs promote <key>` is one `git mv`.** It moves `<key>.md`, `audit/<key>.jsonl`, the bib entry, and the `MANIFEST.tsv` line into `library/`. Audit history travels with the file.
+1. **`./fw refs promote <key>` moves everything that belongs to the key** — the bib entry, `<key>.md`, `audit/<key>.jsonl`, any original under `archive/` — into `library/`, with `git mv` so history follows. It validates before it touches anything. When the key already sits in more than one place (a duplicate fetch), it keeps one copy and merges the audit logs line by line, because every line is a judgment someone made; it refuses when the transcripts differ, since two transcripts of one key usually means one is the wrong document. `./fw refs where <key>` shows a key's home and which units cite it.
 1. **Assigned course readings go straight into `library/`.** They will be cited by more than one unit.
 1. **The two verdict kinds have different scope.**
    - `identity` (is this file the cited work itself?) is a fact about the source. After promotion every unit inherits it; nothing is re-audited.
@@ -138,7 +138,7 @@ Rules:
 1. **Builds read both tiers.** `build` writes the unit's `_quarto.yml` with `bibliography: [<course>/library/references.bib, references.bib]`. Lookup order is unit first, then library.
 1. **The quality ratchet is per unit.** `required_bib_level` lives in the unit's `WORK.json`. The library has no level of its own; `check-bib --library` reports its overall state.
 1. **Units without citations have no `refs/`.** It is created on the first fetch.
-1. **Originals are not in git.** `refs-snapshot` keeps one GitHub Release per course repo (the old template kept one per branch), pinned by the committed `MANIFEST.tsv` files.
+1. **Originals are not in git.** `./fw refs-snapshot` keeps one GitHub Release per course repo (tag `refs`; the old template kept one per branch), pinned by a single committed manifest, `library/refs/MANIFEST.tsv`, that covers both tiers with paths relative to the course root. A release asset is named after the file alone (`<key>.pdf`) — keys are unique across the course — so promoting a source rewrites its manifest path without re-uploading anything.
 
 ## Course repos on GitHub
 

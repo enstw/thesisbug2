@@ -100,10 +100,14 @@ def main() -> None:
                      "or pass --no-github to create the course locally only.")
 
     # ── 1. the fields ────────────────────────────────────────────────────────
-    slug = field(a.slug, "Course slug — directory and repo name, e.g. 1142-asia-pacific-security")
-    if not re.fullmatch(r"[a-z0-9][a-z0-9._-]*", slug or ""):
-        sys.exit("the slug must be lowercase ASCII letters, digits, '-', '.', '_' — it becomes a "
+    slug_rule = ("the slug must be lowercase ASCII letters, digits, '-', '.', '_' — it becomes a "
                  "directory name, a GitHub repo name, and part of every path in the course")
+    slug = field(a.slug, "Course slug — directory and repo name, e.g. 1142-asia-pacific-security")
+    while not re.fullmatch(r"[a-z0-9][a-z0-9._-]*", slug or ""):
+        if a.slug or not interactive:          # given as an argument: fail, don't loop
+            sys.exit(slug_rule)
+        print("  " + slug_rule)
+        slug = ask("Course slug")
     title = field(a.title, "Course name", slug)
     term = field(a.term, "Term", "")
     instructor = field(a.instructor, "Instructor", "")

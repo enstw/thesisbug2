@@ -150,7 +150,7 @@ Rules:
 | Framework | submodule at `.framework/`, HTTPS URL | works with the maintainer's existing credential setup; the framework is public, so no credential is needed to read it |
 | End of term | GitHub *Archive* (read-only) | frozen but still cloneable; the pinned submodule keeps it rebuildable |
 
-`course-init`, shipped by the framework, creates a course in one command:
+`install.sh` (a one-line `curl` from the README) checks prerequisites and runs `scripts/course-init.py`, which creates a course in one command. It prompts for each field in a terminal and takes every field as a flag, so agents can run it unattended:
 
 1. Create `~/homework/<course>/` and write the skeleton (`AGENTS.md`, `COURSE.md`, `STATUS.md`, `library/`, `units/`, `notes/`, `.gitignore`).
 1. Add the `.framework/` submodule and the two skill symlinks.

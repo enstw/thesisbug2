@@ -4,7 +4,7 @@
 
 AI-agent framework for Traditional Chinese academic coursework — one repo per course, shared skills, audited sources.
 
-> **Status: early port.** The architecture in [`docs/DESIGN.md`](docs/DESIGN.md) is settled, the 15 agent skills are in `.agents/skills/`, and `scripts/` has the `fw` dispatcher, `unit-init`, `build`, and the checking gates, with the Quarto templates in `assets/templates/`. `course-init` is not here yet, so a course repo still has to be assembled by hand (see `AGENTS.md`); the steps below marked *planned* do not work today. The [roadmap](#roadmap) shows what exists.
+> **Status: early port.** The architecture in [`docs/DESIGN.md`](docs/DESIGN.md) is settled, the 15 agent skills are in `.agents/skills/`, and `scripts/` has the `fw` dispatcher, `unit-init`, `build`, and the checking gates, with the Quarto templates in `assets/templates/`. `refs promote`, `refs-snapshot`, and the writing protocols are still to come. The [roadmap](#roadmap) shows what exists.
 
 ## What it is
 
@@ -41,14 +41,30 @@ flowchart LR
 
 macOS and Linux only. Course repos rely on symlinks committed to git, which Windows handles only in developer mode, so Windows is not supported.
 
-### Start a course *(planned — not implemented yet)*
+### Create a course
+
+With the GitHub CLI logged in (`gh auth login`), one command creates a course:
 
 ```bash
-git clone https://github.com/enstw/thesisbug2 ~/homework/thesisbug2
-~/homework/thesisbug2/scripts/course-init 1142-asia-pacific-security
+bash <(curl -fsSL https://raw.githubusercontent.com/enstw/thesisbug2/main/install.sh)
 ```
 
-`course-init` will create `~/homework/1142-asia-pacific-security/`, write the course skeleton, mount this framework at `.framework/`, link the agent skill directories, and create a **private** GitHub repository for the course.
+It asks for the course details, then does the rest:
+
+1. **Collects the fields** — course slug (directory and repo name, e.g. `1142-asia-pacific-security`), course name, term, instructor, your name as it appears on submitted work, institution, field, and citation style (`apa`, `apa-zh`, `chicago-fullnote`).
+1. **Creates the repository** — `~/homework/<slug>/`, `git init`, first commit, then a **private** GitHub repository under your account, pushed and tagged with the `thesisbug-course` topic.
+1. **Mounts the framework** — this repository as a shallow git submodule at `.framework/`, with `submodule.recurse` on so a plain `git pull` keeps it at the version the course pins.
+1. **Sets up the agent directives** — `AGENTS.md` (pointing agents at the framework's guide, `COURSE.md`, and `STATUS.md`), `CLAUDE.md` and `GEMINI.md` pointers, and `.claude/skills` + `.agents/skills` linked to the framework's skills, plus `COURSE.md`, `STATUS.md`, `./fw`, `library/`, `notes/`, `units/`.
+
+Every question has a flag, so an agent or a script can run it without prompts:
+
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/enstw/thesisbug2/main/install.sh) \
+  1142-asia-pacific-security --title "亞太安全專題" --term "114-2" \
+  --author "Your Name" --field "國際關係" --citation apa-zh --yes
+```
+
+`--no-github` creates the course locally only; `--parent <dir>` puts it somewhere other than `~/homework`; `--help` lists the rest. Already have the framework cloned? `scripts/course-init.py` is the same program.
 
 ### Start a unit
 
@@ -101,12 +117,13 @@ A new source lands in the unit that fetched it. When a second unit wants to cite
 - [ ] Writing protocols ported (they must be generalised first)
 - [x] `fw` dispatcher and the gates: citations and source backing across both tiers, batch edits, readability, 簡繁 variants, 字數
 - [x] `unit-init` and `build` (two-tier bibliography, APA-zh 中文／西文 grouping by `langid`)
-- [ ] `course-init`, `refs promote`, `refs-snapshot` (`fw update` is done)
+- [x] `install.sh` / `course-init`: one command from nothing to a private course repo with the framework mounted
+- [ ] `refs promote`, `refs-snapshot`
 - [ ] First real course run on the framework
 
 ## Contributing
 
-The project is at the design stage and the design is the thing to comment on. Open an issue against a section of `docs/DESIGN.md`.
+Issues and pull requests are welcome. The architecture and its reasons are in [`docs/DESIGN.md`](docs/DESIGN.md); agents working on the framework start from [`AGENTS.md`](AGENTS.md).
 
 ## License
 

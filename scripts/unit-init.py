@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Create a new unit in a course repo.
 
-    ./fw unit-init --type paper --name final --title "…" --author "…"
-                   [--subtitle "…"] [--date YYYY-MM-DD]
+    ./fw unit-init --type paper --name final --title "…"
+                   [--author "…"] [--subtitle "…"] [--date YYYY-MM-DD]
                    [--citation apa|apa-zh]          (paper only)
+                   (author and citation default to COURSE.md)
                    [--variant thesis|reading-guide] (presentation only)
                    [--extends <earlier-unit>] [--no-build]
 
@@ -83,6 +84,18 @@ def fill_placeholders(unit: Path, work: dict, fw_rel: str) -> None:
             f.write_text(s, encoding="utf-8")
 
 
+def course_fields(root: Path) -> dict[str, str]:
+    """The filled-in rows of COURSE.md's header table."""
+    f = root / "COURSE.md"
+    out = {}
+    if f.is_file():
+        for line in f.read_text(encoding="utf-8").splitlines():
+            m = re.match(r"\|\s*([^|]+?)\s*\|\s*(.+?)\s*\|\s*$", line)
+            if m and "[待完成]" not in m.group(2) and not set(m.group(2)) <= set(":- "):
+                out[m.group(1)] = m.group(2)
+    return out
+
+
 def update_status(root: Path, unit_name: str, ptype: str) -> None:
     status = root / "STATUS.md"
     if not status.is_file():
@@ -99,10 +112,11 @@ def main() -> None:
     ap.add_argument("--name", required=True,
                     help="short ASCII slug for the directory, e.g. final, midterm-blockade")
     ap.add_argument("--title", required=True)
-    ap.add_argument("--author", required=True)
+    ap.add_argument("--author", help="default: the Author row of COURSE.md")
     ap.add_argument("--subtitle", default="")
     ap.add_argument("--date", default=dt.date.today().isoformat())
-    ap.add_argument("--citation", choices=("apa", "apa-zh"), default="apa")
+    ap.add_argument("--citation", choices=("apa", "apa-zh"),
+                    help="paper only; default: the Citation style row of COURSE.md, else apa")
     ap.add_argument("--variant", choices=("thesis", "reading-guide"))
     ap.add_argument("--extends", help="earlier unit this one builds on (recorded, never included live)")
     ap.add_argument("--no-build", action="store_true", help="skip the verification build")
@@ -115,6 +129,15 @@ def main() -> None:
         sys.exit("--variant thesis|reading-guide is required for a presentation")
 
     root = course_root()
+    # COURSE.md holds what is true for every unit of the course, so a unit
+    # only has to say what differs.
+    course = course_fields(root)
+    a.author = a.author or course.get("Author")
+    if not a.author:
+        sys.exit("--author is required (COURSE.md has no Author filled in)")
+    if not a.citation:
+        style = course.get("Citation style", "").strip("`")
+        a.citation = style if style in ("apa", "apa-zh") else "apa"
     existing = list_units(root)
     if a.extends and not any(u.name == a.extends for u in existing):
         sys.exit(f"--extends: no unit named {a.extends}")

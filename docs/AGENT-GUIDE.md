@@ -5,6 +5,7 @@ You are in a course repository that mounts the thesisbug2 framework at `.framewo
 ## Starting a session
 
 1. Read `COURSE.md` (who the instructor is, the citation style, what is graded) and `STATUS.md` (one line per unit).
+1. If `COURSE.md` still has `[待完成]` slots, complete it before starting a unit: ask the author for the syllabus (a PDF or a link is enough; transcribe it with the pdf-to-markdown skill and keep the transcript in `notes/`) and fill the instructor, institution, field, what is graded, and the course notes from it, then confirm what you filled. The installer cannot fill these — they come from the syllabus — and every later unit, and every review prompt, reads them from this file.
 1. If the request names or implies a unit, read that unit's `WORK.json` and `PROGRESS.md` before doing anything else. They say what the unit is and where it stopped.
 1. If the user's first message already says what they want, do that. Ask which unit only when the request could apply to more than one.
 

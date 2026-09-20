@@ -56,6 +56,14 @@ def update(root: Path) -> int:
     if before == after:
         print(f"framework already current ({after})")
         return 0
+    # A course that sets `ignore = all` on the submodule has said it does not
+    # track the pin: every session starts with this update, so the recorded
+    # commit would only ever be churn there. Honour that and leave the index alone.
+    ignore = subprocess.run(["git", "-C", str(root), "config", "-f", ".gitmodules", "--get",
+                             "submodule..framework.ignore"], capture_output=True, text=True)
+    if ignore.stdout.strip() == "all":
+        print(f"framework {before} → {after} (pin not committed: .gitmodules sets ignore = all)")
+        return 0
     subprocess.run(["git", "-C", str(root), "add", ".framework"], check=True)
     # Startup updates must not sweep the author's already-staged coursework
     # into the pin commit. --only leaves those index entries untouched.

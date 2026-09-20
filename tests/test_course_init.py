@@ -140,6 +140,26 @@ class CourseInitTests(unittest.TestCase):
         self.assertEqual(self.run_cmd("git", "show", ":notes/staged.md", cwd=course).stdout, "staged draft\n")
         self.assertEqual(notes.read_text(), "staged draft\nunstaged revision\n")
 
+    def test_update_leaves_pin_alone_when_course_ignores_submodule(self):
+        self.run_cmd(sys.executable, str(REPO / "scripts/course-init.py"),
+                     "1142-methods", *self.arguments("--yes"))
+        course = self.root / "courses/1142-methods"
+        self.run_cmd("git", "checkout", "--detach", cwd=course / ".framework")
+        self.run_cmd("git", "config", "-f", ".gitmodules", "submodule..framework.ignore", "all", cwd=course)
+        self.run_cmd("git", "commit", "-qam", "stop tracking the framework pin", cwd=course)
+        head = self.run_cmd("git", "rev-parse", "HEAD", cwd=course).stdout.strip()
+        (self.framework / "new-version.txt").write_text("new framework revision\n")
+        self.run_cmd("git", "add", "new-version.txt", cwd=self.framework)
+        self.run_cmd("git", "commit", "-qm", "new framework revision", cwd=self.framework)
+        expected = self.run_cmd("git", "rev-parse", "HEAD", cwd=self.framework).stdout.strip()
+
+        result = self.run_cmd("./fw", "update", cwd=course)
+
+        self.assertIn("pin not committed", result.stdout)
+        self.assertEqual(self.run_cmd("git", "rev-parse", "HEAD", cwd=course / ".framework").stdout.strip(), expected)
+        self.assertEqual(self.run_cmd("git", "rev-parse", "HEAD", cwd=course).stdout.strip(), head)
+        self.assertEqual(self.run_cmd("git", "status", "--porcelain", cwd=course).stdout.strip(), "")
+
     def test_unattended_missing_slug_does_not_create_course(self):
         result = self.run_cmd(sys.executable, str(REPO / "scripts/course-init.py"),
                               *self.arguments("--yes"), check=False)

@@ -172,6 +172,9 @@ def main() -> None:
             copy_tree(TEMPLATES / "paper" / "apa-zh", unit)
 
     shutil.copy2(SHARED / "PROGRESS.md", unit / "PROGRESS.md")
+    # History lives beside PROGRESS.md, not in it: agents read PROGRESS.md at
+    # every session start, and a growing log there is paid for in context each time.
+    shutil.copy2(SHARED / "CHANGELOG.md", unit / "CHANGELOG.md")
     if a.type in CITATION_TYPES and not (unit / "references.bib").exists():
         # One bib per tier, APA-zh included: entries carry langid and the
         # build groups 中文／西文.

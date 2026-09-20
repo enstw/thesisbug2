@@ -19,4 +19,4 @@
 
 ## 變更紀錄
 
-- [YYYY-MM-DD] - 建立工作項目
+在 [`CHANGELOG.md`](CHANGELOG.md)，**不到必要不讀取**：本檔只放規則與現況，每一行都必須還有效；歷程寫進 CHANGELOG，要追溯時用 `grep` 查關鍵字，不整份載入。

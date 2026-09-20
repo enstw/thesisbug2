@@ -1,16 +1,11 @@
----
-name: self-inject
-description: >
-  Types keystrokes into the agent's own Claude Code prompt via tmux send-keys on
-  the pane the session runs in. Use only for what no tool reaches: a TUI
-  built-in command (/compact, /model, /config), the ! shell mode when output
-  must land in the transcript as the user's command, or queueing a follow-up
-  prompt for the next turn. Skills go through the Skill tool and long jobs
-  through background Bash instead. Requires a tmux-hosted session; injected
-  input fires only once the prompt is idle.
----
+# Optional integration: Claude Code prompt control through tmux
 
-# self-inject — drive your own Claude Code prompt via tmux
+This recipe applies only when the user requests control of their current
+Claude Code TUI inside tmux. It is outside shared skill discovery because
+its prompt commands and tool names are specific to that client. Other agents,
+non-TUI sessions, and ordinary coursework use their own direct tools; no
+framework workflow requires this recipe. Check the installed client's behavior
+before using it, since prompt queuing and background notifications can change.
 
 When this Claude Code session runs inside a tmux pane, the agent can type into
 its **own** input box with `tmux send-keys`, exactly as if the user typed it.

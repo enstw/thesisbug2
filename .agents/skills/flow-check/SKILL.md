@@ -8,7 +8,6 @@ description: >
   outline, connective naming, a fresh-context cold read, cross-chapter
   consistency, and git-seam targeting; outputs a severity-ranked 跳躍點清單 with
   proposed bridge sentences and rewrites nothing.
-user-invocable: true
 ---
 
 # flow-check — 篇章連貫檢查 (discourse coherence gate)
@@ -23,37 +22,41 @@ ranks them; it changes nothing by itself.
 
 ## The five checks
 
-Run 1–3 **per chapter** (parallel agents), 4 **once across chapters**, 5
+Run 1–3 **per chapter**, 4 **once across chapters**, 5
 **first** whenever git history is available (cheapest, highest hit rate).
 
 1. **逆向大綱 (reverse outline).** Compress every paragraph to one sentence:
    "this paragraph's claim is X." Then read *only the outline*. Flag: adjacent
    claims that don't connect, a claim unrelated to its section heading, the
    same claim appearing twice.
-2. **銜接命名 (connective naming).** For each adjacent paragraph pair, force
+1. **銜接命名 (connective naming).** For each adjacent paragraph pair, force
    an answer: "the implied connective between ¶N's end and ¶N+1's start is
    ___ (因此／然而／此外／例如／回到⋯⋯)." Cannot name one → seam. This is
    objective where "does it read smoothly" is not.
-3. **冷讀 (cold read).** A fresh-context subagent reads the chapter text and
+1. **冷讀 (cold read).** A fresh-context reviewer reads the chapter text and
    nothing else, marking: places it had to re-read, terms/entities appearing
    without introduction, abrupt topic shifts. **Isolation is the invariant**:
    the cold reader gets no outline, no other chapters, no conversation
    history — a reader with full context cannot feel the jumps because their
    brain silently supplies the missing bridges. (This is also why the author
    agent must not grade its own chapter.) "Fresh" means *spawned empty*: a
-   context-inheriting subagent (Claude Code's `fork` agent type, a resumed
+   context-inheriting subagent (a forked conversation, a resumed
    session, a teammate that saw the drafting) carries the bridges with it and
    is disqualified — use a plain new agent whose whole prompt is the chapter
    text plus the marking instructions. A bigger context window changes none
-   of this: the point is what the reader has *not* seen.
-4. **跨章一致 (cross-chapter consistency).** One agent over the per-chapter
+   of this: the point is what the reader has *not* seen. A separate clean
+   session is equivalent to a fresh subagent. If neither is available, prepare
+   a handoff containing only the chapter and marking instructions, run the
+   other checks, and mark the cold read pending; never call a same-context
+   re-read independent.
+1. **跨章一致 (cross-chapter consistency).** One agent over the per-chapter
    *outlines* from layer 1 (not full text): terminology drift on core
    concepts (the manuscript's own coinages — is the same mechanism named the
    same way in every chapter?), theory-chapter concepts actually used in the
    case chapters, comparison-chapter dimensions matching case-chapter section
    structure, and every 「如第X章所述」-style reference resolving to something
    that exists and says what is claimed.
-5. **git 接縫定位 (seam targeting).** `git log --stat -- <manuscript files>`
+1. **git 接縫定位 (seam targeting).** `git log --stat -- <manuscript files>`
    to list late insertions and heavily-patched spots; check the ±3 sentences
    around each insertion point before anything else. Seams concentrate here.
 
@@ -78,11 +81,13 @@ the gap as structural instead of papering over it.
 
 ## Orchestration
 
-Fan out one agent per chapter doing layers 1–3 (the cold read as its own
-clean-context agent), then one synthesizer doing layer 4 over the collected
-outlines, deduplicating, and ranking. For a single-file paper, treat top-level
-sections as the chapters. Findings from layer 5 seed the per-chapter agents
-("check these spots first").
+Run the chapters sequentially or use parallel agents when available and
+authorized; isolation of layer 3 matters, not the orchestration API. Do layer 4
+over the collected outlines, then deduplicate and rank. For a single-file
+paper, treat top-level sections as the chapters. Findings from layer 5 seed
+the other checks ("check these spots first"), but must not be included in the
+cold reader's prompt because they would prime that independent assessment.
+State which layers ran and which remain pending in the report.
 
 ## What it does NOT do
 

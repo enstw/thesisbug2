@@ -8,7 +8,6 @@ description: >
   all), then runs the gates: readability ratchet, 簡繁 variants, count-zh,
   check-citations. Defines what must not change (「」 quotes, 《》 titles, [@key]
   locators, hypothesis wording).
-user-invocable: true
 ---
 
 # safe-edit — 語料庫批次編輯紀律

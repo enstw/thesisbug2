@@ -8,7 +8,6 @@ description: >
   grep, enforces [@key] format and p. / para. locators, and strips NotebookLM
   [loc] residue. Whether a source actually supports a claim is source-kit, not
   this.
-user-invocable: true
 ---
 
 # cite-check — citation hygiene gate

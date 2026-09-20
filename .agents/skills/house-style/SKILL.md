@@ -7,14 +7,6 @@ description: >
   deck and paper engines copy from when scaffolding. Invoke directly only to
   change the house look or the content rules (palette, font, quoting and
   dispute-handling rules).
-user-invocable: true
-allowed-tools:
-  - Read
-  - Write
-  - Edit
-  - Bash(pwd)
-  - Bash(ls *)
-  - Bash(cp *)
 ---
 
 # house-style — the shared look (base skill)

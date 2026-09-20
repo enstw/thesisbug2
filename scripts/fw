@@ -57,8 +57,10 @@ def update(root: Path) -> int:
         print(f"framework already current ({after})")
         return 0
     subprocess.run(["git", "-C", str(root), "add", ".framework"], check=True)
-    subprocess.run(["git", "-C", str(root), "commit", "-m",
-                    f"chore(framework): update {before} → {after}"], check=True)
+    # Startup updates must not sweep the author's already-staged coursework
+    # into the pin commit. --only leaves those index entries untouched.
+    subprocess.run(["git", "-C", str(root), "commit", "--only", "-m",
+                    f"chore(framework): update {before} → {after}", "--", ".framework"], check=True)
     print(f"framework {before} → {after}, pin committed")
     return 0
 

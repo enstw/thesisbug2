@@ -8,16 +8,6 @@ description: >
   no-build deck from a fixed component vocabulary on the house-style look and
   deck-runtime shell; use it instead of hand-rolling reveal.js, Marp, or raw
   HTML. For slide-as-image decks use deck-image.
-user-invocable: true
-allowed-tools:
-  - Read
-  - Write
-  - Edit
-  - Bash(pwd)
-  - Bash(ls *)
-  - Bash(mkdir *)
-  - Bash(cp *)
-  - Bash(node --check *)
 ---
 
 # deck-svg — vector, hand-authored decks (engine layer)
@@ -115,11 +105,10 @@ this engine was carved out of; consult it for anything not covered here.
   Esc/digits secondary; `F` = fullscreen; `P` = presenter console.
 - **Self-check:** `deck.html#debug` — the runtime sets `document.body.dataset`
   `minfont` (`ok` = every arrival's text ≥ 30px @1080p) and `overflow` (`none` =
-  nothing escapes its frame). Headless via the global `browser-cdp` skill:
-  ```sh
-  SHOT=~/.claude/skills/browser-cdp/scripts/shot.sh
-  "$SHOT" --dump 'deck.html#debug' | grep -oE 'data-(minfont|overflow)="[^"]*"'
-  ```
+  nothing escapes its frame). Use the available browser tools; if `browser-cdp`
+  is installed, read its discovered `SKILL.md` for the current capture commands.
+  Do not assume a home-directory path, because agents install skills differently.
+  Without browser access, run the structure check and mark visual QA as pending.
 - **Structure check (no browser):** confirm `deck.html` links `asset/tokens.css`
   + `asset/deck.css`, loads `asset/deck-stage.js` then `asset/presenter-stage.js`,
   and that `#speaker-notes` has one entry per `<section class="slide">`. Run

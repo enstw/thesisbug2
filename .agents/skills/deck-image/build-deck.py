@@ -6,7 +6,7 @@ Reads a manifest JSON describing the deck, copies the shared deck runtime
 skill) into the deck's asset folder, and writes a self-contained HTML file
 where each slide is one full-bleed PNG. This is the assembly half of
 /deck-image; the PNGs come from a per-slide renderer (/genimage-img2,
-/genimage-nb, /genimage-canvas) and this script never cares which.
+HTML capture, or supplied PNGs) and this script never cares which.
 
 Usage:
     build-deck.py <manifest.json> [--assets <dir>] [--base <dir>]

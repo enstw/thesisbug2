@@ -97,37 +97,10 @@ def save_account(values: dict[str, str]) -> Path:
 
 
 def slugify(title: str) -> str:
-    """A slug suggestion, only when the title is ASCII enough to make one."""
+    """Suggest from an ASCII title; never silently discard untranslated words."""
+    if not title.isascii():
+        return ""
     return re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-")
-
-
-SLUG_PROMPT = ("You name git repositories. Reply with one line only: a lowercase English "
-               "kebab-case slug of 2 to 4 words for the university course named in the message. "
-               "No term, no number, no punctuation, no explanation.")
-
-
-def ai_slug(title: str) -> str:
-    """Ask a local Claude Code CLI to translate a non-ASCII course name.
-
-    Turning 亞太安全專題 into asia-pacific-security is translation, which no
-    rule does well. The call has every tool switched off and saves no session,
-    and its answer is only ever a suggestion the author confirms: it names a
-    GitHub repository, which is awkward to rename later. Any failure — no CLI,
-    not logged in, timeout, an answer that is not a slug — means no suggestion.
-    """
-    if not shutil.which("claude"):
-        return ""
-    print("  asking the local claude CLI for a slug suggestion …")
-    try:
-        r = subprocess.run(
-            ["claude", "-p", "--model", "haiku", "--tools", "", "--no-session-persistence",
-             "--system-prompt", SLUG_PROMPT, title],
-            stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=60)
-    except (OSError, subprocess.TimeoutExpired):
-        return ""
-    lines = r.stdout.strip().splitlines()
-    answer = lines[-1].strip().strip("`") if r.returncode == 0 and lines else ""
-    return answer if re.fullmatch(r"[a-z0-9]+(-[a-z0-9]+){0,5}", answer) else ""
 
 
 def term_code(term: str) -> str:
@@ -218,8 +191,11 @@ def main() -> None:
     term = field(a.term, "Term, e.g. 114 學年度第 2 學期 (optional)", "")
     suggestion = ""
     if not a.slug and interactive:             # unattended runs must name the repo themselves
-        name = slugify(title) or ai_slug(title)
+        name = slugify(title)
         suggestion = "-".join(x for x in (term_code(term), name) if x) if name else ""
+        if not name:
+            print("  enter an English slug supplied by you or your current agent; "
+                  "the installer does not call an AI service")
     slug = field(a.slug, "Course slug — directory and repo name, e.g. 1142-asia-pacific-security",
                  suggestion)
     while not re.fullmatch(r"[a-z0-9][a-z0-9._-]*", slug or ""):
@@ -252,19 +228,29 @@ def main() -> None:
     course = parent / slug
     if course.exists():
         sys.exit(f"{course} already exists")
-    if owner and run(["gh", "repo", "view", f"{owner}/{slug}"], check=False, quiet=True).returncode == 0:
+    if not a.no_github and owner and run(["gh", "repo", "view", f"{owner}/{slug}"], check=False, quiet=True).returncode == 0:
         sys.exit(f"GitHub already has {owner}/{slug} — pick another slug")
 
     # ── 2. local repo + framework submodule ──────────────────────────────────
     course.mkdir(parents=True)
     run(["git", "init", "-q", "-b", "main"], cwd=course)
-    print(f"mounting the framework at {course}/.framework …")
+    print(f"mounting the framework at {course}/.framework …\n"
+          "  downloading the bundled fonts can take several minutes; Git progress follows.",
+          flush=True)
     # Shallow: every course clones the framework, and its history (fonts
     # included) would otherwise be paid for once per course.
     local = not a.framework_url.startswith(("http://", "https://", "git@", "ssh://"))
     allow = ["-c", "protocol.file.allow=always"] if local else []
-    run(["git", *allow, "submodule", "add", "--depth", "1", a.framework_url, ".framework"],
-        cwd=course, quiet=True)
+    # Stream progress even through an agent's pipe: hiding it makes the font
+    # download look hung. Abort a stalled HTTP transfer without imposing a
+    # total deadline on a slow but advancing download; keep settings local to
+    # this command so other repos are unaffected.
+    mounted = run(["git", *allow, "-c", "http.lowSpeedLimit=1", "-c", "http.lowSpeedTime=60",
+                   "submodule", "add", "--progress", "--depth", "1", a.framework_url, ".framework"],
+                  cwd=course, check=False)
+    if mounted.returncode:
+        sys.exit(f"framework download failed; the partial course is preserved at {course}.\n"
+                 "Inspect it and move it aside before rerunning the installer with the same slug.")
     run(["git", "config", "-f", ".gitmodules", "submodule..framework.shallow", "true"], cwd=course)
     # An ordinary `git pull` of the course then also moves .framework/ to the
     # commit the course pins.
@@ -316,10 +302,10 @@ def main() -> None:
     run(["git", "commit", "-q", "-m", f"init: course {slug} on thesisbug2"], cwd=course)
     url = None
     if not a.no_github:
-        print(f"creating private GitHub repo {owner}/{slug} …")
+        print(f"creating private GitHub repo {owner}/{slug} …", flush=True)
         desc = f"{title} — coursework ({term})" if term else f"{title} — coursework"
         run(["gh", "repo", "create", f"{owner}/{slug}", "--private", "--source", ".",
-             "--remote", "origin", "--push", "--description", desc], cwd=course, quiet=True)
+             "--remote", "origin", "--push", "--description", desc], cwd=course)
         run(["gh", "repo", "edit", f"{owner}/{slug}", "--add-topic", TOPIC], cwd=course,
             check=False, quiet=True)
         url = f"https://github.com/{owner}/{slug}"

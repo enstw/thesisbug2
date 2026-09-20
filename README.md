@@ -4,7 +4,7 @@
 
 AI-agent framework for Traditional Chinese academic coursework — one repo per course, shared skills, audited sources.
 
-> **Status: early port.** The architecture in [`docs/DESIGN.md`](docs/DESIGN.md) is settled, the 15 agent skills are in `.agents/skills/`, and `scripts/` has the `fw` dispatcher, `unit-init`, `build`, and the checking gates, with the Quarto templates in `assets/templates/`. Everything a skill names now exists; what remains is a first real course. The [roadmap](#roadmap) shows what exists.
+> **Status: early port.** The architecture in [`docs/DESIGN.md`](docs/DESIGN.md) is settled, 14 shared agent skills are in `.agents/skills/`, and `scripts/` has the `fw` dispatcher, `unit-init`, `build`, and the checking gates, with the Quarto templates in `assets/templates/`. Optional capabilities such as image generation and external review depend on the tools available to the agent. The [roadmap](#roadmap) shows what exists.
 
 ## What it is
 
@@ -37,7 +37,7 @@ flowchart LR
 | [Quarto](https://quarto.org/) + TinyTeX | PDF builds through XeLaTeX | `brew install quarto && quarto install tinytex` |
 | librsvg | embeds SVG figures in PDF output | `brew install librsvg` |
 | [uv](https://docs.astral.sh/uv/) | runs the Python scripts and their dependencies without a manual venv | `brew install uv` |
-| An agent CLI: Claude Code, Codex, or Antigravity | the skills are written for these | see each vendor |
+| An agent that can read files and run shell commands | follows `AGENTS.md` and the shared `SKILL.md` procedures; the CLI commands also work without an agent | use your preferred agent |
 
 macOS and Linux only. Course repos rely on symlinks committed to git, which Windows handles only in developer mode, so Windows is not supported.
 
@@ -51,10 +51,12 @@ bash <(curl -fsSL https://raw.githubusercontent.com/enstw/thesisbug2/main/instal
 
 It asks for the course details, then does the rest:
 
-1. **Collects the fields** — only the course name and its slug (directory and repo name, e.g. `1142-asia-pacific-security`) are required. For a Chinese course name, if the `claude` CLI is installed it is asked (headless, tools off) to suggest the English part, the term code is put in front, and you confirm or retype it. Term, instructor, your name as it appears on submitted work, institution, field, and citation style (`apa`, `apa-zh`, `chicago-fullnote`) can be left empty and filled in `COURSE.md` later.
+1. **Collects the fields** — only the course name and its slug (directory and repo name, e.g. `1142-asia-pacific-security`) are required. An ASCII course name gets a local slug suggestion with the term code in front. For a Chinese or mixed-language name, supply an English slug yourself or have your current agent propose it and pass it as the positional argument. The installer never invokes an AI CLI or service. Term, instructor, your name as it appears on submitted work, institution, field, and citation style (`apa`, `apa-zh`, `chicago-fullnote`) can be left empty and filled in `COURSE.md` later.
 1. **Creates the repository** — `~/homework/<slug>/`, `git init`, first commit, then a **private** GitHub repository under your account, pushed and tagged with the `thesisbug-course` topic.
 1. **Mounts the framework** — this repository as a shallow git submodule at `.framework/`, with `submodule.recurse` on so a plain `git pull` keeps it at the version the course pins.
 1. **Sets up the agent directives** — `AGENTS.md` (pointing agents at the framework's guide, `COURSE.md`, and `STATUS.md`), `CLAUDE.md` and `GEMINI.md` pointers, and `.claude/skills` + `.agents/skills` linked to the framework's skills, plus `COURSE.md`, `STATUS.md`, `./fw`, `library/`, `notes/`, `units/`.
+
+The framework includes fonts, so the first download can take several minutes. Git progress is shown as it runs; an HTTP transfer that stalls for 60 seconds fails with an error. If a download fails, inspect and move the partial course directory aside before retrying with the same slug; the installer preserves it and refuses to overwrite it.
 
 Every question has a flag, so an agent or a script can run it without prompts:
 
@@ -96,6 +98,8 @@ Types: `preparation`, `homework`, `paper`, `journal`, `thesis`, `presentation` (
 ./fw update        # pulls .framework/ and commits the new pinned version
 ```
 
+Agents run this at the start of every course session, then re-read the updated framework guide. The local commit contains only the framework pin; unrelated staged coursework stays staged, and nothing is pushed. A failed update is reported while existing work is preserved. Earlier course commits and milestone tags still record their original framework versions.
+
 ### Clone a course on another machine
 
 ```bash
@@ -104,11 +108,17 @@ git clone --recurse-submodules https://github.com/<you>/1142-asia-pacific-securi
 
 This one works with plain git today: the submodule brings the framework back at the pinned version.
 
+## Agent compatibility
+
+`AGENTS.md` is the canonical entry point. `CLAUDE.md` and `GEMINI.md` are thin pointers, and the course's `.agents/skills` and `.claude/skills` symlinks expose the same skill files. An agent without automatic skill discovery can read `.framework/docs/AGENT-GUIDE.md` and the relevant `.framework/.agents/skills/<name>/SKILL.md` directly; slash commands and vendor-specific tool names are not required.
+
+The host agent is interchangeable, and shared procedures do not assume its home-directory skill installation. Browser access, PDF extraction, and a second model for review use available host capabilities. **Image generation is the explicit exception: it uses Codex**, currently the maintainer's stable generation backend. Use Codex's native image tool when available, or the `genimage-img2` integration's Codex wrapper from another host; a missing Codex path is reported rather than silently switching image providers. Supplied images and HTML capture do not require AI generation. Each workflow reports unfinished checks instead of treating them as passed. The Claude-only terminal recipe is an [optional integration note](docs/integrations/claude-code-self-inject.md), outside shared skill discovery.
+
 ## Course repository layout
 
 ```
 <course>/
-├── AGENTS.md          # course context; points agents at .framework/AGENTS.md
+├── AGENTS.md          # course context; points at .framework/docs/AGENT-GUIDE.md
 ├── COURSE.md          # instructor, citation style, requirements, schedule
 ├── STATUS.md          # one line per unit
 ├── .framework/        # this repository, as a submodule

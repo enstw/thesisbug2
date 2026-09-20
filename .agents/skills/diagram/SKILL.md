@@ -36,4 +36,4 @@ When a diagram is needed, **prefer PlantUML source rendered to SVG.** The framew
 
 ## When PlantUML can't express it
 
-Same SVG-first priority for hand-drawn or tool-exported diagrams — commit the final SVG and note the source tool in an adjacent `<name>.README.md` if non-obvious. For AI-generated **raster** imagery (painterly art, not diagrams), use the `genimage-img2` skill instead; SVG-first still governs diagrams and icons.
+Same SVG-first priority for hand-drawn or tool-exported diagrams — commit the final SVG and note the source tool in an adjacent `<name>.README.md` if non-obvious. For AI-generated **raster** imagery (painterly art, not diagrams), use Codex's native image tool or the discovered `genimage-img2` Codex wrapper: generation is the provider exception because Codex is the maintainer's currently stable backend. If unavailable, report the asset as pending instead of switching providers. SVG-first still governs diagrams and icons.

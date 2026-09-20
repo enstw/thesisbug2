@@ -1,18 +1,11 @@
 ---
 name: deck-runtime
 description: >
-  The shared HTML deck shell for deck-svg and deck-image: the <deck-stage>
+  The shared HTML deck shell for deck-svg and deck-image: the deck-stage
   element (slide navigation, P-key presenter console, print-to-PDF at one
   1920×1080 slide per page). A ship-as-is runtime that the deck engines copy in
   when scaffolding; not authored against directly. Consult when a deck's
   navigation, presenter window, or print layout misbehaves or needs changing.
-user-invocable: false
-allowed-tools:
-  - Read
-  - Bash(pwd)
-  - Bash(ls *)
-  - Bash(cp *)
-  - Bash(node --check *)
 ---
 
 # deck-runtime — the shared deck shell (runtime layer)

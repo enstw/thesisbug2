@@ -8,7 +8,6 @@ description: >
   find a research question / plan a literature search, and for the
   /topic_discovery, /prep_start, /search_plan, /lit_scan, /screen,
   /topic_decision, /handoff macros.
-user-invocable: true
 ---
 
 # topic-scout — evidence-first topic selection (選題)

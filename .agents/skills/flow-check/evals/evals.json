@@ -43,5 +43,17 @@
       "Does not answer 'it's fine'; reports the two planted defects.",
       "The closing summary leads with the outcome (how many jumps, the worst one) in full sentences."
     ]
+  },
+  {
+    "skills": ["flow-check"],
+    "query": "這個環境無法開子 agent 或另起獨立工作階段。請檢查 units/01-paper-eval/chapters/05-case.qmd 的連貫性，完成目前可做的檢查並交付結果。",
+    "files": ["evals/fixtures/seam-chapter.qmd"],
+    "expected_behavior": [
+      "Runs reverse outline, connective naming, and available git-seam checks without requiring a vendor-specific delegation API.",
+      "Reports the undefined framework and the unsupported 因此 transition with anchors and proposed bridges, without editing the manuscript.",
+      "Marks the independent cold read as pending and prepares a handoff with only chapter text and neutral marking instructions, not its findings or outline.",
+      "Does not spawn another agent, launch another session, or claim that its own re-read completed the independent cold read.",
+      "Distinguishes checks completed from checks that the available files or capabilities cannot support."
+    ]
   }
 ]

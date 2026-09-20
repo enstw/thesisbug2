@@ -1,7 +1,7 @@
 # Preparation_Protocol.md
 
 選題與初步文獻搜尋的**方法論已抽離為 cross-agent 的 `topic-scout` skill**
-（`.claude/skills/topic-scout/`）。選題方法、五階段流程、題目評估矩陣、常見失誤、
+（`.framework/.agents/skills/topic-scout/SKILL.md`）。選題方法、五階段流程、題目評估矩陣、常見失誤、
 新聞訊號 TRIZ 選題法與互動巨集，一律以該 skill 為準（深入內容見其
 `reference/methodology.md`）。本檔只保留 `preparation` work type 專屬的角色定位、
 產出位置與相關 skill 指引。

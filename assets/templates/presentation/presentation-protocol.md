@@ -4,11 +4,11 @@
 
 You are an academic presentation assistant for a Tamkang University graduate student. Build concise, argument-driven Traditional Chinese slides for seminars, reading guides, thesis proposals, defenses, and conference talks.
 
-Presentations use the **deck-stage HTML engine** by default — a self-contained, offline, single-file `.html` deck you author by hand, styled by a design system from the **`ui-ux-pro-max`** skill. **Quarto Beamer is the must-keep fallback** for Pandoc citation rendering, formal LaTeX venues, or a no-browser environment. These are the only two engines; there is no Slidev.
+Presentations use the **deck-stage HTML engine** by default — a self-contained, offline `.html` deck with bundled assets, styled by **house-style** tokens or a chosen design source. **Quarto Beamer is the must-keep fallback** for Pandoc citation rendering, formal LaTeX venues, or a no-browser environment. These are the only two engines; there is no Slidev.
 
 The deck-stage engine has two authoring modes: the default **SVG-native mode** (hand-authored HTML/CSS — the main body of this protocol) and an **image-deck mode** where every slide is one generated bitmap and the HTML shell carries only navigation, notes, and alt text (§ Image-deck mode).
 
-This protocol is engine-specific (the `deck-stage` contract, the slide patterns, font subsetting, verification). The **look** — theme, palette, typography, art — is *not* fixed here: it comes from the `ui-ux-pro-max` skill (see "The `ui-ux-pro-max` skill" below). Skill = decide the look; protocol = ship the deck.
+This protocol is engine-specific (the `deck-stage` contract, the slide patterns, font subsetting, verification). The **look** — theme, palette, typography, art — comes from house-style or the user's chosen design source. An external design skill such as `ui-ux-pro-max` is optional; the bundled tokens are sufficient to author a deck.
 
 ## Source Files
 
@@ -69,7 +69,7 @@ Minimal skeleton:
   @font-face{font-family:'ENS Font';src:url('asset/ENSFont.woff2') format('woff2');font-weight:100 500;font-display:swap}
   @font-face{font-family:'ENS Font';src:url('asset/ENSFont-Bold.woff2') format('woff2');font-weight:600 900;font-display:swap}
   deck-stage:not(:defined){visibility:hidden}
-  /* design tokens + slide CSS — from the ui-ux-pro-max skill */
+  /* design tokens + slide CSS — from house-style or the chosen design source */
 </style></head><body>
 <deck-stage width="1920" height="1080">
   <section class="slide" data-label="標題">…</section>
@@ -99,7 +99,7 @@ Reference these `asset/` files relative to `<unit>/deck.html` (i.e. `<unit>/asse
 
 ## Design system — a free variable, from the skill
 
-**The look is not fixed.** Theme (light/dark), palette, typography, and art style all vary per deck — supply them from the `ui-ux-pro-max` skill (see "The `ui-ux-pro-max` skill" below). The scaffolded starter is dark because that is one proven example; **dark is not a rule**. Re-run the skill with the deck's real keywords to retheme.
+**The look is not fixed.** Theme (light/dark), palette, typography, and art style can vary per deck. Start with house-style tokens and adapt them to the user's requested look; an installed design skill can help. The scaffolded starter is dark because that is one proven example; **dark is not a rule**.
 
 **Fixed vs. free:**
 
@@ -115,14 +115,14 @@ CJK typography baked into the starter tokens: body `line-height:1.78`, headings 
 
 ### Consuming any design source safely — tokens only, never markup
 
-The look may come from **any** design source — `ui-ux-pro-max`, Claude's own design sense, OpenDesign, a hand-picked palette. Whatever the source, **consume it as `:root` tokens only; never let it regenerate the deck-stage markup or layout CSS.** This split is what makes the look swappable without breaking the deck.
+The look may come from **any** design source — an optional design skill, the current agent, a design application, or a hand-picked palette. Whatever the source, **consume it as `:root` tokens only; never let it regenerate the deck-stage markup or layout CSS.** This split is what makes the look swappable without breaking the deck.
 
 **Why this rule exists.** The deck *layout* is doing two specific jobs that the starter CSS owns, not the design source:
 
 1. **Vertical centering** — `.content { flex:1; justify-content:center }` fills the 1080px frame so content sits in the optical middle.
 1. **Slide-sized type on a fixed canvas** — type is authored in **px against 1920×1080** (body ~30px, title ~76px), then deck-stage `transform:scale()`-fits it to any viewport.
 
-A token-only source (like `ui-ux-pro-max`, which emits a palette/type-scale/effects as CSS variables) drops into `:root` and both jobs survive. But a source used as a **deck generator** — "design this deck" to Claude or OpenDesign — regenerates HTML/CSS from web-page priors and overwrites them: it falls back to top-aligned document flow (→ **top-weighted slides**) and sizes type in `rem`/`vw` against the viewport (→ **small type** after the scale-fit). Top-weight + tiny type is the signature of a web-page prior trampling the slide contract.
+A token-only source drops into `:root` and both jobs survive. But a design source used as a **deck generator** can regenerate HTML/CSS from web-page priors and overwrite them: it falls back to top-aligned document flow (→ **top-weighted slides**) and sizes type in `rem`/`vw` against the viewport (→ **small type** after the scale-fit). Top-weight + tiny type is the signature of a web-page prior trampling the slide contract.
 
 **So, for any non-token source:**
 
@@ -163,7 +163,7 @@ Either way the art is inline/linked SVG, satisfying the SVG-not-emoji hard rule 
 
 ### Raster art (generated)
 
-When a slide genuinely needs bitmap imagery — painterly or photographic hero backgrounds, textures, anything SVG can't express — generate it with the **`genimage-img2` skill** (gpt-image-2 through the Codex CLI). **Pre-condition:** `codex` must be installed and authenticated (`codex login`); the skill pre-flights this and stops with instructions when it isn't.
+When a slide needs bitmap imagery — painterly or photographic hero backgrounds, textures, anything SVG can't express — use supplied art or **Codex image generation**. Generation is the provider exception because Codex is the maintainer's currently stable backend: use its native image tool when available, otherwise the discovered `genimage-img2` Codex wrapper. Verify that path's prerequisites; without a working backend or supplied image, report the asset as pending instead of silently switching providers.
 
 1. Save the asset under `<unit>/` (e.g. `<unit>/hero-art.png`) so the deck stays self-contained; reference it with `<img>` or CSS `background-image`. For a truly single-file deck, inline it as a base64 `data:` URI.
 1. Raster art cannot inherit `--chapter` / `currentColor`, so the theme-aware-art rule moves to the prompt: name the deck's palette and mood in the generation prompt, and regenerate the art if the theme changes.
@@ -174,18 +174,18 @@ When a slide genuinely needs bitmap imagery — painterly or photographic hero b
 
 ## Image-deck mode — full-page generated slides
 
-A second authoring mode for the same deck-stage engine: every slide is **one full-bleed bitmap** generated with the **`genimage-img2` skill** (gpt-image-2 via the Codex CLI), and the HTML shell keeps everything that must stay text — speaker notes, `data-label`, alt text, navigation, print.
+A second authoring mode for the same deck-stage engine: every slide is **one full-bleed bitmap**, and the HTML shell keeps everything that must stay text — speaker notes, `data-label`, alt text, navigation, print. Follow the shared **`deck-image`** skill for generation or assembly of supplied images.
 
 **When to choose it:** narrative/showcase decks whose copy is **locked** — hero-heavy, atmosphere-driven talks where cinematic production value carries the room. The SVG-native mode stays the default for working decks, data-precision charts, and anything still being edited: changing one bullet here costs a page regeneration, not a one-line edit. Freeze the content first, then enter this mode.
 
-**Pre-condition:** `codex` installed and authenticated (`codex login`); the genimage-img2 skill pre-flights this and stops with instructions when it isn't.
+**Pre-condition:** supplied slide images, authored HTML capture, or a working Codex generation path. The host agent remains interchangeable; AI generation uses the Codex backend described above, and the deck engine only needs PNG files.
 
 ### Pipeline
 
 1. **Freeze the content.** Draft the spine and the full talk as usual; the fact-checked content doc is the pipeline input.
 1. **Write `<unit>/prompts-and-page-content.md` — the deck's source code.** One entry per page, two blocks each: **Page Content** (every on-slide string verbatim — title, labels, numbers, footer) and **Prompt** (the accepted generation prompt). Open every prompt with the same **shared style preamble** (e.g. "Create a complete 16:9 presentation slide in Traditional Chinese. Polished university seminar style, dark editorial fintech aesthetic, crisp readable typography, no extra text beyond the specified copy.") — that repetition is what makes N pages look like one deck. Quote each on-slide string exactly ("Slide title text, exactly: …"), then describe the visual concept, layout, and palette. Keep this file in sync whenever a page is regenerated; it must always match what shipped.
-1. **Generate one page per `/genimage-img2` call** into `<unit>/generated-slides/` (`01-title.png`, `02-<topic>.png`, …). The model's native render size (**~1672×941, near-16:9**) is fine — do not chase exact 1920×1080; `object-fit: cover` on the stage absorbs the difference (step 5).
-1. **Proofread gate — mandatory, every page.** Open each PNG with your image-capable reader and check **every string and digit** against its Page Content block. Generated text is probabilistic; a wrong digit in a table is worse than an ugly slide. On mismatch: single-string error → genimage-img2 **edit mode** ("change only this text; keep everything else identical"); layout or multi-string errors → regenerate the page. Re-proofread after every fix.
+1. **Render one page at a time** into `<unit>/generated-slides/` (`01-title.png`, `02-<topic>.png`, …), using the selected renderer's documented interface. Request 16:9 output; `object-fit: cover` fills the stage, so inspect any cropping.
+1. **Proofread gate — mandatory, every page.** Open each PNG with your image-capable reader and check **every string and digit** against its Page Content block. Generated text is probabilistic; a wrong digit in a table is worse than an ugly slide. Correct individual strings with the renderer's edit capability when available, or regenerate the page. Re-proofread after every fix.
 1. **Bake the deck.** Same deck-stage contract — one `<section>` per image, notes index-aligned, engine scripts last:
 
    ```html
@@ -214,7 +214,7 @@ A second authoring mode for the same deck-stage engine: every slide is **one ful
 
 ## Hard rules (design quality gate)
 
-Apply to every slide. These come from the `ui-ux-pro-max` skill's Pre-Delivery Checklist — run that checklist before shipping.
+Apply these checks to every slide. They are self-contained so verification does not require an external design skill.
 
 1. **SVG icons/illustrations only — never emoji.**
 1. **`prefers-reduced-motion`** — every animation must be disabled under it (the starter has the `@media` block). High severity.
@@ -283,38 +283,11 @@ The `meta NOT subset … dropped` warning is harmless. If you subset, re-run whe
 
 ---
 
-## The `ui-ux-pro-max` skill (install on demand)
+## Optional design integrations
 
-Install it at user level (`~/.claude/skills/`), not inside the course: in a course repo `.claude/skills` is a symlink into the framework submodule, so installing there would write into `.framework/` and leave the submodule dirty.
+Use **house-style** tokens by default. If the user's environment supplies a design skill such as `ui-ux-pro-max`, discover its `SKILL.md` through that agent's normal mechanism and follow its current usage instructions. Consume its palette, type scale, and effects as token values only; the engine and quality checks remain this protocol's responsibility.
 
-The skill is a self-contained, pure-stdlib **Python 3** design-intelligence engine (a BM25 search over CSV knowledge bases). It decides the look (palette, typography, effects) and owns the Pre-Delivery Checklist (the hard rules above). It is **not tracked in this repo** — install it on demand into your agent's gitignored skills directory:
-
-```bash
-# Skip if already present:
-ls ~/.claude/skills/ui-ux-pro-max/SKILL.md 2>/dev/null
-
-# Install: upstream is now a monorepo. A bare
-# `git clone … ~/.claude/skills/ui-ux-pro-max` nests the skill a level too deep
-# (engine ends up at …/src/ui-ux-pro-max/scripts/search.py, not the path below),
-# and the repo's bundled ~/.claude/skills/ui-ux-pro-max/{scripts,data} are
-# *symlinks* into src/ — so `cp -R` copies dangling links. Clone to a temp dir
-# and copy the bundled subtree with `-L` to dereference those symlinks:
-tmp=$(mktemp -d)
-git clone --depth 1 https://github.com/nextlevelbuilder/ui-ux-pro-max-skill "$tmp"
-mkdir -p .claude/skills && cp -RL "$tmp/~/.claude/skills/ui-ux-pro-max" ~/.claude/skills/ui-ux-pro-max
-rm -rf "$tmp"
-
-# Smoke-test (after -L the engine is self-contained — real scripts/ + data/):
-python3 ~/.claude/skills/ui-ux-pro-max/scripts/search.py "fintech" --design-system
-```
-
-Lead with `--design-system` to get a full recommendation, then transplant its palette/typography/effects into the starter's `:root` tokens:
-
-```bash
-python3 ~/.claude/skills/ui-ux-pro-max/scripts/search.py "<topic> <field> <keywords>" --design-system -p "Deck Name"
-```
-
-Keep the two tools separate: **skill decides the look, this protocol ships the deck.** Either side swaps cleanly — retheme by re-running the skill, or retarget by porting this protocol to another presenter engine.
+An external skill belongs in the host's user-level installation location, outside the course's linked skill directories, because both `.agents/skills` and `.claude/skills` point into the framework submodule. Missing design integrations do not prevent authoring or verifying a deck with the bundled assets.
 
 ---
 

@@ -21,6 +21,7 @@ Goals:
 1. A course repo's tree makes ownership obvious: framework files are under one directory that coursework never writes to.
 1. A unit handed in last semester still rebuilds to the same PDF, because the course repo records which framework version it used.
 1. Every agent workflow (skills, protocols, gates, evals) ships with the framework, so a new course starts with the full toolchain.
+1. Shared workflows are agent agnostic: any agent with file and shell access can follow them, and missing optional capabilities are reported explicitly.
 
 Non-goals:
 
@@ -53,6 +54,8 @@ Alternatives considered:
 
 The submodule pins a framework commit in the course repo. That pin is what makes goal 4 hold. Updating is `git -C .framework pull` followed by committing the new pointer; a wrapper (`./fw update`) does both. `course-init` sets `submodule.recurse=true` locally so an ordinary `git pull` of the course also moves `.framework/` to the pinned commit.
 
+*Decided (2026-09-20):* every agent session in a course repo begins with `./fw update`, then re-reads `.framework/docs/AGENT-GUIDE.md`, so the session uses current framework instructions and tools. Both the course skeleton and shared guide carry this startup rule; an update already attempted through the skeleton is not repeated. The command uses a fast-forward-only pull and commits only `.framework`, preserving unrelated staged coursework, and never pushes. If the update fails, the agent reports it and continues with the available checkout without discarding or stashing work. Historical course commits and milestone tags retain their original framework pins for reproduction; the active checkout moves forward at session start.
+
 Framework fixes discovered during coursework are made **inside `.framework/`** (it is a full clone), committed, and pushed to thesisbug2. Other courses receive them on their next update. This replaces cherry-picking.
 
 ## Course repository layout
@@ -61,11 +64,11 @@ Framework fixes discovered during coursework are made **inside `.framework/`** (
 
 ```
 <course>/
-├── AGENTS.md                    # thin: course context + pointer to .framework/AGENTS.md
+├── AGENTS.md                    # course context + pointer to .framework/docs/AGENT-GUIDE.md
 ├── COURSE.md                    # instructor, citation style, grading requirements, schedule
 ├── STATUS.md                    # course-level index: one line per unit
 ├── .framework/                  # submodule — coursework never writes here
-├── .agents/skills -> .framework/.agents/skills     # committed symlink (Codex, agy)
+├── .agents/skills -> .framework/.agents/skills     # canonical shared discovery path
 ├── .claude/skills -> .framework/.agents/skills     # committed symlink (Claude Code)
 ├── library/                     # sources shared by two or more units
 │   ├── references.bib
@@ -99,6 +102,22 @@ Rules:
 `fw` is a small script `course-init` writes at the course root; it forwards to `.framework/scripts/<command>`. When `<unit>` is omitted, the unit is the nearest `WORK.json` above the working directory; from the course root with no unit given, `fw` lists the units and exits, so nothing acts on the wrong unit by accident.
 
 Skills write unit paths with a literal `<unit>/` prefix (`<unit>/refs/<key>.md`, `<unit>/references.bib`) and shared paths as `library/…`. A source's transcript is therefore `<unit>/refs/<key>.md` until it is promoted and `library/refs/<key>.md` after; skills say "the source's `refs/<key>.md`" where either may apply.
+
+### Agent compatibility
+
+*Decided (2026-09-20):* agent independence is a workflow contract, not just a set of entry-point filenames.
+
+1. `AGENTS.md` holds project instructions; `CLAUDE.md` and `GEMINI.md` only point to it. Shared `SKILL.md` files use portable `name` and `description` frontmatter. Operational boundaries live in their prose, because vendor-specific tool allowlists are not portable permission controls.
+1. Native skill discovery is convenient but optional. An agent can read `.framework/docs/AGENT-GUIDE.md` and `.framework/.agents/skills/<name>/SKILL.md` directly and execute `./fw` commands through its own shell tool. Slash aliases describe tasks; they do not require a particular UI.
+1. Course creation and the framework commands do not invoke an AI CLI or service implicitly. A caller may translate a course title and supply its slug; the installer only suggests slugs from ASCII titles and always leaves the repository name with the caller.
+1. External PDF, browser, and review-model integrations are selected from the host's available capabilities. Named external skills are resolved through discovery, never a hard-coded user directory. Shared workflows retain their output requirements and report unfinished checks when no suitable capability exists.
+1. **Image generation is the explicit provider exception (maintainer decision, 2026-09-20): use Codex**, currently the maintainer's stable image-generation backend. A Codex host uses its native image tool when available; other hosts use the discovered `genimage-img2` integration's Codex wrapper. No silent fallback to a different image provider is allowed, because it would bypass the backend chosen for reliability. Existing images and HTML-to-PNG capture remain usable without AI generation. This constrains the generation backend, not the host agent.
+1. `gpt-review` keeps its existing name and report directory for compatibility, but selects the referee before probing a provider. A user-requested provider is respected; cross-model claims require an identified different model family. `flow-check` can run its other checks sequentially, but never calls a same-context re-read an independent cold read.
+1. The 14 shared skills exclude the Claude-only `self-inject` recipe. It lives in `docs/integrations/claude-code-self-inject.md` as an optional manual integration, so it cannot steer another agent's common workflow.
+
+Verified on 2026-09-20: all six `tests/test_course_init.py` checks passed with agent CLIs absent from PATH, including pointer files and skill symlinks after a recursive clone, and updating a detached framework checkout while preserving unrelated staged and unstaged coursework; all 14 shared skills passed frontmatter validation. Two fresh-context fixture evaluations passed: `flow-check` found the planted seams, prepared an unprimed handoff, and left the unavailable cold read pending; `source-kit` identified the review masquerading as a book, recorded only `identity: review-of`, and preserved the manuscript and quality threshold. This validates the portable entry path and those fallback/integrity behaviors; it does not claim every vendor's automatic discovery or every model-eval scenario has been exercised.
+
+The [2026-09-20 agy image probe](image-backend-check-2026-09-20.md) produced three valid PNGs in three sequential attempts, but every image added unrequested text. This initial result is recorded separately from the chosen Codex backend; it does not establish long-term reliability or silently change the maintainer's provider decision.
 
 ### Building on an earlier unit
 
@@ -150,7 +169,7 @@ Rules:
 | Framework | submodule at `.framework/`, HTTPS URL | works with the maintainer's existing credential setup; the framework is public, so no credential is needed to read it |
 | End of term | GitHub *Archive* (read-only) | frozen but still cloneable; the pinned submodule keeps it rebuildable |
 
-`install.sh` (a one-line `curl` from the README) checks prerequisites and runs `scripts/course-init.py`, which creates a course in one command. It prompts for each field in a terminal and takes every field as a flag, so agents can run it unattended. Only the course name and the slug are required. In a terminal, a slug is suggested as `<term code>-<name>`: the name is slugified when it is ASCII, and otherwise requested from a local `claude` CLI in headless mode with all tools off, because turning a Chinese course name into English is translation. The suggestion is always confirmed by the author and is never used unattended — it names a GitHub repository and a directory that agent sessions are keyed to, both awkward to rename. Fields that do not change from course to course (author, institution, field, citation style, the `base_path` courses are created under, and by hand `owner`) default from a per-account file, `~/.config/thesisbug2/config.ini`, with precedence flag > file > built-in. The file is machine-local and is read only at course creation; from then on `COURSE.md`, which is committed and travels with the course, is the single source for units and agents, so two machines with different account files cannot make one course disagree with itself.
+`install.sh` (a one-line `curl` from the README) checks prerequisites and runs `scripts/course-init.py`, which creates a course in one command. It prompts for each field in a terminal and takes every field as a flag, so agents can run it unattended. Only the course name and the slug are required. In a terminal, an ASCII title gets a local `<term code>-<name>` suggestion. A Chinese or mixed-language title requires a slug supplied by the author or the calling agent; the installer never starts an AI CLI or service, because translation belongs to the caller's chosen tools. A suggestion is always confirmed by the author and is never used unattended — it names a GitHub repository and a directory that agent sessions are keyed to, both awkward to rename. Fields that do not change from course to course (author, institution, field, citation style, the `base_path` courses are created under, and by hand `owner`) default from a per-account file, `~/.config/thesisbug2/config.ini`, with precedence flag > file > built-in. The file is machine-local and is read only at course creation; from then on `COURSE.md`, which is committed and travels with the course, is the single source for units and agents, so two machines with different account files cannot make one course disagree with itself. `--no-github` also suppresses remote name probes when an account default supplies `owner`, so local creation remains offline.
 
 1. Create `~/homework/<course>/` and write the skeleton (`AGENTS.md`, `COURSE.md`, `STATUS.md`, `library/`, `units/`, `notes/`, `.gitignore`).
 1. Add the `.framework/` submodule and the two skill symlinks.
@@ -158,6 +177,8 @@ Rules:
 1. `gh repo create <owner>/<course> --private --source . --push`, then add the topic.
 
 The skeleton exists only in the framework and is generated by the script. A GitHub *template repository* is deliberately not used: it would be a second copy of the skeleton to keep in sync.
+
+Framework cloning streams Git progress, including when an agent captures the installer's output, because the bundled fonts can take several minutes to download. The clone sets command-local `http.lowSpeedLimit=1` and `http.lowSpeedTime=60` so an HTTP transfer below one byte per second for 60 seconds fails with visible diagnostics; a slow transfer that keeps advancing has no total deadline. A failed clone leaves its partial course intact and tells the author to inspect and move it aside before retrying, because deleting an existing directory could destroy work. GitHub creation and push output is also streamed so the next network operation does not become another silent wait.
 
 ## What ports from `thesisbug-template`
 

@@ -4,8 +4,8 @@ description: >
   Builds an image-based presentation deck where every slide is one full-bleed
   PNG. Use when asked for an image slide deck, "generate slides as images",
   "deck-image", or to turn AI-generated or hand-drawn slide images into a
-  presentation. Plans slides, renders each via a pluggable renderer
-  (/genimage-img2, /genimage-nb, or /genimage-canvas for exact text; mixable),
+  presentation. Plans slides, renders each via Codex image generation or an
+  HTML-to-PNG renderer, or assembles images supplied by the user,
   then build-deck.py assembles a self-contained 16:9 deck-stage HTML deck. For
   live, editable HTML slides use deck-svg instead.
 ---
@@ -33,61 +33,39 @@ source of truth. (`$SKILL_DIR` = this skill's own folder.)
 
 ## Renderers
 
-The per-slide primitives are *global* skills at `~/.claude/skills/` (not
-siblings under `.agents/skills/`) — that is the one path this skill reaches
-outside its own folder. Pick per deck, or per slide (a mixed deck is fine:
-drawn title/divider slides + generated body slides, one manifest).
+The host agent may vary, but **AI image generation uses Codex**, the
+maintainer's currently stable backend. A Codex native image tool, the
+`genimage-img2` Codex wrapper, browser capture of authored HTML, and supplied
+PNGs all satisfy the same assembly input. External skills are not bundled here;
+discover their actual paths and read their instructions instead of assuming
+a vendor's home directory.
 
 | Renderer | How | Best for | Pre-condition |
 | :--- | :--- | :--- | :--- |
-| **/genimage-img2** | gpt-image-2 via `codex exec` (`genimage-img2/gen-image.sh`) | photorealistic / illustrative slides; dense multilingual text renders well but can garble | `codex` installed + `codex login` |
-| **/genimage-nb** | nano banana via `agy -p` (`genimage-nb/gen-image.sh`) | AI-generated slides billed to the Gemini side; alternative look to gpt-image-2 | `agy` installed + logged in |
-| **/genimage-canvas** | agent-drawn: author each slide as a 1920×1080 HTML composition per the canvas-design method, rasterized by `genimage-canvas/gen-image.sh` (browser-cdp `shot.sh`) | designed, typography-heavy slides; **exact on-slide text by construction** (use house-style ENSFont for CJK); no external CLI, no cost | canvas-design + browser-cdp skills (gen-image.sh fails if browser-cdp missing) |
+| Codex image generation | Codex native image tool, or the discovered `genimage-img2` Codex wrapper for another host | photographic or illustrated slides | a working Codex generation path; the wrapper requires an installed, authenticated Codex CLI |
+| Authored HTML → PNG | fixed 1920×1080 HTML captured by available browser tools; optional `genimage-canvas` integration | typography-heavy slides with editable source text | browser capture; external integrations may have additional dependencies |
+| Supplied images | copy the user's PNGs into the deck | already-approved slide images | readable image files |
 
-All three renderers honor the **same output contract** — `IMAGE_OK
-<abs_path>` (exit 0) / `IMAGE_FAIL <reason>` (exit non-zero) — so Step 3's
-loop works unchanged; only the input differs (a prompt for the AI pair, an
-authored HTML source for /genimage-canvas):
-
-```
-genimage-img2/gen-image.sh    "<prompt>"    "<out.png>" "<size hint>"
-genimage-nb/gen-image.sh      "<prompt>"    "<out.png>" "<size hint>"
-genimage-canvas/gen-image.sh  "<src.html>"  "<out.png>" "WxH"
-```
+The required output is an existing PNG at the manifest's path. Some external
+wrappers report `IMAGE_OK <abs_path>` / `IMAGE_FAIL <reason>`; honor that
+contract when documented, but native tools need not emit those strings.
 
 **Boundary vs deck-svg:** if the slides should stay *live* HTML — selectable
 text, entrance animations, re-editable components — this is deck-svg's job.
 Use deck-image when slides are genuinely images: AI-generated art, or
-/genimage-canvas compositions you want frozen poster-grade.
+authored compositions you want frozen as images.
 
 ## Pre-flight (per renderer actually used)
 
-/genimage-img2 gate:
-
-```bash
-command -v codex >/dev/null || echo "CODEX_MISSING"
-[ -f "${CODEX_HOME:-$HOME/.codex}/auth.json" ] || [ -n "$OPENAI_API_KEY" ] || [ -n "$CODEX_API_KEY" ] || echo "AUTH_MISSING"
-[ -x "$HOME/.claude/skills/genimage-img2/gen-image.sh" ] || echo "IMG2_MISSING"
-```
-
-/genimage-nb gate:
-
-```bash
-command -v agy >/dev/null || echo "AGY_MISSING"
-[ -x "$HOME/.claude/skills/genimage-nb/gen-image.sh" ] || echo "IMGNB_MISSING"
-```
-
-/genimage-canvas gate:
-
-```bash
-[ -x "$HOME/.claude/skills/genimage-canvas/gen-image.sh" ] || echo "IMGCANVAS_MISSING"
-```
-
-(gen-image.sh re-checks its own dependencies — hard `IMAGE_FAIL` without
-browser-cdp. Fed an authored `.html` it runs rasterize-only, so
-canvas-design isn't needed at render time.)
-
-Stop with the matching install/login message if a flag fires.
+For AI generation, use Codex's native image tool when available; otherwise
+discover and read `genimage-img2` and use its Codex wrapper. Verify that path's
+dependencies through its documented interface. Do not infer login state from
+a credential file or probe unrelated providers, because installation paths and
+authentication differ by host. Do not silently substitute another provider
+when Codex is unavailable; the provider exception exists for reliability.
+Supplied PNGs need no generator. If no renderer is available, finish the slide
+specs and report image production as pending; do not call an image deck complete
+or change the requested deliverable without the user's agreement.
 
 ## Inputs
 
@@ -158,53 +136,24 @@ Prompt rules:
 Target: `generated-slides/<NN>-<slug>.png` at 16:9 for every slide, whichever
 renderer produces it. Run from the deck directory.
 
-### AI renderers (/genimage-img2, /genimage-nb — same loop, different script)
+### Codex image generation
 
-Sequential:
+Send each slide's prompt through the Codex native tool or discovered wrapper
+and save its output at the planned PNG path. Keep prompts in files or structured tool arguments
+to preserve exact text. Track completion and errors per slide; retry only a
+failed slide after identifying a fix. Use the host's long-job mechanism where
+needed; no particular shell-tool API is required.
 
-```bash
-cd "<deck>"
-GEN="$HOME/.claude/skills/genimage-img2/gen-image.sh"      # or …/genimage-nb/gen-image.sh
-SIZE="landscape 16:9 aspect ratio, high detail, sharp text"
-"$GEN" "$(cat prompt-01.txt)" "generated-slides/01-title.png" "$SIZE"
-# ... one call per slide; each prints  IMAGE_OK <path>  or  IMAGE_FAIL <reason>
-```
+### Drawn renderer
 
-Faster — a few in parallel (agentic CLI runs are heavy; cap at ~3 concurrent).
-Write each slide's prompt to its own file first to avoid quoting pain:
-
-```bash
-cd "<deck>"
-GEN="$HOME/.claude/skills/genimage-img2/gen-image.sh"      # or …/genimage-nb/gen-image.sh
-SIZE="landscape 16:9 aspect ratio, high detail, sharp text"
-pids=()
-for p in prompts/*.txt; do
-  slug=$(basename "$p" .txt)
-  "$GEN" "$(cat "$p")" "generated-slides/${slug}.png" "$SIZE" &
-  pids+=($!)
-  # throttle to 3 in flight
-  if [ "${#pids[@]}" -ge 3 ]; then wait "${pids[0]}"; pids=("${pids[@]:1}"); fi
-done
-wait
-```
-
-Use `timeout: 600000` on each Bash call. Collect every `IMAGE_OK`/`IMAGE_FAIL`
-line; re-run only the failures (one targeted retry each).
-
-### Drawn renderer (/genimage-canvas)
-
-Per slide: author a self-contained 1920×1080 HTML composition following the
-canvas-design skill's philosophy (fixed-size stage, no scroll — /genimage-canvas's
-SKILL.md § Author has the full constraints), using house-style's ENSFont for
+Per slide: author a self-contained 1920×1080 HTML composition (fixed-size
+stage, no scroll), using house-style's ENSFont for
 CJK text: copy `$SKILL_DIR/../house-style/assets/fonts/ENSFont.woff2` and
 `ENSFont-Bold.woff2` beside the HTML and declare the same two `@font-face`
 blocks as house-style `tokens.css` (family `'ENS Font'`, Regular weight
-`100 500` + Bold weight `600 900`; snippet in /genimage-canvas § Author).
-Then rasterize:
-
-```bash
-~/.claude/skills/genimage-canvas/gen-image.sh "slide-src/01-title.html" "generated-slides/01-title.png" "1920x1080"
-```
+`100 500` + Bold weight `600 900`). Capture at 1920×1080 using the available
+browser workflow. If `browser-cdp` or `genimage-canvas` is installed, follow
+its discovered instructions for capture; do not assume it is dependency-free.
 
 Keep the HTML sources in `<deck>/slide-src/` so any slide can be re-edited
 and re-rendered; the deck itself only references the PNGs.
@@ -255,10 +204,12 @@ The first slide automatically gets a `→ / P` hint overlay (disable with
    an ugly slide because the audience trusts it. For dense slides (tables,
    small labels, footers) crop and enlarge the region before judging — at full
    frame a garbled CJK glyph or a swapped digit is easy to miss. Regenerate
-   offenders (Step 3) and re-proofread. /genimage-canvas slides skip this:
-   their text is exact by construction.
+   offenders (Step 3) and re-proofread. For authored HTML slides, also inspect
+   glyph rendering and clipping; exact source text alone does not prove a
+   correct capture.
 1. Open `deck.html` in a browser to confirm navigation and the presenter
-   window work; for a headless check use the global `browser-cdp` skill.
+   window work; use the available browser workflow, including `browser-cdp`
+   when installed. Without browser access, report this check as pending.
 1. Report: deck path, slide count, renderer(s) used, and the controls (→ next,
    P presenter, R reset, browser Print → Save as PDF for a clean
    one-page-per-slide export).
@@ -267,9 +218,8 @@ The first slide automatically gets a `→ / P` hint overlay (disable with
 
 1. Slides use `object-fit: cover`, so a slightly off-16:9 render still fills the
    frame — exact dimensions aren't critical, but ask for 16:9 to minimize crop.
-1. Cost/time: budget ~1–3 min per AI-rendered slide; /genimage-img2 bills the codex
-   ChatGPT subscription, /genimage-nb the agy/Gemini side — not per-image.
-   /genimage-canvas slides cost only the authoring time.
+1. Cost/time depends on the selected renderer and account. Check its current
+   terms when a budget matters; do not infer billing from the host agent.
 1. `generated-slides/` holds large binaries — suggest `.gitignore` unless the
    user wants them committed.
 1. Keep the aesthetic sentence identical across all slide prompts (AI) or the

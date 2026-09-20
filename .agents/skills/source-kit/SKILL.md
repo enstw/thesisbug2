@@ -2,13 +2,12 @@
 name: source-kit
 description: >
   Acquires, stores, and audits the sources behind cited academic work. Use when
-  adding references.bib entries, fetching fulltext into <unit>/refs/, a URL
+  adding references.bib entries, fetching fulltext into a unit's refs/, a URL
   returns 403 or a challenge page, mapping claims to sources before a draft, or
   reviewing whether a source actually supports its claim. Covers think-tank
   landing pages, blocked hosts (robust-web-fetch), and recording
-  identity/support verdicts to <unit>/refs/audit/<key>.jsonl for the bib-quality
+  identity/support verdicts to per-source audit JSONL files for the bib-quality
   ratchet. Use for /bib_audit, "audit the bib", "稽核來源".
-user-invocable: true
 ---
 
 # source-kit — source acquisition + audit
@@ -67,9 +66,10 @@ Markdown (`<unit>/refs/<citation_key>.md`) is the preferred form.
 
 1. Fetch the source from the `url` or `doi` field in the bib entry.
 1. **PDFs** → `<unit>/refs/<citation_key>.pdf`. PDF→Markdown conversion is out of
-   scope here — use the **`pdf-to-markdown`** skill if your agent has it (same
-   `enstw/skill-jz` source as robust-web-fetch; page-marked output, OCR
-   fallback).
+   scope here — use an available extractor that preserves page markers, with
+   OCR when needed; **`pdf-to-markdown`** is an optional integration. Without
+   extraction, retain the original and mark transcription pending rather than
+   claiming fulltext has been verified.
 1. **Other types** (DOCX, HTML save, EPUB) → save the fulltext directly as
    `<unit>/refs/<citation_key>.md`, preserving paragraph structure.
 1. **Paywalled / inaccessible** → create `<unit>/refs/<citation_key>.md` noting
@@ -106,11 +106,14 @@ the fetch has somewhere to record what it learned:
 ## 2. When the source is behind a CDN
 
 When `curl`, `wget`, or a built-in fetcher returns 403 or a "Just a moment…"
-challenge, use the **`robust-web-fetch`** skill if your agent has it (install via
-`pnpm dlx skills add enstw/skill-jz --skill robust-web-fetch`). It escalates
+challenge, use the **`robust-web-fetch`** skill if your agent has it. It escalates
 curl-cffi → Wayback → Chromium print → camoufox; with `--html-fallback` it
 writes a Markdown rendering when the PDF itself can't be retrieved. Record the
-winning tier in `DOWNLOADS.md` Notes so a re-fetch skips dead ends.
+winning tier in `DOWNLOADS.md` Notes so a re-fetch skips dead ends. If it is
+unavailable, use the host's browser/archive tools or record the source as
+blocked; never count a challenge or landing page as verified fulltext. Resolve
+external skills through the host's discovery mechanism, because their install
+paths are not part of this framework.
 
 ## 3. Landing page vs. direct asset URL
 

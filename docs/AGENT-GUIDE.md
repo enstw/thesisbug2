@@ -4,8 +4,9 @@ You are in a course repository that mounts the thesisbug2 framework at `.framewo
 
 ## Starting a session
 
+1. **Update thesisbug2 first:** run `./fw update` from the course root at the start of every agent session, then re-read this guide from the updated `.framework/`. This keeps shared instructions and tools current across agents and machines. The update may commit only the framework pin locally; it does not authorize a push. If the update fails, report what failed and continue with the available checkout without resetting, stashing, or discarding local work. If the course's `AGENTS.md` already triggered the update this session, do not repeat it.
 1. Read `COURSE.md` (who the instructor is, the citation style, what is graded) and `STATUS.md` (one line per unit).
-1. If `COURSE.md` still has `[待完成]` slots, complete it before starting a unit: ask the author for the syllabus (a PDF or a link is enough; transcribe it with the pdf-to-markdown skill and keep the transcript in `notes/`) and fill the instructor, institution, field, what is graded, and the course notes from it, then confirm what you filled. The installer cannot fill these — they come from the syllabus — and every later unit, and every review prompt, reads them from this file.
+1. If `COURSE.md` still has `[待完成]` slots, complete it before starting a unit: ask the author for the syllabus (a PDF or a link is enough; use an available PDF/text extraction tool and keep the transcript in `notes/`) and fill the instructor, institution, field, what is graded, and the course notes from it, then confirm what you filled. If extraction is unavailable, retain the unverified slots and report the missing capability. The installer cannot fill these — they come from the syllabus — and every later unit, and every review prompt, reads them from this file.
 1. If the request names or implies a unit, read that unit's `WORK.json` and `PROGRESS.md` before doing anything else. They say what the unit is and where it stopped.
 1. If the user's first message already says what they want, do that. Ask which unit only when the request could apply to more than one.
 
@@ -36,7 +37,11 @@ Run everything from the course root through the dispatcher:
 
 ## Skills
 
-The framework's skills are linked into `.claude/skills/` and `.agents/skills/`. Invoke the skill for the job — the procedure lives there, not here.
+The canonical skills are `.framework/.agents/skills/<name>/SKILL.md`, also exposed through `.agents/skills/` and `.claude/skills/`. Use native skill discovery when available; otherwise read the relevant file directly. Names such as `/check_flow` are task aliases, not required slash-command APIs, so an agent without those APIs can follow the same procedure.
+
+Use your environment's file, shell, browser, and delegation capabilities. External skills named below are integrations to discover and read before use, since they are not bundled here. Never assume a vendor home directory or install into the course's skill symlinks, because that would modify the framework submodule. If a capability is missing, finish independent checks and report what remains unverified. `flow-check` specifically requires an isolated reader for its cold read; `gpt-review` requires a suitable second model for a cross-model verdict.
+
+**Image generation is the provider exception:** use Codex, the maintainer's current stable backend. A Codex host can use its native image tool; another host uses the discovered `genimage-img2` Codex wrapper. Report an unavailable backend instead of substituting another image provider. Supplied PNGs and authored HTML capture still work without AI generation.
 
 | Stage | Skill |
 | :--- | :--- |

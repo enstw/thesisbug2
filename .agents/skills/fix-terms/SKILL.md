@@ -7,7 +7,6 @@ description: >
   submission. Scans and proposes (位置 → 原詞 → 建議) rather than blind-replacing:
   rules are context-aware, a mandatory-translation list overrides (制腦權, 造謠,
   錯誤資訊, 智能合約), and quotations are left verbatim.
-user-invocable: true
 ---
 
 # fix-terms — terminology & cross-strait usage校正

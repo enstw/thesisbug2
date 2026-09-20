@@ -18,8 +18,8 @@ ratchet does. So each file has a contract this command checks:
   DECISIONS.md   the rules in force — requirements and standing decisions —
                  each as the rule plus its reason. A superseded decision is
                  removed, not annotated: the file answers "what applies now".
-  CHANGELOG.md   everything else. Never read at session start; grep it when a
-                 task needs the history. Not checked — it may grow.
+  CHANGELOG.md   everything else. Never read at session start; query it with
+                 `./fw log --find` when a task needs the history. Not checked — it may grow.
 
 The narrative of a working session belongs in its commit messages, which git
 already stores, dates, and scopes. CHANGELOG.md takes one line per milestone.
@@ -51,7 +51,7 @@ MAX_LINE = 320
 DONE = re.compile(r"^\s*[-*]\s*\[[xX]\]")
 DATED = re.compile(r"^\s*[-*]\s*(\*\*)?\[?(19|20)\d\d-\d\d-\d\d")
 CHANGELOG_HEAD = ("# 變更紀錄\n\n> **不到必要不讀取。** 這是歷程，不是規則，也不是現況。"
-                  "要追溯時用 `grep` 查關鍵字，不要整份讀進 context。\n\n（新→舊）\n\n")
+                  "要追溯時用 `./fw log --find <關鍵字>`，再 `./fw log --show <id>`；不要整份讀。\n\n（新→舊）\n\n")
 
 
 def violations(path: Path) -> list[str]:

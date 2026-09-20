@@ -188,6 +188,10 @@ class CourseInitTests(unittest.TestCase):
         self.assertIn("第一章初稿", (unit / "CHANGELOG.md").read_text(encoding="utf-8"))
         self.run_cmd("./fw", "log", "hw", "里程碑一行", cwd=course)
         self.assertIn("里程碑一行", (unit / "CHANGELOG.md").read_text(encoding="utf-8"))
+        found = self.run_cmd("./fw", "log", "hw", "--find", "里程碑", cwd=course).stdout
+        self.assertIn("1 of", found)
+        self.assertIn("里程碑一行", self.run_cmd("./fw", "log", "hw", "--show", "1", cwd=course).stdout)
+        self.assertLess(len(found), 400)                       # a query answers small
 
     def test_unattended_missing_slug_does_not_create_course(self):
         result = self.run_cmd(sys.executable, str(REPO / "scripts/course-init.py"),

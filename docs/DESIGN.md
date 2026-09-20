@@ -100,7 +100,7 @@ Rules:
 | :--- | :--- | :--- | :--- |
 | `PROGRESS.md` | where the unit is, what is open, what it waits on | yes | size budget; no `[x]`, no dated entries, no paragraphs |
 | `DECISIONS.md` | which requirements and decisions apply now | yes | size budget; no `[x]`, no paragraphs |
-| `CHANGELOG.md` | how it got here — one line per milestone | no; grep on demand | no — it may grow |
+| `CHANGELOG.md` | how it got here — one line per milestone | no; `./fw log --find` / `--show` on demand | no — it may grow |
 
 `./fw check-progress` enforces the contract and `./fw build` refuses to build on a violation (`--no-progress-gate` once), the same ratchet shape as `required_bib_level`: a rule that asks agents to keep a file tidy does not hold across sessions, a gate on a step every workstream reaches does. Session narrative belongs in commit messages.
 

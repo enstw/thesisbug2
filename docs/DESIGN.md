@@ -92,6 +92,18 @@ Rules:
 1. **Milestone tags** are `<unit>/<label>`, for example `03-paper-final/draft-v1`.
 1. **Committed symlinks** replace `link-skills.sh`. Both agent skill directories point into the submodule, so a framework update updates every agent's skills at once. Symlinks in git need developer mode on Windows; *decided:* Windows is unsupported, and the README says so.
 
+### A unit's status files
+
+*Decided:* three files, split by the question each answers, because a single `PROGRESS.md` turned into a session log in practice — 93 KB in one thesis, 60% changelog, with a "current stage" paragraph two months stale that every new session read and believed.
+
+| File | Answers | Read at session start | Checked |
+| :--- | :--- | :--- | :--- |
+| `PROGRESS.md` | where the unit is, what is open, what it waits on | yes | size budget; no `[x]`, no dated entries, no paragraphs |
+| `DECISIONS.md` | which requirements and decisions apply now | yes | size budget; no `[x]`, no paragraphs |
+| `CHANGELOG.md` | how it got here — one line per milestone | no; grep on demand | no — it may grow |
+
+`./fw check-progress` enforces the contract and `./fw build` refuses to build on a violation (`--no-progress-gate` once), the same ratchet shape as `required_bib_level`: a rule that asks agents to keep a file tidy does not hold across sessions, a gate on a step every workstream reaches does. Session narrative belongs in commit messages.
+
 ### How skills and scripts name paths
 
 *Decided:* agent sessions start at the course root, and every command is run from there through one dispatcher:

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Build one unit to PDF.
 
-    ./fw build [<unit>] [--target <file.qmd>] [--no-bib-gate]
+    ./fw build [<unit>] [--target <file.qmd>] [--no-bib-gate] [--no-progress-gate]
 
 Reads the unit's WORK.json, takes the matching template from
 assets/templates/<type>/, and writes two generated files into the unit
@@ -178,6 +178,20 @@ def bib_gate(unit: Path, work: dict) -> None:
                  "required_bib_level in the unit's WORK.json. Override once with --no-bib-gate.")
 
 
+def progress_gate(unit: Path) -> None:
+    """Refuse to build while the unit's status files have turned into a log.
+
+    They are read at the start of every session, so history left in them is a
+    cost paid each time and a stale "current state" agents will believe. A
+    build is the one step every workstream reaches, which makes it the place a
+    cleanup cannot be skipped — the same reasoning as the bib ratchet.
+    """
+    if "--no-progress-gate" in sys.argv:
+        return
+    if subprocess.run([sys.executable, str(HERE / "check-progress.py"), str(unit)]).returncode:
+        sys.exit("\nBuild blocked: see above. Override once with --no-progress-gate.")
+
+
 def render(unit: Path, root: Path, target: str | None) -> None:
     dirs = (unit / "_output", unit)
     before = {p: p.stat().st_mtime_ns for d in dirs for p in d.glob("*.pdf")}
@@ -219,6 +233,7 @@ def main() -> None:
               f"Beamer fallback: ./fw build {unit.name} --target presentation.qmd")
         return
 
+    progress_gate(unit)
     bib_gate(unit, work)
     generate(unit, root, work)
     render(unit, root, target)

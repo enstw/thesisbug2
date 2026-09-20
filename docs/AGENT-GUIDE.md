@@ -7,7 +7,7 @@ You are in a course repository that mounts the thesisbug2 framework at `.framewo
 1. **Update thesisbug2 first:** run `./fw update` from the course root at the start of every agent session, then re-read this guide from the updated `.framework/`. This keeps shared instructions and tools current across agents and machines. The update may commit only the framework pin locally; it does not authorize a push. (A course whose `.gitmodules` sets `ignore = all` on the submodule has opted out of tracking the pin; there the update pulls and commits nothing.) If the update fails, report what failed and continue with the available checkout without resetting, stashing, or discarding local work. If the course's `AGENTS.md` already triggered the update this session, do not repeat it.
 1. Read `COURSE.md` (who the instructor is, the citation style, what is graded) and `STATUS.md` (one line per unit).
 1. If `COURSE.md` still has `[待完成]` slots, complete it before starting a unit: ask the author for the syllabus (a PDF or a link is enough; use an available PDF/text extraction tool and keep the transcript in `notes/`) and fill the instructor, institution, field, what is graded, and the course notes from it, then confirm what you filled. If extraction is unavailable, retain the unverified slots and report the missing capability. The installer cannot fill these — they come from the syllabus — and every later unit, and every review prompt, reads them from this file.
-1. If the request names or implies a unit, read that unit's `WORK.json` and `PROGRESS.md` before doing anything else. They say what the unit is and where it stopped. **Do not read the unit's `CHANGELOG.md` unless a task needs the history** — it records how the unit got here, and loading tens of kilobytes of that dilutes attention on the rules and the current state, which are what the work needs. When you must trace a decision, `grep` it for the keyword. The same applies to other long files (`refs/<key>.md` transcripts, review reports): grep or read the relevant section. When you update `PROGRESS.md`, keep every line in it currently true and move superseded narrative to `CHANGELOG.md`, because a status file that mixes in stale entries has to be read in full to be trusted.
+1. If the request names or implies a unit, read that unit's `WORK.json`, `PROGRESS.md` (where it is, what is open, what it waits on) and `DECISIONS.md` (the requirements and decisions in force) before doing anything else. **Do not read `CHANGELOG.md` unless a task needs the history**; grep it for the keyword. The same goes for other long files — `refs/<key>.md` transcripts, review reports: grep, or read the section.
 1. If the user's first message already says what they want, do that. Ask which unit only when the request could apply to more than one.
 
 ## Layout
@@ -62,6 +62,16 @@ Lint order for a manuscript: **fix-terms → flow-check → cite-check**, with g
 A source's files exist in exactly one place: the unit that fetched it (`<unit>/refs/`, `<unit>/references.bib`) or, once a second unit wants it, `library/`. Look in `library/` and the other units before fetching anything; keys are unique across the course. `source-kit` has the full procedure, including the append-only audit logs (`refs/audit/<key>.jsonl`) and why a `support` verdict carries the unit's name while an `identity` verdict does not. The state machine is in `.framework/docs/bib-lifecycle.md`.
 
 Raw originals (`*.pdf`, `*.epub`, `*.html`) are never committed. Transcripts and audit logs are.
+
+## Status files are not a log
+
+`PROGRESS.md` and `DECISIONS.md` are read at the start of every session, so everything in them costs context each time and is taken as current. An agent's habit is to append a paragraph about what it just did; after a few weeks the live to-do list is a few lines under kilobytes of history, some of it no longer true, and the next agent believes it. So:
+
+- **Finishing something means deleting its line**, then `./fw check-progress --log "one line"` if it is a milestone worth finding later. Never tick it `[x]` and leave it.
+- **A changed rule is rewritten in place** in `DECISIONS.md`; the old wording goes, because the file answers "what applies now", not "how we got here".
+- **The story of a session goes in its commit messages.** Git already stores it, dated and scoped to the change; a second copy in a status file only rots.
+- **Re-measure instead of keeping a number.** A word count or gate result in `PROGRESS.md` carries its date; when it is old, measure again.
+- `./fw check-progress` enforces this (size budget, no `[x]`, no dated entries, no paragraphs) and `./fw build` refuses to build when it fails. `--sweep` moves finished and dated lines to `CHANGELOG.md` for you.
 
 ## Communication contract
 

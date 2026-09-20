@@ -48,6 +48,9 @@ class CourseInitTests(unittest.TestCase):
         # Copy the real entry files, without model eval answers or large fonts.
         self.framework = self.root / "framework"
         shutil.copytree(REPO / "assets/course-skeleton", self.framework / "assets/course-skeleton")
+        # unit-init needs the shared scaffold and one small type to create a unit from.
+        shutil.copytree(REPO / "assets/scaffold", self.framework / "assets/scaffold")
+        shutil.copytree(REPO / "assets/templates/homework", self.framework / "assets/templates/homework")
         shutil.copytree(REPO / "scripts", self.framework / "scripts", ignore=shutil.ignore_patterns("__pycache__"))
         shutil.copytree(REPO / "docs", self.framework / "docs")
         for source in (REPO / ".agents/skills").glob("*/SKILL.md"):
@@ -159,6 +162,32 @@ class CourseInitTests(unittest.TestCase):
         self.assertEqual(self.run_cmd("git", "rev-parse", "HEAD", cwd=course / ".framework").stdout.strip(), expected)
         self.assertEqual(self.run_cmd("git", "rev-parse", "HEAD", cwd=course).stdout.strip(), head)
         self.assertEqual(self.run_cmd("git", "status", "--porcelain", cwd=course).stdout.strip(), "")
+
+    def test_status_files_gate_blocks_a_log_and_sweep_clears_it(self):
+        self.run_cmd(sys.executable, str(REPO / "scripts/course-init.py"),
+                     "1142-methods", *self.arguments("--yes"))
+        course = self.root / "courses/1142-methods"
+        self.run_cmd("./fw", "unit-init", "--type", "homework", "--name", "hw", "--title", "測試",
+                     "--no-build", cwd=course)
+        unit = course / "units/01-homework-hw"
+        for name in ("PROGRESS.md", "DECISIONS.md", "CHANGELOG.md"):
+            self.assertTrue((unit / name).is_file(), name)
+        self.run_cmd("./fw", "check-progress", "hw", cwd=course)          # a fresh scaffold passes
+
+        progress = unit / "PROGRESS.md"
+        progress.write_text(progress.read_text(encoding="utf-8")
+                            + "- [x] 第一章初稿\n- 2026-01-02 - **寫了很多**：" + "敘事" * 200 + "\n",
+                            encoding="utf-8")
+        blocked = self.run_cmd("./fw", "check-progress", "hw", cwd=course, check=False)
+        self.assertNotEqual(blocked.returncode, 0)
+        self.assertIn("finished item", blocked.stdout)
+        self.assertIn("dated entry", blocked.stdout)
+
+        self.run_cmd("./fw", "check-progress", "hw", "--sweep", cwd=course)
+        self.assertNotIn("第一章初稿", progress.read_text(encoding="utf-8"))
+        self.assertIn("第一章初稿", (unit / "CHANGELOG.md").read_text(encoding="utf-8"))
+        self.run_cmd("./fw", "log", "hw", "里程碑一行", cwd=course)
+        self.assertIn("里程碑一行", (unit / "CHANGELOG.md").read_text(encoding="utf-8"))
 
     def test_unattended_missing_slug_does_not_create_course(self):
         result = self.run_cmd(sys.executable, str(REPO / "scripts/course-init.py"),

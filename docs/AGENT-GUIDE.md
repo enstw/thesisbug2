@@ -65,13 +65,15 @@ Raw originals (`*.pdf`, `*.epub`, `*.html`) are never committed. Transcripts and
 
 ## Status files are not a log
 
+For a unit explicitly enrolled in the [experimental JSON workflow](workflow.md), `PROGRESS.md` and `DECISIONS.md` are generated views. Use `./fw todo <unit>`, `./fw decision <unit>`, and `./fw workflow <unit> context` to update their sources; finish with `./fw workflow <unit> handoff`. Read each command's `--help` before use. Do not edit generated views or read the entire `.workflow/` store, because that bypasses revision checks and reloads the history. Enrollment is explicit; neither framework updates nor unit creation migrate existing files.
+
 `PROGRESS.md` and `DECISIONS.md` are read at the start of every session, so everything in them costs context each time and is taken as current. An agent's habit is to append a paragraph about what it just did; after a few weeks the live to-do list is a few lines under kilobytes of history, some of it no longer true, and the next agent believes it. So:
 
-- **Finishing something means deleting its line**, then `./fw log "one line"` if it is a milestone worth finding later. Never tick it `[x]` and leave it.
-- **A changed rule is rewritten in place** in `DECISIONS.md`; the old wording goes, because the file answers "what applies now", not "how we got here".
+- **Finishing something removes it from the live list:** delete its line in a Markdown unit, or mark it done through `todo` in a JSON unit. Use `./fw log <unit> "one line"` only for a milestone worth finding later; completed items are history.
+- **A changed rule replaces the current rule** in `DECISIONS.md`, or through `decision revise` in a JSON unit; preserve its predecessor and reason in the appropriate history first, because uncommitted intermediate decisions are not automatically saved by Git.
 - **The story of a session goes in its commit messages.** Git already stores it, dated and scoped to the change; a second copy in a status file only rots.
 - **Re-measure instead of keeping a number.** A word count or gate result in `PROGRESS.md` carries its date; when it is old, measure again.
-- `./fw check-progress` enforces this (size budget, no `[x]`, no dated entries, no paragraphs) and `./fw build` refuses to build when it fails. `--sweep` moves finished and dated lines to `CHANGELOG.md` for you.
+- Run `./fw check-progress <unit>` before handoff even when there was no build, because research-only sessions can also accumulate stale state. `./fw build` checks it too, including HTML presentations. The gate checks size and formatting, plus JSON/view consistency when enabled; it cannot establish that a short statement is still true. `--sweep` is for ordinary Markdown units only.
 
 ## Communication contract
 

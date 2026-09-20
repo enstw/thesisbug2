@@ -92,6 +92,8 @@ cd ~/homework/1142-asia-pacific-security
 
 Types: `preparation`, `homework`, `paper`, `journal`, `thesis`, `presentation` (`--variant thesis|reading-guide`). `unit-init` runs one build so you know the unit renders before you start writing.
 
+Course units can explicitly try the [JSON workflow experiment](docs/workflow.md): versioned tasks and decisions, bounded queries, generated status views, and handoff checks through `./fw`. It uses the Python standard library with no jq dependency; existing Markdown units keep their current workflow until migrated.
+
 ### Update the framework inside a course
 
 ```bash

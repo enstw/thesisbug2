@@ -1,0 +1,24 @@
+name: Offline regression checks
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python: ['3.12', '3.14']
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: astral-sh/setup-uv@d0d8abe699bfb85fec6de9f7adb5ae17292296ff # v6
+        with:
+          python-version: ${{ matrix.python }}
+      - run: uv run --no-project --no-config python -m unittest discover -s tests -v

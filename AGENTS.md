@@ -15,11 +15,13 @@ What exists so far:
 
 To try a script without a real course, make a scratch directory with `units/<name>/WORK.json`, symlink this repo in as `.framework`, and add the two-line `fw` shim (`exec "$(dirname "$0")/.framework/scripts/fw" "$@"`).
 
+`todo`, `decision`, and `workflow` are an opt-in [JSON workflow experiment](docs/workflow.md) for course units. Existing units and other projects are not migrated automatically; general context cleanup uses their existing files and the optional external `context-cleanup` skill.
+
 ### Skill evals
 
 `flow-check`, `source-kit`, and `safe-edit` carry `evals/evals.json` (four, three, and three scenarios respectively: a query, fixture files, expected behaviours) and invented fixtures with planted defects, described in each `evals/fixtures/README.md`. There is no model-eval runner. To check a skill after editing it, build a scratch course repo, copy the fixture in as `units/01-paper-eval/`, copy `.agents/skills/` in **without any `evals/` directory** (leaving it in hands the agent the answers), give a fresh-context agent only the query, and compare what it did — and what `git status` in the scratch repo shows — with `expected_behavior`. Add a scenario when a real session shows a skill failing, rather than guessing at failures in advance.
 
-`uv run --no-project -m unittest discover -s tests -v` runs the offline installer regression checks: no agent executable on PATH, interactive and unattended slug handling, `--no-github` with an account owner, pointer files and skill symlinks after recursive clone, preservation of existing directories, and framework startup updates that preserve staged and unstaged coursework. Tests use temporary repos and an isolated account config so they cannot change real courses or machine defaults.
+`uv run --no-project -m unittest discover -s tests -v` runs the offline regression suite. Installer cases cover agent-free setup, slug handling, recursive clones, and preserving coursework during updates; workflow cases cover revision retention, concurrent/stale writes, migration, bounded queries, recovery, and repeated handoffs without new history. Tests use temporary repos and isolated configuration, and CI runs them on macOS and Ubuntu.
 
 The predecessor is `thesisbug-template` (private), usually checked out beside this repo at `../thesisbug-template`. Skills, scripts, and templates are ported from there.
 
@@ -30,7 +32,7 @@ The predecessor is `thesisbug-template` (private), usually checked out beside th
 - **Image generation uses Codex as an explicit exception**, because it is currently the maintainer's stable image backend; the host agent can still be any agent. Prefer Codex's native image tool when available, otherwise use the discovered `genimage-img2` Codex wrapper, and report a missing backend instead of silently choosing another image provider.
 - **This repo is public; the predecessor is private.** Before copying anything in, clear it against `docs/DESIGN.md` § Audit required before each port. Personal context, coursework content, thesis-specific wording, and fonts or images without redistribution rights stay out. Port by copying files into new commits; never import the predecessor's git history, because its work branches contain private coursework.
 - **Keep coursework paths out of the framework.** Framework code locates a unit by walking up to the nearest `WORK.json` and reads shared sources from the course's `library/`. A hard-coded `work/` path is a bug here.
-- **Update the design document with the change.** When a decision in `docs/DESIGN.md` changes, edit the document in the same commit, so the design and the code cannot drift apart.
+- **Update the design document with the change.** When a decision in `docs/DESIGN.md` changes, edit the document in the same commit, so the design and the code cannot drift apart. Rewrite the affected contract in place; session narratives and individual test-run results belong in commit messages, because accumulating them in project context buries the current rules. Review context-file diffs for this during workflow-tool development too.
 - **Explain rules when you add them.** An instruction added to a skill, a protocol, or this file carries its reason in the same sentence. Current models follow instructions literally and generalise from the reason; a bare prohibition gets applied too broadly or too narrowly.
 - **Skill descriptions stay at roughly 300–500 characters**, third person, stating what the skill does and when to use it. Every agent loads all descriptions at startup, and long ones get truncated at a point the author did not choose. The hard limit is 1,024.
 - **Diagrams are Mermaid** in fenced blocks inside the Markdown, so the rendered diagram cannot drift from its source.

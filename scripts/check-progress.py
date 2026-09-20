@@ -44,7 +44,8 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
-from _paths import course_root, rel, resolve_unit  # noqa: E402
+from _paths import course_root, rel, resolve_unit, workflow_paths  # noqa: E402
+from _workflow import store_problems  # noqa: E402
 
 BUDGET = {"PROGRESS.md": 6_000, "DECISIONS.md": 9_000}    # bytes; CJK is 3 bytes a character
 MAX_LINE = 320
@@ -122,9 +123,14 @@ def main() -> None:
         print(f"logged to {rel(unit / 'CHANGELOG.md', root)}")
         return
     if a.sweep:
+        if store_problems(unit) or workflow_paths(unit)["data"].exists():
+            sys.exit("JSON workflow views cannot be swept; update tasks through fw todo and regenerate with fw workflow render")
         print(f"swept {sweep(unit)} line(s) from PROGRESS.md into CHANGELOG.md")
 
     bad = 0
+    for problem in store_problems(unit):
+        print(f"workflow: {problem}")
+        bad += 1
     for name in BUDGET:
         f = unit / name
         if not f.is_file():

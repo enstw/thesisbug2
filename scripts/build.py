@@ -224,6 +224,8 @@ def main() -> None:
     unit = resolve_unit(positional[0] if positional else None)
     work = json.loads((unit / "WORK.json").read_text(encoding="utf-8"))
 
+    progress_gate(unit)
+
     if work.get("type") == "presentation" and not (target and target.endswith(".qmd")):
         deck = unit / "deck.html"
         if not deck.is_file():
@@ -233,7 +235,6 @@ def main() -> None:
               f"Beamer fallback: ./fw build {unit.name} --target presentation.qmd")
         return
 
-    progress_gate(unit)
     bib_gate(unit, work)
     generate(unit, root, work)
     render(unit, root, target)

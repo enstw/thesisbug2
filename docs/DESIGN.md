@@ -1,6 +1,6 @@
 # thesisbug2 — design
 
-Status: **draft for review**, 2026-09-18. Nothing below is implemented yet. Decisions marked *Decided* were agreed with the maintainer; items under § Open questions are not.
+Status: **active design**. Decisions marked *Decided* were agreed with the maintainer; items under § Open questions are not. [AGENTS.md](../AGENTS.md#current-state) describes the available implementation; sections marked *Planned* are not implemented yet.
 
 ## Why a second generation
 
@@ -87,7 +87,7 @@ Rules:
 
 1. **A unit is a directory that contains `WORK.json`.** Scripts locate the current unit by walking up from the working directory to the nearest `WORK.json`, the way git finds `.git`. Skills say "the unit directory" instead of `work/`.
 1. **Unit names are `NN-<type>-<topic>`.** The number gives chronological order; the type is one of `preparation`, `homework`, `paper`, `journal`, `presentation`, `thesis`.
-1. **Status has two levels.** `STATUS.md` is the course index. Each unit's `PROGRESS.md` is the working log for that unit.
+1. **Status has two levels.** `STATUS.md` is the course index. Each unit's `PROGRESS.md` is its current-state summary; history belongs in `CHANGELOG.md`, so old work is not presented as current.
 1. **A thesis is a course repo with one unit.** No special case.
 1. **Milestone tags** are `<unit>/<label>`, for example `03-paper-final/draft-v1`.
 1. **Committed symlinks** replace `link-skills.sh`. Both agent skill directories point into the submodule, so a framework update updates every agent's skills at once. Symlinks in git need developer mode on Windows; *decided:* Windows is unsupported, and the README says so.
@@ -103,6 +103,18 @@ Rules:
 | `CHANGELOG.md` | how it got here — one line per milestone | no; `./fw log --find` / `--show` on demand | no — it may grow |
 
 `./fw check-progress` enforces the contract and `./fw build` refuses to build on a violation (`--no-progress-gate` once), the same ratchet shape as `required_bib_level`: a rule that asks agents to keep a file tidy does not hold across sessions, a gate on a step every workstream reaches does. Session narrative belongs in commit messages.
+
+### Experimental: JSON workflow commands
+
+*Decided:* the JSON workflow is an explicitly enabled experiment for course units. Other projects use their existing documents and the optional external `context-cleanup` skill. Python's standard library and the uv toolchain provide `fw todo`, `fw decision`, and `fw workflow` on macOS and Ubuntu; common queries and bounded `--json` output require no jq. [Usage and migration](workflow.md) live separately so routine startup need not load the command reference.
+
+1. **JSON is authoritative.** Each task or decision has a schema version, stable UUID, and revision chain in its own file; `context.json` holds the current summary and external requirements. The latest revision defines current state, preserving intermediate decisions before Git commits. `_paths.py` owns the layout.
+1. **Status Markdown is generated after opting in.** Checks detect drift, and ordinary item mutations refuse to overwrite edited views. Single-item writes validate, lock, check the caller's revision, and atomically replace the file; a failed view refresh is reported as already saved and repaired by `render`.
+1. **History is queried on demand.** Default lists contain unfinished tasks and effective decisions with pagination. No-ops and handoffs create no revisions; milestones are explicit, because recording every operation would recreate the log buildup.
+1. **Migration is previewed and explicit.** A fingerprint binds the plan to the original documents, which are archived verbatim. New units and framework updates do not automatically enable the experiment, because existing coursework must retain its current contract.
+1. **Build and handoff both check state, including HTML presentations.** Git synchronizes JSON; divergent revision chains require resolution, because local locks cannot coordinate offline clones. Multi-item transactions and automatic conflict resolution are outside the initial contract.
+
+Regression cases live in [test_workflow.py](../tests/test_workflow.py); the CI matrix runs the offline suite on macOS and Ubuntu. Test-run results belong in CI or commit messages, not appended here.
 
 ### How skills and scripts name paths
 
@@ -130,11 +142,7 @@ Skills write unit paths with a literal `<unit>/` prefix (`<unit>/refs/<key>.md`,
 1. `gpt-review` keeps its existing name and report directory for compatibility, but selects the referee before probing a provider. A user-requested provider is respected; cross-model claims require an identified different model family. `flow-check` can run its other checks sequentially, but never calls a same-context re-read an independent cold read.
 1. The 14 shared skills exclude the Claude-only `self-inject` recipe. It lives in `docs/integrations/claude-code-self-inject.md` as an optional manual integration, so it cannot steer another agent's common workflow.
 
-Verified on 2026-09-20: all six `tests/test_course_init.py` checks passed with agent CLIs absent from PATH, including pointer files and skill symlinks after a recursive clone, and updating a detached framework checkout while preserving unrelated staged and unstaged coursework; all 14 shared skills passed frontmatter validation. Two fresh-context fixture evaluations passed: `flow-check` found the planted seams, prepared an unprimed handoff, and left the unavailable cold read pending; `source-kit` identified the review masquerading as a book, recorded only `identity: review-of`, and preserved the manuscript and quality threshold. This validates the portable entry path and those fallback/integrity behaviors; it does not claim every vendor's automatic discovery or every model-eval scenario has been exercised.
-
-The source-acquisition routing update was checked on 2026-09-20 against the external skills' 17 offline regressions, a local publisher fixture in a real browser (cookies across commands and restart, chapter completeness, preserved output on failure, explicit page printing), and visible-browser attachment/cleanup. A fresh-context `source-kit` fixture pass still recorded only `identity: review-of`, left the manuscript and quality threshold unchanged, and explained why citation-format success could not establish source support. These checks used invented documents; real EZproxy login and current publisher access remain untested.
-
-The [2026-09-20 agy image probe](image-backend-check-2026-09-20.md) produced three valid PNGs in three sequential attempts, but every image added unrequested text. This initial result is recorded separately from the chosen Codex backend; it does not establish long-term reliability or silently change the maintainer's provider decision.
+Verification entry points: [installer and update regressions](../tests/test_course_init.py) and the [skill fixture procedure](../AGENTS.md#skill-evals). Automated installer coverage does not establish every vendor's skill discovery, and skill evaluations remain scenario-specific. Source-acquisition checks used invented documents; real EZproxy login and current publisher access remain untested. The [agy image probe](image-backend-check-2026-09-20.md) records a provider experiment, not a change to the selected Codex backend.
 
 ### Building on an earlier unit
 

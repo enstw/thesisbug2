@@ -84,6 +84,15 @@ def library(root: Path | None = None) -> Path:
     return (root or course_root()) / "library"
 
 
+def workflow_paths(unit: Path) -> dict[str, Path]:
+    """The workflow store and its reading surfaces share one layout definition."""
+    data = unit / ".workflow"
+    return {"data": data, "task": data / "tasks", "decision": data / "decisions",
+            "context": data / "context.json", "manifest": data / "store.json",
+            "lock": data / ".lock", "archive": data / "migration.json",
+            "progress": unit / "PROGRESS.md", "decisions": unit / "DECISIONS.md"}
+
+
 def manuscript_files(unit: Path) -> list[Path]:
     """The unit's prose sources: chapters/*.qmd plus top-level *.qmd."""
     files = sorted((unit / "chapters").glob("*.qmd")) + sorted(unit.glob("*.qmd"))

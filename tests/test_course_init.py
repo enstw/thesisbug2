@@ -30,11 +30,18 @@ class CourseInitTests(unittest.TestCase):
         git = shutil.which("git")
         self.assertIsNotNone(git)
         (bin_dir / "git").symlink_to(git)
-        # Deliberately omit user-installed agents and gh. Git's shell helpers
-        # remain available through the system paths; no personal config is read.
+        # A system PATH is not isolated: Ubuntu runners ship gh in /bin.
+        # Expose only Python, Git, and the ordinary utilities used by Git's
+        # shell helpers, so no host agent or GitHub CLI can leak into the test.
+        for name in ("sh", "bash", "env", "basename", "dirname", "cat", "chmod", "cp", "cut",
+                     "expr", "find", "grep", "head", "ln", "mkdir", "mv", "pwd", "readlink",
+                     "rm", "rmdir", "sed", "sleep", "sort", "tail", "tr", "uname", "wc", "xargs"):
+            command = shutil.which(name, path=os.defpath)
+            if command:
+                (bin_dir / name).symlink_to(command)
         self.env = {
             **os.environ,
-            "PATH": str(bin_dir) + os.pathsep + os.defpath,
+            "PATH": str(bin_dir),
             "XDG_CONFIG_HOME": str(self.root / "config"),
             "GIT_CONFIG_GLOBAL": os.devnull,
             "GIT_CONFIG_SYSTEM": os.devnull,

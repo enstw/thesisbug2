@@ -58,6 +58,16 @@ def resolve_unit(arg: str | None = None) -> Path:
         for cand in (Path(arg), root / arg, root / "units" / arg):
             if (cand / UNIT_MARKER).is_file():
                 return cand.resolve()
+        # The short name given to unit-init (`final` for 03-paper-final) is what
+        # an author remembers; accept it when exactly one unit ends with it, and
+        # refuse to guess between two.
+        short = [u for u in list_units(root) if u.name.split("-", 2)[-1] == arg
+                 or u.name.endswith("-" + arg)]
+        if len(short) == 1:
+            return short[0].resolve()
+        if len(short) > 1:
+            sys.exit(f"'{arg}' matches more than one unit: "
+                     + ", ".join(u.name for u in short) + " — use the full name")
         sys.exit(f"not a unit (no {UNIT_MARKER}): {arg}")
     here = Path.cwd().resolve()
     for d in (here, *here.parents):

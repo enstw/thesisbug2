@@ -9,6 +9,7 @@
 | Field | [待完成] (used by review prompts, e.g. 國際關係) |
 | Citation style | [待完成] (`apa` · `apa-zh` · `chicago-fullnote`) |
 | Language | 繁體中文（臺灣用語） |
+| Library proxy | — (optional: your library's EZproxy login prefix, e.g. `https://ezproxy.lib.example.edu/login?url=`; `source-kit` uses it for licensed sources) |
 
 ## What is graded
 

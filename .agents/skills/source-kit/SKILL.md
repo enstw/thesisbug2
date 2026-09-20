@@ -5,9 +5,9 @@ description: >
   adding references.bib entries, fetching fulltext into a unit's refs/, a URL
   returns 403 or a challenge page, mapping claims to sources before a draft, or
   reviewing whether a source actually supports its claim. Covers think-tank
-  landing pages, blocked hosts (robust-web-fetch), and recording
-  identity/support verdicts to per-source audit JSONL files for the bib-quality
-  ratchet. Use for /bib_audit, "audit the bib", "稽核來源".
+  landing pages, CDN blocks, EZproxy/institutional login, and recording
+  identity/support verdicts to audit JSONL files for the quality ratchet.
+  Use for /bib_audit, "audit the bib", "稽核來源".
 ---
 
 # source-kit — source acquisition + audit
@@ -104,17 +104,35 @@ the fetch has somewhere to record what it learned:
   landing-page-only / inaccessible / deprecated). Do not track PDF→Markdown
   progress here; that's pdf2md's concern.
 
-## 2. When the source is behind a CDN
+## 2. Blocked downloads and institutional login
 
 When `curl`, `wget`, or a built-in fetcher returns 403 or a "Just a moment…"
-challenge, use the **`robust-web-fetch`** skill if your agent has it. It escalates
-curl-cffi → Wayback → Chromium print → camoufox; with `--html-fallback` it
-writes a Markdown rendering when the PDF itself can't be retrieved. Record the
-winning tier in `DOWNLOADS.md` Notes so a re-fetch skips dead ends. If it is
-unavailable, use the host's browser/archive tools or record the source as
-blocked; never count a challenge or landing page as verified fulltext. Resolve
-external skills through the host's discovery mechanism, because their install
-paths are not part of this framework.
+challenge, use **`robust-web-fetch`** if available. Its original-file strategies
+are curl-cffi → Wayback → camoufox. Web-page printing requires an explicit
+`--rendered-pdf`; `--html-fallback` permits a Markdown substitute after the
+original-file attempts fail. Keep those artifact types distinct, because an
+abstract or login page printed into a PDF is not the publisher's fulltext.
+
+For a known **EZproxy, institutional login, or interactive challenge**, use
+**`authenticated-fetch`** directly if available. The user signs in through a
+dedicated visible browser; subsequent downloads use that session and preserve
+the proxy-rewritten links. It depends on **`browser-cdp`** for browser lifecycle
+and **`robust-web-fetch`** for validation. Missing institutional entitlement
+remains an access limitation; record it rather than retrying indefinitely.
+
+Request `--json` and record the actual output path, method, artifact type,
+final source URL, and archive timestamp in `DOWNLOADS.md` Notes, omitting
+session tokens or signed access parameters. Inspect `status` and `complete`:
+an explicitly allowed partial chapter merge exits 3 and lists missing URLs;
+it must not become a complete-book retention entry. Compare the supplied
+chapter list with the table of contents, because the tool only knows the URLs
+it was given. `content_verified: false` means source identity and claim support
+still require the audit below, even when the PDF structure is valid.
+
+Resolve external skills through host discovery, because their install paths
+are not part of this framework. If unavailable, use the host's browser/archive
+capabilities or record the source as blocked; report missing checks and never
+count a challenge, landing page, or partial download as verified fulltext.
 
 ## 3. Landing page vs. direct asset URL
 

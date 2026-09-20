@@ -139,7 +139,7 @@ A new source lands in the unit that fetched it. When a second unit wants to cite
 - [x] Agent skills ported and cleared for publication
 - [x] Quarto templates, CSL files, fonts ported
 - [x] Writing protocols ported, generalised — identity and field come from the course's `COURSE.md`
-- [x] `fw` dispatcher and the gates: citations and source backing across both tiers, batch edits, readability, 簡繁 variants, 字數
+- [x] `fw` dispatcher and the gates: citations and source backing across both tiers, bib quality profile (`score-bib`), batch edits, readability, 簡繁 variants, 字數
 - [x] `unit-init` and `build` (two-tier bibliography, APA-zh 中文／西文 grouping by `langid`)
 - [x] `install.sh` / `course-init`: one command from nothing to a private course repo with the framework mounted
 - [x] `refs where` / `refs promote`, `refs-snapshot` (push and pull not yet exercised against a real release)

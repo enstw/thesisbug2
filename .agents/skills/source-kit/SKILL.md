@@ -236,3 +236,35 @@ you did; once committed, the file is append-only with no exceptions.
 1. `./fw check-bib <unit> --assert=L<n>` to confirm the level clears, then
    raise `required_bib_level` in `WORK.json` so the floor ratchets and dirt can't
    re-enter.
+
+## 8. Quality profile — `./fw score-bib`
+
+check-bib answers whether a source *backs* the claim made from it. It cannot
+answer whether that source is the right **kind** of thing to be carrying the
+claim: a party's press release backs its own quoted figure perfectly and is
+still the wrong place to rest a finding. That judgment has nowhere to be
+derived from, so it is written by hand into `<unit>/bib-scores.yml` — each key
+scored 0–3 on `authority`, `fitness`, `load`, `independence`, and
+`recency_fit` (`./fw score-bib --help` has the axis definitions and the
+sidecar's format; `library/bib-scores.yml` holds the same axes for promoted
+sources, and a unit's entry wins axis by axis because `load` is a fact about
+one manuscript).
+
+`./fw score-bib <unit>` turns the sidecar into a portfolio view (class,
+perspective, year band, language, citation concentration by source family) and
+five worklists. Act on them in this order:
+
+1. **UPGRADE / CORROBORATE** — load-bearing with low authority. Either find a
+   stronger source or add a primary corroborant; this is where a chapter is
+   most likely to fall under questioning.
+1. **POSITION-EVIDENCE CHECK** — load-bearing and from a party to the events.
+   The fix is usually in the prose, not the bib: frame the claim as that
+   party's position or action rather than as neutral fact.
+1. **TRANSCRIPTION RISK**, **STALE RISK**, **PARK / CUT** — keep the 轉述／轉引
+   flags, re-date what is presented as current, drop what nothing cites.
+
+Run it after an audit round rather than per key: it is a view of the whole set,
+and the portfolio half only means something once most keys are scored. A key
+with no sidecar entry scores 0 on every axis but `recency_fit`, so it surfaces
+in PARK / CUT instead of passing unnoticed — score the keys the argument rests
+on first.

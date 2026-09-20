@@ -156,6 +156,7 @@ Rules:
    - `support` (does the source back this claim?) is about one claim in one unit. Every `support` line carries a `unit` field, and `check-bib` for unit U counts only lines where `unit == U`.
 1. **Builds read both tiers.** `build` writes the unit's `_quarto.yml` with `bibliography: [<course>/library/references.bib, references.bib]`. Lookup order is unit first, then library.
 1. **The quality ratchet is per unit.** `required_bib_level` lives in the unit's `WORK.json`. The library has no level of its own; `check-bib --library` reports its overall state.
+1. **The judgment sidecar splits the same way.** `bib-scores.yml` — the hand-written axes `./fw score-bib` reads — sits beside the `references.bib` it scores, one per tier, and a unit's entry overrides the library's axis by axis. `authority`, `fitness`, `independence`, and `recency_fit` are facts about the source, inherited by every unit that cites it; `load` (how much of the argument rests on it) is a fact about one manuscript, so one source can anchor the final paper and be background in the midterm. Same split as `identity` vs `support`, for the same reason.
 1. **Units without citations have no `refs/`.** It is created on the first fetch.
 1. **Originals are not in git.** `./fw refs-snapshot` keeps one GitHub Release per course repo (tag `refs`; the old template kept one per branch), pinned by a single committed manifest, `library/refs/MANIFEST.tsv`, that covers both tiers with paths relative to the course root. A release asset is named after the file alone (`<key>.pdf`) — keys are unique across the course — so promoting a source rewrites its manifest path without re-uploading anything.
 
@@ -186,7 +187,7 @@ Framework cloning streams Git progress, including when an agent captures the ins
 | :--- | :--- |
 | The 15 skills (text updated from `work/` to "the unit directory" and `library/`) | Path resolution in every script (nearest `WORK.json`) |
 | `assets/templates/`, CSL files, `multibib.lua`, house-style assets | `init` → `unit-init` (creates a unit on `main`; no branch) |
-| `check-citations.py`, `check-bib.py`, `score-bib.py` core logic | `build` (output named after the unit; two-tier bibliography) |
+| `check-citations.py`, `check-bib.py` core logic | `build` (output named after the unit; two-tier bibliography) · `score-bib` (sidecar per tier, `load` per unit) |
 | `apply-edits.py`, `lint-readability.py`, `count-zh.py`, `check-zh-variants.py`, `plantuml2svg.py`, `yt2sub` | `refs-snapshot` (one Release per course repo) |
 | The nine skill eval scenarios and fixtures | `AGENTS.md` (framework) and the course `AGENTS.md` skeleton |
 | `docs/bib-lifecycle.md` | New: `course-init`, `refs promote`, `fw update`, duplicate-key check |

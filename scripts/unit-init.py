@@ -64,6 +64,7 @@ def presentation_files(variant: str) -> dict[str, Path]:
         "asset/presenter-stage.js": runtime / "presenter-stage.js",
         "presentation.qmd": scaffold / "variants" / variant / "presentation.qmd",
         "draft.qmd": scaffold / "draft.qmd",
+        "storyboard.md": scaffold / "storyboard.md",                     # shape → layout, per slide
         "notes/.gitkeep": scaffold / "notes" / ".gitkeep",
     }
 

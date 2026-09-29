@@ -199,6 +199,13 @@ class WorkflowTests(unittest.TestCase):
     def test_presentation_build_runs_status_gate(self):
         (self.unit / "WORK.json").write_text('{"type":"presentation"}', encoding="utf-8")
         (self.unit / "deck.html").write_text("<!doctype html><title>Fixture</title>", encoding="utf-8")
+        # A deck without its storyboard is refused: the shape-per-slide decision
+        # has to exist for the author to review before the slides do.
+        no_storyboard = self.cli("build", "hw", ok=False)
+        self.assertNotEqual(no_storyboard.returncode, 0)
+        self.assertIn("storyboard", no_storyboard.stderr)
+        (self.unit / "storyboard.md").write_text("| # | 來源 | 形狀 | 版型 |\n| :--- | :--- | :--- | :--- |\n",
+                                                 encoding="utf-8")
         self.cli("build", "hw")
         self.store.paths["progress"].write_text("# 進度\n- [x] 歷史\n", encoding="utf-8")
         blocked = self.cli("build", "hw", ok=False)

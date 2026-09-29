@@ -104,6 +104,8 @@ Rules:
 
 `./fw check-progress` enforces the contract and `./fw build` refuses to build on a violation (`--no-progress-gate` once), the same ratchet shape as `required_bib_level`: a rule that asks agents to keep a file tidy does not hold across sessions, a gate on a step every workstream reaches does. Session narrative belongs in commit messages.
 
+A presentation unit has a second gate of the same shape: `./fw build` refuses a deck with no `storyboard.md` (`--no-deck-gate` once) and one that leans on a single pattern (comparison tables on most content slides, more than six bullets on a slide). The storyboard records, per slide, the source paragraph and the **content shape** (deck-svg `reference/content-shapes.md`) before the slide exists, because an agent choosing layouts from the class list takes the easiest one and reshapes the content to fit; the shape decision has to be visible to the author at review, and a gate is what makes the file exist across sessions.
+
 ### Experimental: JSON workflow commands
 
 *Decided:* the JSON workflow is an explicitly enabled experiment for course units. Other projects use their existing documents and the optional external `context-cleanup` skill. Python's standard library and the uv toolchain provide `fw todo`, `fw decision`, and `fw workflow` on macOS and Ubuntu; common queries and bounded `--json` output require no jq. [Usage and migration](workflow.md) live separately so routine startup need not load the command reference.

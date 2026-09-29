@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Build one unit to PDF.
 
-    ./fw build [<unit>] [--target <file.qmd>] [--no-bib-gate] [--no-progress-gate]
+    ./fw build [<unit>] [--target <file.qmd>] [--no-bib-gate] [--no-progress-gate] [--no-deck-gate]
 
 Reads the unit's WORK.json, takes the matching template from
 assets/templates/<type>/, and writes two generated files into the unit
@@ -16,8 +16,9 @@ then runs `quarto render` in the unit and copies the PDF to
 <course>/_output/<unit-name>.pdf.
 
 Presentations are hand-authored deck.html files printed from a browser, so
-for them this only checks the deck exists — unless --target names the Beamer
-fallback .qmd.
+for them this runs the deck gate (storyboard present, no single pattern
+carrying the deck) instead of rendering — unless --target names the Beamer
+fallback .qmd. --no-deck-gate skips it once.
 """
 
 from __future__ import annotations
@@ -192,6 +193,55 @@ def progress_gate(unit: Path) -> None:
         sys.exit("\nBuild blocked: see above. Override once with --no-progress-gate.")
 
 
+def deck_gate(unit: Path, root: Path) -> None:
+    """Refuse a deck that skipped the storyboard or leans on one pattern.
+
+    The storyboard is where the author sees, per slide, which content shape
+    was chosen before the slide exists; without it the choice only shows up
+    as oddly reshaped content on a finished deck. The pattern counts catch
+    the two substitutions that lose the most: everything as a comparison
+    table, and slides that are documents in bullet form. The gate cannot
+    judge whether a shape fits — that is the storyboard review.
+    """
+    deck = unit / "deck.html"
+    html = deck.read_text(encoding="utf-8")
+    sections = [s for s in re.findall(r"<section\b([^>]*)>(.*?)</section>", html, flags=re.S)
+                if "slide" in s[0]]
+    slides = sections
+    # hero/finale carry no argument; the pattern counts cover only the rest
+    body = [s for s in sections if not re.search(r"\b(hero|finale)\b", s[0])]
+    n = len(body)
+    problems: list[str] = []
+
+    storyboard = unit / "storyboard.md"
+    if not storyboard.is_file():
+        problems.append(f"no {rel(storyboard, root)} — write the storyboard (one row per slide: "
+                        "source paragraph, content shape, pattern) and have the author review it "
+                        "before the deck; see deck-svg reference/content-shapes.md")
+    else:
+        rows = [ln for ln in storyboard.read_text(encoding="utf-8").splitlines()
+                if ln.startswith("|") and not ln.startswith("| :---") and not ln.startswith("| #")]
+        rows = [r for r in rows if "[編號＋名稱]" not in r]
+        if n and abs(len(rows) - len(slides)) > 2:
+            problems.append(f"storyboard has {len(rows)} rows but the deck has {len(slides)} slides — "
+                            "one row per slide, so a slide added without a shape decision shows up here")
+
+    if n:
+        tables = sum(1 for _, b in body if 'class="cmp' in b or "table class=\"cmp" in b)
+        if tables / n > 0.4 and tables >= 3:
+            problems.append(f"{tables} of {n} content slides use table.cmp — a comparison table is for "
+                            "3+ items on shared attributes (shape 7); typologies, contrasts and spectra "
+                            "have their own patterns (content-shapes.md)")
+        fat = [i for i, (_, b) in enumerate(body, 1) if len(re.findall(r"<li\b", b)) > 6]
+        if fat:
+            problems.append(f"slide(s) {fat} carry more than 6 bullets — move detail to speaker notes "
+                            "or split the slide")
+
+    if problems:
+        sys.exit("deck gate: " + "\n            ".join(problems) +
+                 "\n(./fw build --no-deck-gate skips this once)")
+
+
 def render(unit: Path, root: Path, target: str | None) -> None:
     dirs = (unit / "_output", unit)
     before = {p: p.stat().st_mtime_ns for d in dirs for p in d.glob("*.pdf")}
@@ -230,6 +280,8 @@ def main() -> None:
         deck = unit / "deck.html"
         if not deck.is_file():
             sys.exit(f"no deck at {rel(deck, root)} — scaffold one with ./fw unit-init")
+        if "--no-deck-gate" not in argv:
+            deck_gate(unit, root)
         print(f"The deck is {rel(deck, root)}. It has no build step: open it in a browser "
               "and Print → Save as PDF (one slide per page).\n"
               f"Beamer fallback: ./fw build {unit.name} --target presentation.qmd")

@@ -29,7 +29,8 @@ engine    deck-svg       asset/deck.css + deck.html         ← you work here
 |---|---|---|
 | `template/deck.html` | The deck you author: `<deck-stage>` with placeholder slides + `#speaker-notes` + the number-counter script. Links `asset/tokens.css` and `asset/deck.css`. | **Yes** — this is the work surface. |
 | `template/asset/deck.css` | Component / layout / motion CSS — the slide vocabulary. | Rarely (it's the engine style); extend with a new component if a slide needs one. |
-| `reference/slide-patterns.md` | The component cheat-sheet (what classes exist and when to use them). | No. |
+| `reference/content-shapes.md` | Content shape → pattern: which layout fits what kind of material, the storyboard format, and the anti-patterns. Read **first**. | No. |
+| `reference/slide-patterns.md` | The component cheat-sheet (what classes exist). | No. |
 
 ## Scaffolding a new deck
 
@@ -71,12 +72,30 @@ Resulting deck is portable and offline:
 Verify it opens before authoring (see § Run & verify), then replace the
 placeholder slides.
 
+## Storyboard before slides
+
+Write `<unit>/storyboard.md` (scaffolded by `unit-init`) before `deck.html`:
+one row per slide with the source paragraph it condenses, its **content shape**
+(numbered in `reference/content-shapes.md`), the pattern, and the minutes. The
+author reviews the storyboard; `deck.html` is written only after that sign-off.
+
+The shape column exists because an agent choosing layouts from the class list
+picks whatever is easiest to type — bullets, cards, `table.cmp` — and then
+trims or reshapes the content to fit, so a 3×3 typology becomes a list and the
+examples disappear. **The shape of the content chooses the layout; if no
+pattern fits, add a component to `asset/deck.css`, never bend the content.**
+Putting the choice in a table the author reads makes a bad fit visible before
+the slide exists. `./fw build` checks that the storyboard is there and that the
+deck does not lean on one pattern (`table.cmp` share, bullets per slide); it
+cannot judge fit — that is the review.
+
 ## Authoring slides
 
 Each slide is `<section class="slide" style="--chapter:var(--cN)" data-label="…">`.
-Compose the body from the component vocabulary in `reference/slide-patterns.md`
-(hero, topbar/eyebrow, kicker/lead, cards, grids, `table.cmp`, `blockquote.pull`,
-stats, `ul.clean`, flowdiag, inline `svg.art`). Stagger entrance with
+Compose the body from the pattern the storyboard names, using the classes in
+`reference/slide-patterns.md` (claim, defn, matrix, spectrum, timeline, tiers,
+debate, cards, grids, `table.cmp`, `blockquote.pull`, stats, `ul.clean`,
+flowdiag, inline `svg.art`). Stagger entrance with
 `class="rise d1|d2|d3|d4"`. Keep one idea per slide; push detail into speaker
 notes.
 

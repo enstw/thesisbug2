@@ -1,5 +1,8 @@
 # deck-svg slide-pattern cheat-sheet
 
+This is the class list. Which class a slide should use is decided by the
+shape of its content — `content-shapes.md` — not by this list; read that first.
+
 Every class below is defined in `template/asset/deck.css`. Colours come from
 house-style tokens — drive accents off `var(--chapter)` (set per slide via
 `style="--chapter:var(--cN)"`, N = 1–4), never hard-coded hex.
@@ -29,6 +32,15 @@ house-style tokens — drive accents off `var(--chapter)` (set per slide via
 - `.stats` > `.stat` (`.n` number, `.l` label) — metric trio; `.n` with `data-to="47.2"` animates the count on arrival.
 - `ul.clean` (+ `.lead-size`) — dotted bullet list with accent markers.
 - `.flowdiag` > `.flownode` / `.flowarrow` — left-to-right process diagram.
+
+## Content-shape components (see `content-shapes.md` for when)
+- `.claim` (+ `.hl`) — one statement, 64px; an optional `.lead` beneath.
+- `.defn` > `.term` (`h3` + `small` + `p`) and `.example` (`b` label + `p`) — term, definition, example.
+- `.matrix` > `.axis-y`, `table` (`thead th` column values, `tbody th` row values, `td` cells, `td.hi` highlight, `td.dim`), `.axis-x` — 2×2 / 3×3 typology or payoff matrix.
+- `.spectrum` > `.marks` (`.mark` with `style="left:NN%"`, `b` + `span`), `.bar`, `.ends` — continuum with marked positions.
+- `.timeline` > `.tl` (`time`, `b`, `p`) — equal-width dated columns on a rail.
+- `.tiers` > `.tier` (`h3` + `p`) — stacked levels, top = highest.
+- `.debate` > `.claim`, `.sides` > `.side` (`h3` + `p`), `.ask` — contested claim, two positions, the question to the room.
 
 ## Inline SVG art
 - `svg.art` — responsive inline SVG (vector-crisp; keep CJK as `<text>`, never rasterize).

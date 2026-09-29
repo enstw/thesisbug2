@@ -149,6 +149,9 @@ Reusable blocks shipped in the starter:
 1. **Stats** — `.stats` of `.stat` with `.n` (count-up via `data-to`) and `.l` label.
 1. **Numbered list** — `ol.num` (reading-guide discussion questions).
 1. **Finale** — centered closing statement / Q&A.
+1. **Content-shape blocks** — `.claim` (one statement), `.defn` (term + definition + example), `.matrix` (2×2 / 3×3 typology or payoff, with axis labels), `.spectrum` (two poles, marked positions), `.timeline`, `.tiers` (levels of analysis), `.debate` (contested claim, two sides, the ask).
+
+Which block a slide gets is decided by the **shape of its content**, recorded per slide in `<unit>/storyboard.md` before the deck is written — see the deck-svg skill's `reference/content-shapes.md` for the catalogue and the anti-patterns. The storyboard exists because an agent choosing from the block list alone takes the easiest block and reshapes the content to fit it; naming the shape first, in a table the author reviews, catches that before a slide is built.
 
 Use SVG illustrations (inheriting `--chapter` / `currentColor`) where a diagram adds evidence or orientation — never emoji, never decoration for its own sake. Keep each slide comfortably inside the frame; overflow is silently clipped, so verify by rendering.
 

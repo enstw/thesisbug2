@@ -114,6 +114,75 @@
   .flowarrow { display:grid; place-items:center; color:var(--chapter); font-size:48px; font-weight:700; }
 
   /* ============================================================
+     CONTENT-SHAPE COMPONENTS — see reference/content-shapes.md
+     One class per content shape, so the shape of the material picks the
+     layout instead of the material being cut to fit bullets or a table.
+     ============================================================ */
+
+  /* ---------- one claim (shape 1) ---------- */
+  .claim { font-size: 64px; line-height: 1.35; color: var(--text); font-weight: 700; max-width: 1560px; margin: 0; }
+  .claim .hl { color: var(--chapter); }
+  .claim + .lead { margin-top: 36px; }
+
+  /* ---------- definition (shape 2): term + definition | example ---------- */
+  .defn { display:grid; grid-template-columns: 1.1fr 1fr; gap: 56px; align-items: start; }
+  .defn .term h3 { font-size: 50px; margin: 0 0 18px; }
+  .defn .term h3 small { display:block; font-size: 26px; color: var(--muted); font-weight: 400; letter-spacing: .12em; margin-top: 6px; }
+  .defn .term p { font-size: 31px; line-height: 1.65; margin: 0; }
+  .defn .example { border-left: 5px solid var(--chapter); padding: 6px 0 6px 30px; }
+  .defn .example b { display:block; color: var(--chapter); font-size: 24px; letter-spacing: .16em; margin-bottom: 10px; }
+  .defn .example p { font-size: 29px; line-height: 1.6; margin: 0; color: var(--body); }
+
+  /* ---------- two-axis matrix (shape 4): 2×2 / 3×3 typology, payoff ---------- */
+  .matrix { display:grid; grid-template-columns: auto 1fr; grid-template-rows: 1fr auto; gap: 0 20px; align-items: stretch; }
+  .matrix .axis-y { grid-row: 1; writing-mode: vertical-rl; text-align: center; /* upright CJK, reads top→bottom */
+    color: var(--chapter); font-weight: 700; font-size: 27px; letter-spacing: .2em; }
+  .matrix .axis-x { grid-column: 2; grid-row: 2; text-align: center; color: var(--chapter); font-weight: 700; font-size: 27px; letter-spacing: .2em; margin-top: 16px; }
+  .matrix table { grid-column: 2; grid-row: 1; width: 100%; height: 100%; border-collapse: separate; border-spacing: 14px; font-size: 27px; }
+  .matrix th { color: var(--muted); font-weight: 400; font-size: 26px; padding: 6px 10px; line-height: 1.4; }
+  .matrix thead th { text-align: center; vertical-align: bottom; }
+  .matrix tbody th { text-align: right; white-space: nowrap; vertical-align: middle; }
+  .matrix td { background: var(--ink-2); border: 1px solid var(--hair); border-radius: 14px; padding: 22px 26px; vertical-align: top; line-height: 1.5; color: var(--body); }
+  .matrix td b { display:block; color: var(--text); font-size: 30px; margin-bottom: 6px; }
+  .matrix td.hi { border-color: var(--chapter); box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--chapter) 60%, transparent); }
+  .matrix td.dim { color: var(--muted); }
+
+  /* ---------- spectrum (shape 5): two poles, positions marked ---------- */
+  .spectrum { padding-top: 10px; }
+  .spectrum .marks { position: relative; height: 230px; }
+  .spectrum .mark { position: absolute; bottom: 0; transform: translateX(-50%); width: 320px; text-align: center; }
+  .spectrum .mark b { display:block; color: var(--text); font-size: 30px; line-height: 1.3; }
+  .spectrum .mark span { display:block; color: var(--muted); font-size: 24px; line-height: 1.45; margin-top: 4px; }
+  .spectrum .mark::after { content:""; display:block; width: 20px; height: 20px; border-radius: 50%; background: var(--chapter); margin: 14px auto -4px; }
+  .spectrum .bar { height: 12px; border-radius: 6px; background: linear-gradient(90deg, var(--c1), var(--c3)); }
+  .spectrum .ends { display:flex; justify-content: space-between; margin-top: 18px; font-size: 30px; color: var(--text); font-weight: 700; }
+
+  /* ---------- timeline (shape 9) ---------- */
+  .timeline { display:grid; grid-auto-flow: column; grid-auto-columns: 1fr; position: relative; padding-top: 40px; }
+  .timeline::before { content:""; position:absolute; left: 0; right: 0; top: 14px; height: 4px; background: var(--hair); }
+  .tl { position: relative; padding: 0 24px 0 0; }
+  .tl::before { content:""; position:absolute; top: -34px; left: 0; width: 20px; height: 20px; border-radius: 50%; background: var(--chapter); border: 3px solid var(--ink); }
+  .tl time { display:block; color: var(--chapter); font-weight: 700; font-size: 26px; letter-spacing: .1em; margin-bottom: 8px; }
+  .tl b { display:block; color: var(--text); font-size: 30px; line-height: 1.3; margin-bottom: 8px; }
+  .tl p { margin: 0; font-size: 25px; color: var(--muted); line-height: 1.5; }
+
+  /* ---------- levels / hierarchy (shape 10): stacked tiers ---------- */
+  .tiers { display:grid; gap: 16px; }
+  .tier { display:grid; grid-template-columns: 340px 1fr; gap: 32px; align-items: center;
+    padding: 24px 34px; border: 1px solid var(--hair); border-left: 8px solid var(--chapter); border-radius: 14px; background: var(--ink-2); }
+  .tier h3 { font-size: 32px; margin: 0; }
+  .tier p { margin: 0; font-size: 27px; color: var(--body); line-height: 1.5; }
+
+  /* ---------- discussion question (shape 13): claim, two sides, ask ---------- */
+  .debate .claim { font-size: 50px; margin-bottom: 34px; }
+  .debate .sides { display:grid; grid-template-columns: 1fr 1fr; gap: 34px; }
+  .debate .side { border: 1px solid var(--hair); border-radius: 18px; padding: 30px 34px; background: var(--ink-2); border-top: 4px solid var(--chapter); }
+  .debate .side h3 { font-size: 32px; color: var(--chapter); margin: 0 0 12px; }
+  .debate .side p { margin: 0; font-size: 27px; line-height: 1.6; }
+  .debate .ask { margin-top: 30px; font-size: 29px; color: var(--muted); }
+  .debate .ask strong { color: var(--text); }
+
+  /* ============================================================
      HERO (title slide)
      ============================================================ */
   .hero { padding: 0; align-items: stretch; justify-content: center;

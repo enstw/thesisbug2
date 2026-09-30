@@ -32,8 +32,8 @@
     display: flex; align-items: baseline; justify-content: space-between;
     border-bottom: 1px solid var(--hair); padding-bottom: 24px; flex: none;
   }
-  .eyebrow { font-size: calc(26px * var(--deck-font-scale, 1)); font-weight: 700; letter-spacing: .28em; color: var(--chapter); }
-  .chap { font-size: calc(24px * var(--deck-font-scale, 1)); letter-spacing: .14em; color: var(--muted); }
+  .eyebrow { font-size: calc(30px * var(--deck-font-scale, 1)); font-weight: 700; letter-spacing: .28em; color: var(--chapter); }
+  .chap { font-size: calc(30px * var(--deck-font-scale, 1)); letter-spacing: .14em; color: var(--muted); }
   .chap b { color: var(--text); font-weight: 700; }
 
   .content { flex: 1; display: flex; flex-direction: column; justify-content: center; min-height: 0; padding-top: 40px; }
@@ -66,15 +66,17 @@
   }
   .card::before { content:""; position:absolute; inset:0 0 auto 0; height:4px; background: var(--chapter); opacity:.85; }
   .card h3 { font-size: calc(38px * var(--deck-font-scale, 1)); margin: 0 0 14px; }
-  .card p { font-size: calc(27px * var(--deck-font-scale, 1)); line-height: 1.66; margin: 0 0 14px; }
+  .card p { font-size: calc(30px * var(--deck-font-scale, 1)); line-height: 1.55; margin: 0 0 14px; }
   .card p:last-child { margin-bottom: 0; }
-  .card .tag { display:inline-block; font-size: calc(22px * var(--deck-font-scale, 1)); letter-spacing:.16em; color:var(--chapter); font-weight:700; margin-bottom:14px; }
-  .card ul.clean li { font-size: calc(26px * var(--deck-font-scale, 1)); }
+  .card .tag { display:inline-block; font-size: calc(30px * var(--deck-font-scale, 1)); letter-spacing:.16em; color:var(--chapter); font-weight:700; margin-bottom:14px; }
+  .card ul.clean li { font-size: calc(30px * var(--deck-font-scale, 1)); }
 
   /* ---------- comparison table ---------- */
-  table.cmp { width:100%; border-collapse: collapse; font-size: calc(28px * var(--deck-font-scale, 1)); }
-  table.cmp caption { text-align:left; color:var(--muted); font-size: calc(24px * var(--deck-font-scale, 1)); letter-spacing:.1em; padding-bottom:18px; }
+  table.cmp { width:100%; border-collapse: collapse; font-size: calc(30px * var(--deck-font-scale, 1)); }
+  table.cmp caption { text-align:left; color:var(--muted); font-size: calc(30px * var(--deck-font-scale, 1)); letter-spacing:.1em; padding-bottom:18px; }
   table.cmp th, table.cmp td { text-align:left; padding: 20px 22px; border-bottom: 1px solid var(--hair); vertical-align: top; line-height:1.55; }
+  /* .tight: many rows (six or more) fit without shrinking the text below 30px */
+  table.cmp.tight th, table.cmp.tight td { padding: 12px 20px; }
   table.cmp thead th { color: var(--text); font-size: calc(30px * var(--deck-font-scale, 1)); }
   table.cmp tbody th { color: var(--muted); font-weight:400; width:26%; }
   table.cmp td { color: var(--body); }
@@ -86,13 +88,14 @@
     background: linear-gradient(90deg, color-mix(in srgb, var(--chapter) 14%, transparent), transparent);
     border-radius: 0 14px 14px 0;
   }
-  blockquote.pull cite { display:block; margin-top:22px; font-size: calc(25px * var(--deck-font-scale, 1)); font-style:normal; font-weight:400; color:var(--muted); line-height:1.6; }
+  blockquote.pull cite { display:block; margin-top:22px; font-size: calc(30px * var(--deck-font-scale, 1)); font-style:normal; font-weight:400; color:var(--muted); line-height:1.6; }
 
   /* ---------- stats ---------- */
   .stats { display:grid; grid-template-columns: repeat(3,1fr); gap: 34px; }
+  .stats.four { grid-template-columns: repeat(4,1fr); }
   .stat { text-align:center; padding: 44px 30px; border:1px solid var(--hair); border-radius:18px; background:var(--ink-2); }
   .stat .n { font-weight:700; font-size: calc(90px * var(--deck-font-scale, 1)); color: var(--chapter); line-height:1.1; }
-  .stat .l { color: var(--muted); font-size: calc(26px * var(--deck-font-scale, 1)); margin-top:14px; line-height:1.5; }
+  .stat .l { color: var(--muted); font-size: calc(30px * var(--deck-font-scale, 1)); margin-top:14px; line-height:1.5; }
 
   /* ---------- clean bullet list ---------- */
   ul.clean { list-style:none; padding:0; margin:0; display:grid; gap:20px; }
@@ -102,7 +105,28 @@
 
   /* ---------- SVG art ---------- */
   svg.art { display:block; width:100%; height:auto; overflow:visible; }
-  .art-cap { text-align:center; color:var(--muted); font-size: calc(24px * var(--deck-font-scale, 1)); margin-top:18px; letter-spacing:.03em; }
+
+  /* ---------- diagram SVG (svg.art.dg): redrawn source figures ----------
+     Classes instead of fill/stroke attributes, so a redrawn figure follows the
+     theme and the chapter colour like the rest of the slide. Size the viewBox
+     to the slide pixels it fills (≈1680 wide at full width), so 30px text
+     stays 30px on screen instead of shrinking with the figure. */
+  svg.dg text { font-family: var(--font); font-size: calc(30px * var(--deck-font-scale, 1)); fill: var(--text); }
+  svg.dg text.sub { fill: var(--muted); }
+  svg.dg text.acc { fill: var(--chapter); font-weight: 700; }
+  svg.dg text.b { font-weight: 700; }
+  svg.dg .box { fill: var(--ink-2); stroke: var(--hair); stroke-width: 2; }
+  svg.dg .box.hi { stroke: var(--chapter); stroke-width: 4; }
+  svg.dg .box.fill { fill: color-mix(in srgb, var(--chapter) 22%, var(--ink-2)); stroke: var(--chapter); }
+  svg.dg .edge { stroke: var(--chapter); stroke-width: 4; fill: none; }
+  svg.dg .edge.off { stroke: var(--muted); stroke-dasharray: 12 10; }
+  svg.dg .ah { fill: var(--chapter); }
+  svg.dg .seg { stroke: var(--ink); stroke-width: 4; }
+  svg.dg .seg.big { fill: color-mix(in srgb, var(--chapter) 55%, var(--ink-2)); }
+  svg.dg .seg.mid { fill: color-mix(in srgb, var(--chapter) 30%, var(--ink-2)); }
+  svg.dg .seg.small { fill: var(--ink-3); }
+  svg.dg .kline { stroke: var(--text); stroke-width: 4; stroke-dasharray: 8 8; }
+  .art-cap { text-align:center; color:var(--muted); font-size: calc(30px * var(--deck-font-scale, 1)); margin-top:18px; letter-spacing:.03em; }
   .artbox { display:flex; flex-direction:column; justify-content:center; }
 
   /* ---------- flow diagram (分析框架) ---------- */
@@ -110,7 +134,7 @@
   .flownode { border:1px solid var(--hair); border-top:4px solid var(--chapter); border-radius:16px;
     background: var(--ink-2); padding: 34px 26px; text-align:center; }
   .flownode h3 { font-size: calc(34px * var(--deck-font-scale, 1)); margin:0 0 8px; }
-  .flownode p { margin:0; font-size: calc(24px * var(--deck-font-scale, 1)); color:var(--muted); line-height:1.5; }
+  .flownode p { margin:0; font-size: calc(30px * var(--deck-font-scale, 1)); color:var(--muted); line-height:1.5; }
   .flowarrow { display:grid; place-items:center; color:var(--chapter); font-size: calc(48px * var(--deck-font-scale, 1)); font-weight:700; }
 
   /* ============================================================
@@ -127,23 +151,23 @@
   /* ---------- definition (shape 2): term + definition | example ---------- */
   .defn { display:grid; grid-template-columns: 1.1fr 1fr; gap: 56px; align-items: start; }
   .defn .term h3 { font-size: calc(50px * var(--deck-font-scale, 1)); margin: 0 0 18px; }
-  .defn .term h3 small { display:block; font-size: calc(26px * var(--deck-font-scale, 1)); color: var(--muted); font-weight: 400; letter-spacing: .12em; margin-top: 6px; }
+  .defn .term h3 small { display:block; font-size: calc(30px * var(--deck-font-scale, 1)); color: var(--muted); font-weight: 400; letter-spacing: .12em; margin-top: 6px; }
   .defn .term p { font-size: calc(31px * var(--deck-font-scale, 1)); line-height: 1.65; margin: 0; }
   .defn .example { border-left: 5px solid var(--chapter); padding: 6px 0 6px 30px; }
-  .defn .example b { display:block; color: var(--chapter); font-size: calc(24px * var(--deck-font-scale, 1)); letter-spacing: .16em; margin-bottom: 10px; }
-  .defn .example p { font-size: calc(29px * var(--deck-font-scale, 1)); line-height: 1.6; margin: 0; color: var(--body); }
+  .defn .example b { display:block; color: var(--chapter); font-size: calc(30px * var(--deck-font-scale, 1)); letter-spacing: .16em; margin-bottom: 10px; }
+  .defn .example p { font-size: calc(30px * var(--deck-font-scale, 1)); line-height: 1.6; margin: 0; color: var(--body); }
 
   /* ---------- two-axis matrix (shape 4): 2×2 / 3×3 typology, payoff ---------- */
   .matrix { display:grid; grid-template-columns: auto 1fr; grid-template-rows: 1fr auto; gap: 0 20px; align-items: stretch; }
   .matrix .axis-y { grid-row: 1; writing-mode: vertical-rl; text-align: center; /* upright CJK, reads top→bottom */
-    color: var(--chapter); font-weight: 700; font-size: calc(27px * var(--deck-font-scale, 1)); letter-spacing: .2em; }
-  .matrix .axis-x { grid-column: 2; grid-row: 2; text-align: center; color: var(--chapter); font-weight: 700; font-size: calc(27px * var(--deck-font-scale, 1)); letter-spacing: .2em; margin-top: 16px; }
-  .matrix table { grid-column: 2; grid-row: 1; width: 100%; height: 100%; border-collapse: separate; border-spacing: 14px; font-size: calc(27px * var(--deck-font-scale, 1)); }
-  .matrix th { color: var(--muted); font-weight: 400; font-size: calc(26px * var(--deck-font-scale, 1)); padding: 6px 10px; line-height: 1.4; }
+    color: var(--chapter); font-weight: 700; font-size: calc(30px * var(--deck-font-scale, 1)); letter-spacing: .2em; }
+  .matrix .axis-x { grid-column: 2; grid-row: 2; text-align: center; color: var(--chapter); font-weight: 700; font-size: calc(30px * var(--deck-font-scale, 1)); letter-spacing: .2em; margin-top: 16px; }
+  .matrix table { grid-column: 2; grid-row: 1; width: 100%; height: 100%; border-collapse: separate; border-spacing: 14px; font-size: calc(30px * var(--deck-font-scale, 1)); }
+  .matrix th { color: var(--muted); font-weight: 400; font-size: calc(30px * var(--deck-font-scale, 1)); padding: 6px 10px; line-height: 1.4; }
   .matrix thead th { text-align: center; vertical-align: bottom; }
   .matrix tbody th { text-align: right; white-space: nowrap; vertical-align: middle; }
-  .matrix td { background: var(--ink-2); border: 1px solid var(--hair); border-radius: 14px; padding: 22px 26px; vertical-align: top; line-height: 1.5; color: var(--body); }
-  .matrix td b { display:block; color: var(--text); font-size: calc(30px * var(--deck-font-scale, 1)); margin-bottom: 6px; }
+  .matrix td { background: var(--ink-2); border: 1px solid var(--hair); border-radius: 14px; padding: 16px 24px; vertical-align: top; line-height: 1.5; color: var(--body); }
+  .matrix td b { display:block; color: var(--text); font-size: calc(32px * var(--deck-font-scale, 1)); margin-bottom: 6px; }
   .matrix td.hi { border-color: var(--chapter); box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--chapter) 60%, transparent); }
   .matrix td.dim { color: var(--muted); }
 
@@ -152,7 +176,7 @@
   .spectrum .marks { position: relative; height: 230px; }
   .spectrum .mark { position: absolute; bottom: 0; transform: translateX(-50%); width: 320px; text-align: center; }
   .spectrum .mark b { display:block; color: var(--text); font-size: calc(30px * var(--deck-font-scale, 1)); line-height: 1.3; }
-  .spectrum .mark span { display:block; color: var(--muted); font-size: calc(24px * var(--deck-font-scale, 1)); line-height: 1.45; margin-top: 4px; }
+  .spectrum .mark span { display:block; color: var(--muted); font-size: calc(30px * var(--deck-font-scale, 1)); line-height: 1.45; margin-top: 4px; }
   .spectrum .mark::after { content:""; display:block; width: 20px; height: 20px; border-radius: 50%; background: var(--chapter); margin: 14px auto -4px; }
   .spectrum .bar { height: 12px; border-radius: 6px; background: linear-gradient(90deg, var(--c1), var(--c3)); }
   .spectrum .ends { display:flex; justify-content: space-between; margin-top: 18px; font-size: calc(30px * var(--deck-font-scale, 1)); color: var(--text); font-weight: 700; }
@@ -162,24 +186,24 @@
   .timeline::before { content:""; position:absolute; left: 0; right: 0; top: 14px; height: 4px; background: var(--hair); }
   .tl { position: relative; padding: 0 24px 0 0; }
   .tl::before { content:""; position:absolute; top: -34px; left: 0; width: 20px; height: 20px; border-radius: 50%; background: var(--chapter); border: 3px solid var(--ink); }
-  .tl time { display:block; color: var(--chapter); font-weight: 700; font-size: calc(26px * var(--deck-font-scale, 1)); letter-spacing: .1em; margin-bottom: 8px; }
+  .tl time { display:block; color: var(--chapter); font-weight: 700; font-size: calc(30px * var(--deck-font-scale, 1)); letter-spacing: .1em; margin-bottom: 8px; }
   .tl b { display:block; color: var(--text); font-size: calc(30px * var(--deck-font-scale, 1)); line-height: 1.3; margin-bottom: 8px; }
-  .tl p { margin: 0; font-size: calc(25px * var(--deck-font-scale, 1)); color: var(--muted); line-height: 1.5; }
+  .tl p { margin: 0; font-size: calc(30px * var(--deck-font-scale, 1)); color: var(--muted); line-height: 1.5; }
 
   /* ---------- levels / hierarchy (shape 10): stacked tiers ---------- */
   .tiers { display:grid; gap: 16px; }
   .tier { display:grid; grid-template-columns: 340px 1fr; gap: 32px; align-items: center;
     padding: 24px 34px; border: 1px solid var(--hair); border-left: 8px solid var(--chapter); border-radius: 14px; background: var(--ink-2); }
   .tier h3 { font-size: calc(32px * var(--deck-font-scale, 1)); margin: 0; }
-  .tier p { margin: 0; font-size: calc(27px * var(--deck-font-scale, 1)); color: var(--body); line-height: 1.5; }
+  .tier p { margin: 0; font-size: calc(30px * var(--deck-font-scale, 1)); color: var(--body); line-height: 1.5; }
 
   /* ---------- discussion question (shape 13): claim, two sides, ask ---------- */
   .debate .claim { font-size: calc(50px * var(--deck-font-scale, 1)); margin-bottom: 34px; }
   .debate .sides { display:grid; grid-template-columns: 1fr 1fr; gap: 34px; }
   .debate .side { border: 1px solid var(--hair); border-radius: 18px; padding: 30px 34px; background: var(--ink-2); border-top: 4px solid var(--chapter); }
   .debate .side h3 { font-size: calc(32px * var(--deck-font-scale, 1)); color: var(--chapter); margin: 0 0 12px; }
-  .debate .side p { margin: 0; font-size: calc(27px * var(--deck-font-scale, 1)); line-height: 1.6; }
-  .debate .ask { margin-top: 30px; font-size: calc(29px * var(--deck-font-scale, 1)); color: var(--muted); }
+  .debate .side p { margin: 0; font-size: calc(30px * var(--deck-font-scale, 1)); line-height: 1.6; }
+  .debate .ask { margin-top: 30px; font-size: calc(30px * var(--deck-font-scale, 1)); color: var(--muted); }
   .debate .ask strong { color: var(--text); }
 
   /* ============================================================
@@ -203,7 +227,7 @@
     -webkit-background-clip: text; background-clip: text; color: transparent;
   }
   .hero__sub { font-size: calc(40px * var(--deck-font-scale, 1)); color: var(--body); margin: 40px auto 0; max-width: 1100px; line-height:1.5; }
-  .hero__meta { margin-top: 54px; color: var(--muted); font-size: calc(27px * var(--deck-font-scale, 1)); line-height:1.7; }
+  .hero__meta { margin-top: 54px; color: var(--muted); font-size: calc(30px * var(--deck-font-scale, 1)); line-height:1.7; }
   .hero__meta strong { color: var(--text); font-weight:700; }
   .hero__hint { position:absolute; right:120px; bottom:64px; z-index:2; color:var(--muted); font-size: calc(22px * var(--deck-font-scale, 1)); letter-spacing:.04em; }
   .hero__hint kbd { display:inline-block; padding:3px 12px; margin:0 4px; border:1px solid var(--hair); border-radius:7px; background:var(--ink-2); color:var(--text); font-family:var(--font); font-size: calc(20px * var(--deck-font-scale, 1)); }
@@ -257,6 +281,13 @@
 
   /* ---------- two-column text block (.colblock) — used by reading-guide ---------- */
   .colblock h3 { font-size: calc(38px * var(--deck-font-scale, 1)); margin: 0 0 18px; color: var(--chapter); }
+  .colblock ul.clean li { font-size: calc(30px * var(--deck-font-scale, 1)); line-height: 1.55; }
+  /* claim vs weakness (shape 6): .against keeps the rebuttal column's heading
+     neutral so the chapter colour marks the author's side; .verdict closes the
+     slide with the judgment or the question it leaves. */
+  .colblock.against h3 { color: var(--text); }
+  .verdict { margin-top: 34px; padding-top: 24px; border-top: 1px solid var(--hair); font-size: calc(32px * var(--deck-font-scale, 1)); color: var(--text); }
+  .verdict em { color: var(--chapter); }
 
   /* ---------- numbered list (ol.num) — used by reading-guide 討論問題 ---------- */
   ol.num { list-style:none; padding:0; margin:0; counter-reset:q; display:grid; gap:22px; }

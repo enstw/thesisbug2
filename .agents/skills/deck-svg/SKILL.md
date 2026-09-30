@@ -109,6 +109,8 @@ notes.
   `tokens.css`.
 - Add a genuinely new visual? Add a component class to `asset/deck.css`, don't
   inline a one-off `<style>` blob.
+- Keep projected text at 30px or more (the stock components already are),
+  because smaller type reads on a laptop but not from the back of a classroom.
 - Write every text size as `calc(<n>px * var(--deck-font-scale, 1))`, in
   `deck.css` and in any inline style, because a bare `px` size ignores the
   `+`/`−` keys and is left behind when the presenter resizes for the room.

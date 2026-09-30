@@ -13,7 +13,7 @@ This protocol is engine-specific (the `deck-stage` contract, the slide patterns,
 ## Source Files
 
 - **Main deck:** `<unit>/deck.html` — the canonical deliverable, a self-contained deck-stage deck (committed).
-- **Engine assets:** `<unit>/asset/deck-stage.js`, `<unit>/asset/presenter-stage.js`, `<unit>/asset/ENSFont.woff2` — ship as-is; do not edit the JS.
+- **Engine assets:** `<unit>/asset/deck-stage.js`, `<unit>/asset/presenter-stage.js`, `<unit>/asset/deck-font-controls.js`, `<unit>/asset/ENSFont.woff2` — ship as-is; do not edit the JS.
 - **Image-deck mode adds:** `<unit>/prompts-and-page-content.md` (per-page copy + accepted prompts — the deck's source code) and `<unit>/generated-slides/*.png` (one full-bleed bitmap per slide).
 - **Beamer fallback deck:** `<unit>/presentation.qmd`
 - **Optional Quarto prose draft:** `<unit>/draft.qmd`

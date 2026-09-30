@@ -61,7 +61,7 @@ h1{font-family:var(--serif);font-size:22px;font-weight:600;margin:0;color:var(--
 <header><span class="label">Speaker Notes</span><span class="pn"><span id="cur">—</span> / <span id="tot">?</span></span></header>
 <h1 id="title">—</h1>
 <div class="note" id="note"><span class="empty-note">（無備註）</span></div>
-<div class="footer"><span class="kbd">←</span><span class="kbd">→</span> 切換 ｜ <span class="kbd">Space</span> 下一頁 ｜ <span class="kbd">R</span> 重置 ｜ 點縮圖跳頁 ｜ <span class="kbd">Esc</span> 關閉視窗</div>
+<div class="footer"><span class="kbd">←</span><span class="kbd">→</span> 切換 ｜ <span class="kbd">Space</span> 下一頁 ｜ <span class="kbd">+</span><span class="kbd">−</span> 調整投影片字級 ｜ <span class="kbd">R</span> 重置 ｜ 點縮圖跳頁 ｜ <span class="kbd">Esc</span> 關閉視窗</div>
 <script>
 const DECK_URL = ${JSON.stringify(deckUrl)};
 let nN=[],lL=[],totalSlides=0,frames={current:null,next:null};
@@ -181,7 +181,7 @@ function render(i){
   if(n&&String(n).trim()){el.textContent=n;}else{el.innerHTML='<span class="empty-note">（這張無備註）</span>';}
   renderThumbs(i);
 }
-window.addEventListener('keydown',(e)=>{if(e.key==='Escape'){window.close();return;}const k=e.key;if(['ArrowLeft','ArrowRight','PageDown','PageUp',' ','r','R','Home','End'].includes(k)){if(window.opener&&!window.opener.closed){window.opener.postMessage({presenterKey:k},'*');}e.preventDefault();}});
+window.addEventListener('keydown',(e)=>{if(e.key==='Escape'){window.close();return;}const k=e.key;const direction=(k==='+'||k==='=')?1:k==='-'?-1:0;if(direction){if(window.opener&&!window.opener.closed){window.opener.postMessage({deckFontDirection:direction},'*');}e.preventDefault();return;}if(['ArrowLeft','ArrowRight','PageDown','PageUp',' ','r','R','Home','End'].includes(k)){if(window.opener&&!window.opener.closed){window.opener.postMessage({presenterKey:k},'*');}e.preventDefault();}});
 <\/script></body></html>`;
   }
 
@@ -213,6 +213,7 @@ window.addEventListener('keydown',(e)=>{if(e.key==='Escape'){window.close();retu
     const s = stage();
     if (!s) return;
     if (typeof e.data.presenterGoto === 'number') { s.goTo(e.data.presenterGoto); return; }
+    if (e.data.deckFontDirection === 1 || e.data.deckFontDirection === -1) return;
     if (!e.data.presenterKey) return;
     const k = e.data.presenterKey;
     if (k === 'ArrowRight' || k === ' ' || k === 'PageDown') s.next();

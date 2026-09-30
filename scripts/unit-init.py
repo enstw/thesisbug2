@@ -57,6 +57,7 @@ def presentation_files(variant: str) -> dict[str, Path]:
     return {
         "deck.html": deck / "variants" / variant / "deck.html",          # engine
         "asset/deck.css": deck / "asset" / "deck.css",
+        "asset/deck-font-controls.js": deck / "asset" / "deck-font-controls.js",
         "asset/tokens.css": house / "css" / "tokens.css",                # look
         "asset/ENSFont.woff2": house / "fonts" / "ENSFont.woff2",
         "asset/ENSFont-Bold.woff2": house / "fonts" / "ENSFont-Bold.woff2",

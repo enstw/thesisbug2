@@ -27,7 +27,7 @@ engine    deck-svg, deck-image   author slides onto the shell
 | File | Role | Edit it? |
 |---|---|---|
 | `deck-stage.js` | The `<deck-stage>` custom element: slide flight/nav, keyboard (→/Esc/digits/F), `slidechange` event, print CSS (`@page 1920×1080`, one slide per page), `#debug` self-check. | **No — frozen.** Treat as a dependency. |
-| `presenter-stage.js` | Dual-screen presenter console (P key): current/next preview, speaker notes, drives a popped-out projector window over `postMessage`, print-to-slides. | **No.** |
+| `presenter-stage.js` | Dual-screen presenter console (P key): current/next preview, speaker notes, drives a popped-out projector window over `postMessage`, print-to-slides. Forwards `+`/`=`/`-` as `{deckFontDirection: ±1}` so the presenter can resize the deck's text; an engine without a font-size handler ignores the message. | **No.** |
 
 This is the only home for these two files. deck-svg and deck-image copy them in;
 they are not duplicated per engine.

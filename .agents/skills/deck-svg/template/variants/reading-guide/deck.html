@@ -10,6 +10,7 @@
      · asset/tokens.css      ← house-style：字型 @font-face + 色盤 token（換主題只改這裡）
      · asset/deck.css        ← deck-svg：版面／元件／動態（手寫投影片的詞彙）
      · asset/deck-stage.js   ← deck-runtime：投影片引擎（換頁、列印、講者視窗）
+     · asset/deck-font-controls.js ← deck-svg：全份字級快捷鍵（+／− 每次 10%，80–150%）
      · asset/ENSFont{,-Bold}.woff2 ← house-style：全字集中文字型（Regular＋Bold）
      手寫的部分只有底下 <deck-stage> 內的投影片與 speaker-notes。 -->
 <link rel="stylesheet" href="asset/tokens.css" />
@@ -191,6 +192,7 @@
 
 <script src="asset/deck-stage.js"></script>
 <script src="asset/presenter-stage.js"></script>
+<script src="asset/deck-font-controls.js"></script>
 <script>
   /* 數字滾動：標上 data-to 的元素在該頁出現時動畫到目標值，遵守 prefers-reduced-motion。 */
   (function () {

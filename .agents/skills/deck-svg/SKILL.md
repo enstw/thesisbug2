@@ -20,7 +20,7 @@ the component vocabulary.
 ```
 look      house-style    asset/tokens.css + ENSFont{,-Bold}.woff2   (theme — don't edit here)
 runtime   deck-runtime   asset/deck-stage.js + presenter-stage.js  (shell — frozen)
-engine    deck-svg       asset/deck.css + deck.html         ← you work here
+engine    deck-svg       asset/deck.css + deck-font-controls.js + deck.html  ← you work here
 ```
 
 ## What's in the box (`template/`, `reference/`)
@@ -29,6 +29,7 @@ engine    deck-svg       asset/deck.css + deck.html         ← you work here
 |---|---|---|
 | `template/deck.html` | The deck you author: `<deck-stage>` with placeholder slides + `#speaker-notes` + the number-counter script. Links `asset/tokens.css` and `asset/deck.css`. | **Yes** — this is the work surface. |
 | `template/asset/deck.css` | Component / layout / motion CSS — the slide vocabulary. | Rarely (it's the engine style); extend with a new component if a slide needs one. |
+| `template/asset/deck-font-controls.js` | Deck-wide font size: `+`/`=` and `-` step `--deck-font-scale` by 10% (80–150%), remembered per deck and synced across its windows. | No. |
 | `reference/content-shapes.md` | Content shape → pattern: which layout fits what kind of material, the storyboard format, and the anti-patterns. Read **first**. | No. |
 | `reference/slide-patterns.md` | The component cheat-sheet (what classes exist). | No. |
 
@@ -44,6 +45,7 @@ mkdir -p "$DST/asset"
 # engine: structure + component CSS
 cp "$SKILL_DIR/template/deck.html"          "$DST/deck.html"
 cp "$SKILL_DIR/template/asset/deck.css"     "$DST/asset/deck.css"
+cp "$SKILL_DIR/template/asset/deck-font-controls.js" "$DST/asset/"
 
 # house-style: theme + font
 cp "$SKILL_DIR/../house-style/assets/css/tokens.css"           "$DST/asset/tokens.css"
@@ -63,6 +65,7 @@ Resulting deck is portable and offline:
   asset/
     tokens.css           # house-style (theme — swap to re-theme)
     deck.css             # deck-svg (components)
+    deck-font-controls.js # deck-svg (+/− font size)
     ENSFont.woff2        # house-style (font, regular ≤500)
     ENSFont-Bold.woff2   # house-style (font, bold ≥600)
     deck-stage.js        # deck-runtime (shell)
@@ -106,6 +109,9 @@ notes.
   `tokens.css`.
 - Add a genuinely new visual? Add a component class to `asset/deck.css`, don't
   inline a one-off `<style>` blob.
+- Write every text size as `calc(<n>px * var(--deck-font-scale, 1))`, in
+  `deck.css` and in any inline style, because a bare `px` size ignores the
+  `+`/`−` keys and is left behind when the presenter resizes for the room.
 
 **Speaker notes:** keep the `#speaker-notes` JSON array in lockstep with slide
 order — one string per `<section>`, same sequence.
@@ -121,7 +127,9 @@ this engine was carved out of; consult it for anything not covered here.
 ## Run & verify
 
 - **Run:** open `deck.html` directly — no build, no server. Click = next; arrows/
-  Esc/digits secondary; `F` = fullscreen; `P` = presenter console.
+  Esc/digits secondary; `F` = fullscreen; `P` = presenter console; `+`/`−` =
+  whole-deck font size (also from the presenter console; Cmd/Ctrl +/− stays
+  browser zoom).
 - **Self-check:** `deck.html#debug` — the runtime sets `document.body.dataset`
   `minfont` (`ok` = every arrival's text ≥ 30px @1080p) and `overflow` (`none` =
   nothing escapes its frame). Use the available browser tools; if `browser-cdp`
@@ -129,9 +137,9 @@ this engine was carved out of; consult it for anything not covered here.
   Do not assume a home-directory path, because agents install skills differently.
   Without browser access, run the structure check and mark visual QA as pending.
 - **Structure check (no browser):** confirm `deck.html` links `asset/tokens.css`
-  + `asset/deck.css`, loads `asset/deck-stage.js` then `asset/presenter-stage.js`,
-  and that `#speaker-notes` has one entry per `<section class="slide">`. Run
-  `node --check` on the two JS assets.
+  + `asset/deck.css`, loads `asset/deck-stage.js`, `asset/presenter-stage.js`,
+  then `asset/deck-font-controls.js`, and that `#speaker-notes` has one entry
+  per `<section class="slide">`. Run `node --check` on the three JS assets.
 - **Present / PDF:** `P` pops the presenter console → **開啟簡報視窗** for the
   projector window; **列印投影片** (or browser Print → Save as PDF, enable
   "Background graphics") gives one 1920×1080 slide per page.

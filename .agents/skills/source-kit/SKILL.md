@@ -72,7 +72,7 @@ Markdown (`<unit>/refs/<citation_key>.md`) is the preferred form.
    claiming fulltext has been verified.
 1. **Other types** (DOCX, HTML save, EPUB) → save the fulltext directly as
    `<unit>/refs/<citation_key>.md`, preserving paragraph structure.
-1. **Paywalled, but the institution's library licenses it** → most journal articles a course needs are in this case, so try the library proxy before recording a source as inaccessible. The route is the **`authenticated-fetch`** skill (in older installs, tier 5 of `robust-web-fetch`): it opens a persistent visible browser window, the author logs in to the proxy once, and the agent then finds and downloads PDFs with the same cookies, merging chaptered ebooks. Open `<Library proxy><publisher-url>` using the `Library proxy` row of `COURSE.md`; when the row is missing, ask the author for their library's EZproxy login prefix and record it there, since every later unit needs it too. If the skill is unavailable, ask the author to download the file by hand. A landing page that says the institution has no access means exactly that — fall back to the next branch rather than retrying.
+1. **Paywalled, but the institution's library licenses it** → most journal articles a course needs are in this case, so try the library proxy before recording a source as inaccessible. The route is the **`authenticated-fetch`** skill (in older installs, tier 5 of `robust-web-fetch`): the agent downloads PDFs inside a signed-in browser session, merging chaptered ebooks. **Run `./fw check-login` before asking the author for anything:** exit 0 means a login recipe and a filled credential file already exist on this machine, so the author has done their part — sign in with the skill's stored-credential `login <site>` and download straight away, because stopping to ask someone who already set this up only stalls the unit until they come back. Ask the author to sign in by hand in the visible window only when the check exits 1, or when that one `login` attempt fails and the page it stopped on gives no cause you can fix (a login form whose own script had not finished is a recipe fault to fix, not a reason to ask). Open `<Library proxy><publisher-url>` using the `Library proxy` row of `COURSE.md`; when the row is missing, ask the author for their library's EZproxy login prefix and record it there, since every later unit needs it too. If the skill is unavailable, ask the author to download the file by hand. A landing page that says the institution has no access means exactly that — fall back to the next branch rather than retrying.
 1. **Paywalled / inaccessible** → create `<unit>/refs/<citation_key>.md` noting
    that, with whatever metadata is available (title, abstract, etc.). Do **not**
    fabricate content.
@@ -114,9 +114,11 @@ original-file attempts fail. Keep those artifact types distinct, because an
 abstract or login page printed into a PDF is not the publisher's fulltext.
 
 For a known **EZproxy, institutional login, or interactive challenge**, use
-**`authenticated-fetch`** directly if available. The user signs in through a
-dedicated visible browser; subsequent downloads use that session and preserve
-the proxy-rewritten links. It depends on **`browser-cdp`** for browser lifecycle
+**`authenticated-fetch`** directly if available. `./fw check-login` says
+whether a stored-credential login is already configured: when it is, sign in
+with it without waiting for the author; when it is not, the author signs in
+through a dedicated visible browser. Either way, subsequent downloads use that
+session and preserve the proxy-rewritten links. It depends on **`browser-cdp`** for browser lifecycle
 and **`robust-web-fetch`** for validation. Missing institutional entitlement
 remains an access limitation; record it rather than retrying indefinitely.
 

@@ -13,7 +13,7 @@ This protocol is engine-specific (the `deck-stage` contract, the slide patterns,
 ## Source Files
 
 - **Main deck:** `<unit>/deck.html` — the canonical deliverable, a self-contained deck-stage deck (committed).
-- **Engine assets:** `<unit>/asset/deck-stage.js`, `<unit>/asset/presenter-stage.js`, `<unit>/asset/deck-font-controls.js`, `<unit>/asset/ENSFont.woff2` — ship as-is; do not edit the JS.
+- **Engine assets:** `<unit>/asset/deck-stage.js`, `<unit>/asset/presenter-stage.js`, `<unit>/asset/deck-font-controls.js`, `<unit>/asset/deck-check.js`, `<unit>/asset/ENSFont.woff2` — ship as-is; do not edit the JS.
 - **Image-deck mode adds:** `<unit>/prompts-and-page-content.md` (per-page copy + accepted prompts — the deck's source code) and `<unit>/generated-slides/*.png` (one full-bleed bitmap per slide).
 - **Beamer fallback deck:** `<unit>/presentation.qmd`
 - **Optional Quarto prose draft:** `<unit>/draft.qmd`
@@ -91,7 +91,7 @@ Reference these `asset/` files relative to `<unit>/deck.html` (i.e. `<unit>/asse
 ## Authoring the deck
 
 1. **Draft the spine first** (problem → gap → question → method → evidence → finding → contribution for a thesis; range → author → arguments → synthesis → concepts → critique → questions for a reading guide). The starter `deck.html` already encodes the spine for your variant — edit its sections rather than starting blank.
-1. **One idea per slide.** Title names the topic; the on-slide text is the signpost; the **note carries the talk**. Prefer 2–6 bullets; never paste a manuscript paragraph onto a slide.
+1. **One idea per slide**, graspable in about ten seconds, because the audience reads while listening. Title names the topic; the on-slide text is the signpost; the **note carries the talk** (the storyboard's 口說重點 column plans it). Prefer 2–6 bullets; never paste a manuscript paragraph onto a slide.
 1. **Keep notes index-aligned.** Every `<section>` needs one entry in the `#speaker-notes` array, same order. If you add or remove a slide, add or remove its note. Reformat note beats with `\n・` separators for presenter readability. Verify alignment (§ Verification).
 1. **A prose-heavy source slide** becomes a short on-slide statement plus the full detail in the note.
 
@@ -99,7 +99,7 @@ Reference these `asset/` files relative to `<unit>/deck.html` (i.e. `<unit>/asse
 
 ## Design system — a free variable, from the skill
 
-**The look is not fixed.** Theme (light/dark), palette, typography, and art style can vary per deck. Start with house-style tokens and adapt them to the user's requested look; an installed design skill can help. The scaffolded starter is dark because that is one proven example; **dark is not a rule**.
+**The look is not fixed.** Theme (light/dark), palette, typography, and art style can vary per deck. Start with house-style tokens and adapt them to the user's requested look; an installed design skill can help. The scaffolded starter is dark because that is one proven example; **dark is not a rule** — in a lit classroom a light theme usually projects better, because a projector cannot make a dark ground dark and the text loses contrast with it.
 
 **Fixed vs. free:**
 
@@ -120,14 +120,14 @@ The look may come from **any** design source — an optional design skill, the c
 **Why this rule exists.** The deck *layout* is doing two specific jobs that the starter CSS owns, not the design source:
 
 1. **Vertical centering** — `.content { flex:1; justify-content:center }` fills the 1080px frame so content sits in the optical middle.
-1. **Slide-sized type on a fixed canvas** — type is authored in **px against 1920×1080** (body ~30px, title ~76px), then deck-stage `transform:scale()`-fits it to any viewport.
+1. **Slide-sized type on a fixed canvas** — type is authored in **px against 1920×1080** (body ~40px, title ~76px), then deck-stage `transform:scale()`-fits it to any viewport.
 
 A token-only source drops into `:root` and both jobs survive. But a design source used as a **deck generator** can regenerate HTML/CSS from web-page priors and overwrite them: it falls back to top-aligned document flow (→ **top-weighted slides**) and sizes type in `rem`/`vw` against the viewport (→ **small type** after the scale-fit). Top-weight + tiny type is the signature of a web-page prior trampling the slide contract.
 
 **So, for any non-token source:**
 
 - Constrain it explicitly: *"Output only a CSS `:root{}` block — palette, type-scale, effect variables. Do not write HTML; do not touch `.slide` / `.content` / layout CSS."*
-- Pin the type-scale to the **slide** canvas, not a web base: body ~30px / title ~76px on 1920×1080 — never a ~16px web base, which scales down to unreadable.
+- Pin the type-scale to the **slide** canvas, not a web base: body ~40px / title ~76px on 1920×1080 — never a ~16px web base, which scales down to unreadable.
 - Paste the resulting variables into the starter `:root` and leave the structure alone.
 
 If you paste *only* tokens and type still looks small, the culprit is the source's **type-scale base** (web-sized ~16–18px) — rescale it to the slide canvas.
@@ -136,7 +136,7 @@ If you paste *only* tokens and type still looks small, the culprit is the source
 
 ## Slide layout patterns (in the starter CSS)
 
-Author at the 1920×1080 design size in **px**. Common scale: eyebrow 26, slide title 76, kicker 56, lead 34, body 30, card h3 38, table 28, stat number 90. Each `.slide` is a flex column: a thin top accent rail (`.railtop`), a `.topbar` (eyebrow left / chapter tag right + hairline), then a vertically-centered `.content`.
+Author at the 1920×1080 design size in **px**. Common scale: eyebrow 34, slide title 76, kicker 56, lead and body 40, card h3 46, table and labels 34, stat number 96. Nothing the audience reads goes below 34px; only presenter chrome (the title slide's key hints) is smaller. Each `.slide` is a flex column: a thin top accent rail (`.railtop`), a `.topbar` (eyebrow left / chapter tag right + hairline), then a vertically-centered `.content`.
 
 Reusable blocks shipped in the starter:
 
@@ -152,6 +152,8 @@ Reusable blocks shipped in the starter:
 1. **Content-shape blocks** — `.claim` (one statement), `.defn` (term + definition + example), `.matrix` (2×2 / 3×3 typology or payoff, with axis labels), `.spectrum` (two poles, marked positions), `.timeline`, `.tiers` (levels of analysis), `.debate` (contested claim, two sides, the ask).
 
 Which block a slide gets is decided by the **shape of its content**, recorded per slide in `<unit>/storyboard.md` before the deck is written — see the deck-svg skill's `reference/content-shapes.md` for the catalogue and the anti-patterns. The storyboard exists because an agent choosing from the block list alone takes the easiest block and reshapes the content to fit it; naming the shape first, in a table the author reviews, catches that before a slide is built.
+
+**Projection first.** Spend free space on larger type, a diagram, a primary-evidence screenshot, or a small table (about four columns × five rows at most) rather than on whitespace, because a projected slide is read from the back of the room. If the content does not fit, split the slide rather than cramming it or shrinking the type. Keep contrast high: no muted-grey secondary text and no thin weights, since projectors wash both out.
 
 Use SVG illustrations (inheriting `--chapter` / `currentColor`) where a diagram adds evidence or orientation — never emoji, never decoration for its own sake. Keep each slide comfortably inside the frame; overflow is silently clipped, so verify by rendering.
 
@@ -279,7 +281,7 @@ The `meta NOT subset … dropped` warning is harmless. If you subset, re-run whe
      empty:notes.filter(x=>!x||!x.trim()).length})
    ```
    (`./fw unit-init` runs the Python equivalent of this when scaffolding a presentation.)
-1. **Render** — at a 1920×1080 viewport, step through (`deck.goTo(i)`) and check nothing is clipped and no glyph is tofu.
+1. **Render** — open `deck.html#debug` at a 1920×1080 viewport, step through (`deck.goTo(i)`), and read `document.body.dataset.minfont` (`ok`: no text under 34px) and `.overflow` (`none`) — offenders are in `minfontBad` / `overflowBad`. Also look at each slide for tofu and crowding the check cannot see.
 1. **Reduced motion** — confirm the media-query block reveals all `.rise` and stops loops.
 1. **Presenter** — press **P**; confirm notes render and current/next thumbnails update (HTTP only).
 1. **Print** — Print → Save as PDF with Background graphics on; confirm one 1920×1080 page per slide, no overlay, no trailing blank page.
@@ -337,8 +339,8 @@ Single- or two-source guides may skip the cross-reading map and emphasize argume
 - [ ] No tofu (the shipped full font covers everything; only an issue if you chose to subset).
 - [ ] Every animation is disabled under `prefers-reduced-motion`.
 - [ ] No emoji; all icons/art are inline SVG inheriting `--chapter`.
-- [ ] Text meets 4.5:1 contrast in the chosen theme; no slide overflows the 1920×1080 frame.
-- [ ] Engine scripts load last, in order: `deck-stage.js` then `presenter-stage.js`.
+- [ ] Text meets 4.5:1 contrast in the chosen theme; `#debug` reports `minfont=ok` and `overflow=none` on every slide.
+- [ ] Engine scripts load last, in order: `deck-check.js` (first, because deck-stage rewrites the `#debug` hash on start), `deck-stage.js`, then `presenter-stage.js`.
 - [ ] An `@media print` block forces `.rise` visible (so every slide prints, not just the active one).
 - [ ] Clear title slide and Q&A / closing slide; slide count fits the time limit.
 - [ ] Key claims have source support in `<unit>/refs/`.

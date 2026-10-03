@@ -20,16 +20,17 @@ the component vocabulary.
 ```
 look      house-style    asset/tokens.css + ENSFont{,-Bold}.woff2   (theme — don't edit here)
 runtime   deck-runtime   asset/deck-stage.js + presenter-stage.js  (shell — frozen)
-engine    deck-svg       asset/deck.css + deck-font-controls.js + deck.html  ← you work here
+engine    deck-svg       asset/deck.css + deck-font-controls.js + deck-check.js + deck.html  ← you work here
 ```
 
 ## What's in the box (`template/`, `reference/`)
 
 | File | Role | You edit it? |
 |---|---|---|
-| `template/deck.html` | The deck you author: `<deck-stage>` with placeholder slides + `#speaker-notes` + the number-counter script. Links `asset/tokens.css` and `asset/deck.css`. | **Yes** — this is the work surface. |
+| `template/variants/<thesis\|reading-guide>/deck.html` | The starter deck you author: `<deck-stage>` with placeholder slides + `#speaker-notes` + the number-counter script. Links `asset/tokens.css` and `asset/deck.css`. | **Yes** — this is the work surface. |
 | `template/asset/deck.css` | Component / layout / motion CSS — the slide vocabulary. | Rarely (it's the engine style); extend with a new component if a slide needs one. |
 | `template/asset/deck-font-controls.js` | Deck-wide font size: `+`/`=` and `-` step `--deck-font-scale` by 10% (80–150%), remembered per deck and synced across its windows. | No. |
+| `template/asset/deck-check.js` | The `deck.html#debug` self-check (type floor and overflow, § Run & verify); does nothing without `#debug`. | No. |
 | `reference/content-shapes.md` | Content shape → pattern: which layout fits what kind of material, the storyboard format, and the anti-patterns. Read **first**. | No. |
 | `reference/slide-patterns.md` | The component cheat-sheet (what classes exist). | No. |
 
@@ -43,9 +44,10 @@ DST=<unit>                              # the presentation unit's directory, e.g
 mkdir -p "$DST/asset"
 
 # engine: structure + component CSS
-cp "$SKILL_DIR/template/deck.html"          "$DST/deck.html"
+cp "$SKILL_DIR/template/variants/thesis/deck.html" "$DST/deck.html"   # or variants/reading-guide
 cp "$SKILL_DIR/template/asset/deck.css"     "$DST/asset/deck.css"
 cp "$SKILL_DIR/template/asset/deck-font-controls.js" "$DST/asset/"
+cp "$SKILL_DIR/template/asset/deck-check.js" "$DST/asset/"
 
 # house-style: theme + font
 cp "$SKILL_DIR/../house-style/assets/css/tokens.css"           "$DST/asset/tokens.css"
@@ -66,6 +68,7 @@ Resulting deck is portable and offline:
     tokens.css           # house-style (theme — swap to re-theme)
     deck.css             # deck-svg (components)
     deck-font-controls.js # deck-svg (+/− font size)
+    deck-check.js        # deck-svg (#debug self-check)
     ENSFont.woff2        # house-style (font, regular ≤500)
     ENSFont-Bold.woff2   # house-style (font, bold ≥600)
     deck-stage.js        # deck-runtime (shell)
@@ -77,10 +80,19 @@ placeholder slides.
 
 ## Storyboard before slides
 
-Write `<unit>/storyboard.md` (scaffolded by `unit-init`) before `deck.html`:
-one row per slide with the source paragraph it condenses, its **content shape**
-(numbered in `reference/content-shapes.md`), the pattern, and the minutes. The
-author reviews the storyboard; `deck.html` is written only after that sign-off.
+Write `<unit>/storyboard.md` (scaffolded by `unit-init`) before `deck.html`.
+It opens with a bullet list of **前提** — audience, time limit, room and
+projection (type floor, theme), wording conventions — because those set type
+size, slide count and terms for every slide. Then one table row per slide with
+the source paragraph it condenses, its **content shape** (numbered in
+`reference/content-shapes.md`), the pattern, the minutes, **畫面內容** (what is
+on the slide), **口說重點** (explanation, citations with locators, transitions,
+anticipated questions — the talk lives in the notes once the slide is sparse,
+so the author reviews it here and it becomes `#speaker-notes` when the deck is
+built), and **AI 協助** (what AI drafted or verified, what the author wrote or
+changed), because courses increasingly ask for per-slide AI disclosure and it
+is reliable only when recorded as the slide is planned. The author reviews the
+storyboard; `deck.html` is written only after that sign-off.
 
 The shape column exists because an agent choosing layouts from the class list
 picks whatever is easiest to type — bullets, cards, `table.cmp` — and then
@@ -99,8 +111,9 @@ Compose the body from the pattern the storyboard names, using the classes in
 `reference/slide-patterns.md` (claim, defn, matrix, spectrum, timeline, tiers,
 debate, cards, grids, `table.cmp`, `blockquote.pull`, stats, `ul.clean`,
 flowdiag, inline `svg.art`). Stagger entrance with
-`class="rise d1|d2|d3|d4"`. Keep one idea per slide; push detail into speaker
-notes.
+`class="rise d1|d2|d3|d4"`. Keep one idea per slide, graspable in about ten
+seconds, because the audience is listening while it reads; detail goes to the
+speaker notes.
 
 **Keep look and structure separate (the whole point of the split):**
 - Re-theme by editing token *values* in `asset/tokens.css` — never hard-code
@@ -109,11 +122,22 @@ notes.
   `tokens.css`.
 - Add a genuinely new visual? Add a component class to `asset/deck.css`, don't
   inline a one-off `<style>` blob.
-- Keep projected text at 30px or more (the stock components already are),
-  because smaller type reads on a laptop but not from the back of a classroom.
+- Keep body text at 40px and nothing the audience reads below 34px (tables,
+  labels, captions; the stock components already comply), because type that
+  reads on a laptop washes out on a classroom projector. Only presenter chrome
+  such as the title slide's key hints is smaller.
 - Write every text size as `calc(<n>px * var(--deck-font-scale, 1))`, in
   `deck.css` and in any inline style, because a bare `px` size ignores the
   `+`/`−` keys and is left behind when the presenter resizes for the room.
+
+**Design for the projector, not the laptop.** Spend free space on larger
+type, a diagram, a primary-evidence screenshot, or a small table (about four
+columns × five rows at most) rather than on whitespace, because the back row
+reads size, not elegance. When content does not fit, split the slide rather
+than cramming it or shrinking the type. Keep contrast high — no muted-grey
+secondary text, no thin weights — since projectors wash out low-contrast text;
+in a lit classroom a light theme usually projects better than a dark one
+(re-theme in `tokens.css`).
 
 **Speaker notes:** keep the `#speaker-notes` JSON array in lockstep with slide
 order — one string per `<section>`, same sequence.
@@ -132,16 +156,25 @@ this engine was carved out of; consult it for anything not covered here.
   Esc/digits secondary; `F` = fullscreen; `P` = presenter console; `+`/`−` =
   whole-deck font size (also from the presenter console; Cmd/Ctrl +/− stays
   browser zoom).
-- **Self-check:** `deck.html#debug` — the runtime sets `document.body.dataset`
-  `minfont` (`ok` = every arrival's text ≥ 30px @1080p) and `overflow` (`none` =
-  nothing escapes its frame). Use the available browser tools; if `browser-cdp`
-  is installed, read its discovered `SKILL.md` for the current capture commands.
+- **Self-check:** open `deck.html#debug` and step through every slide.
+  `asset/deck-check.js` checks each slide once its entrance animation ends and
+  sets `document.body.dataset` `minfont` (`ok` = all visible text on the
+  checked slides ≥ 34px at 1920×1080 design size, else `small`) and
+  `overflow` (`none` = no text leaves the slide, no `.content` overflows into
+  the header, no clipping container cuts text, else `found`); offenders are
+  listed in `minfontBad` / `overflowBad` as `<slide number> <element> <px>`,
+  checked slide numbers in `checked`, and on the console. `+`/`−` resets the
+  results and rechecks the current slide. Use the available browser tools; if
+  `browser-cdp` is installed, read its discovered `SKILL.md` for the current
+  capture commands.
   Do not assume a home-directory path, because agents install skills differently.
   Without browser access, run the structure check and mark visual QA as pending.
 - **Structure check (no browser):** confirm `deck.html` links `asset/tokens.css`
-  + `asset/deck.css`, loads `asset/deck-stage.js`, `asset/presenter-stage.js`,
-  then `asset/deck-font-controls.js`, and that `#speaker-notes` has one entry
-  per `<section class="slide">`. Run `node --check` on the three JS assets.
+  + `asset/deck.css`, loads `asset/deck-check.js` (first, because deck-stage
+  rewrites the `#debug` hash to the slide number as it starts), then
+  `asset/deck-stage.js`, `asset/presenter-stage.js` and
+  `asset/deck-font-controls.js`, and that `#speaker-notes` has one entry per
+  `<section class="slide">`. Run `node --check` on the four JS assets.
 - **Present / PDF:** `P` pops the presenter console → **開啟簡報視窗** for the
   projector window; **列印投影片** (or browser Print → Save as PDF, enable
   "Background graphics") gives one 1920×1080 slide per page.

@@ -40,11 +40,26 @@ Diagrams and generated art are covered in the presentation protocol
 
 ## Storyboard first
 
-Write `<unit>/storyboard.md` before `deck.html`, one row per slide:
+Write `<unit>/storyboard.md` before `deck.html`. It opens with a short
+**前提** list — audience, time limit, room and projection (type floor, light or
+dark theme), wording conventions — because those decide type size, slide count
+and terms, and changing them after the slides exist means redoing the deck.
+Keep 前提 as bullets: `./fw build` counts every table row as a slide. Then one
+row per slide:
 
-| # | 來源段落 | 內容形狀 | 版型 | 講 | 備註 |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| 5 | `notes/key.md` § 論證怎麼走 → 叁 | 4 Two-axis typology | `.matrix` 3×3 | 2 min | axis y = 極數, axis x = 權威密度; highlight the cell the author's case falls in |
+| # | 來源段落 | 內容形狀 | 版型 | 講 | 畫面內容 | 口說重點 | AI 協助 |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| 5 | `notes/key.md` § 論證怎麼走 → 叁 | 4 Two-axis typology | `.matrix` 3×3 | 2 min | axis y = 極數, axis x = 權威密度; highlight the cell the author's case falls in | why the axes, the author's case with page, transition to the critique, expected question on the empty cell | AI drafted the cell labels; author chose the axes and checked them against the source |
+
+**畫面內容** is what appears on the slide; **口說重點** is what the talk says
+— explanation, citations with locators, transitions, anticipated questions.
+Once on-slide text is kept sparse, all of that moves to the speaker notes, so
+the notes carry the talk and must be visible at storyboard review; they are
+written out in full into `#speaker-notes` while building the deck. The **AI
+協助** column records what AI drafted or verified and what the author wrote or
+changed, because courses increasingly require disclosing AI use per paragraph
+or slide, and noting it while storyboarding is more reliable than
+reconstructing it afterwards.
 
 The row is the traceability the author asked for: every slide points back to
 the paragraph it condenses, and the shape column makes the layout choice

@@ -11,7 +11,8 @@
 Creates units/NN-<type>-<name>/ (NN = next free number), copies the type's
 scaffold into it, writes WORK.json, adds a row to STATUS.md, and — for the
 Quarto types — runs one build to prove the unit renders before any writing
-starts. It does not commit; the caller does, so the commit message is theirs.
+starts; a presentation instead gets a check that its deck loads every asset
+and has one speaker note per slide. It does not commit; the caller does, so the commit message is theirs.
 """
 
 from __future__ import annotations
@@ -58,6 +59,7 @@ def presentation_files(variant: str) -> dict[str, Path]:
         "deck.html": deck / "variants" / variant / "deck.html",          # engine
         "asset/deck.css": deck / "asset" / "deck.css",
         "asset/deck-font-controls.js": deck / "asset" / "deck-font-controls.js",
+        "asset/deck-check.js": deck / "asset" / "deck-check.js",         # deck.html#debug self-check
         "asset/tokens.css": house / "css" / "tokens.css",                # look
         "asset/ENSFont.woff2": house / "fonts" / "ENSFont.woff2",
         "asset/ENSFont-Bold.woff2": house / "fonts" / "ENSFont-Bold.woff2",
@@ -68,6 +70,27 @@ def presentation_files(variant: str) -> dict[str, Path]:
         "storyboard.md": scaffold / "storyboard.md",                     # shape → layout, per slide
         "notes/.gitkeep": scaffold / "notes" / ".gitkeep",
     }
+
+
+def deck_problems(unit: Path) -> list[str]:
+    """What a fresh deck needs before anyone authors it: one speaker note per
+    slide and a <script> tag for every JS asset copied beside it.
+
+    Presentations have no build to prove the scaffold works, so this is the
+    check that catches a starter and the asset map drifting apart (an asset
+    copied but never loaded silently does nothing).
+    """
+    html = (unit / "deck.html").read_text(encoding="utf-8")
+    problems = []
+    slides = len(re.findall(r"<section\b[^>]*\bclass=\"slide\b", html))
+    m = re.search(r'<script type="application/json" id="speaker-notes">(.*?)</script>', html, re.S)
+    notes = json.loads(m.group(1)) if m else []
+    if slides != len(notes) or not all(str(n).strip() for n in notes):
+        problems.append(f"{slides} slides but {len(notes)} speaker notes (or an empty note)")
+    for js in sorted((unit / "asset").glob("*.js")):
+        if f'<script src="asset/{js.name}"></script>' not in html:
+            problems.append(f"deck.html does not load asset/{js.name}")
+    return problems
 
 
 def fill_placeholders(unit: Path, work: dict, fw_rel: str) -> None:
@@ -195,7 +218,11 @@ def main() -> None:
     update_status(root, unit_name, a.type)
     print(f"created {rel(unit, root)}/  ({a.type})")
 
-    if a.type != "presentation" and not a.no_build:
+    if a.type == "presentation":
+        problems = deck_problems(unit)
+        if problems:
+            sys.exit("the scaffold was created but the deck check failed:\n  " + "\n  ".join(problems))
+    elif not a.no_build:
         print("verifying the unit builds …")
         r = subprocess.run([sys.executable, str(HERE / "build.py"), str(unit)])
         if r.returncode:

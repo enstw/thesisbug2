@@ -12,14 +12,18 @@
   /* ============================================================
      SLIDE BASE — 每個 <section> 都是一張 1920×1080 投影片
      ============================================================ */
+  /* Type scale for a classroom projector: body 40px, tables and labels 34px
+     at least, titles 76px — sizes that read on a laptop wash out from the back
+     row. Only presenter chrome (.hero__hint key hints, .deck-font-status) is
+     smaller, because the audience does not need to read it. */
   .slide {
-    display: flex; flex-direction: column; padding: 84px 120px 76px;
+    display: flex; flex-direction: column; padding: 72px 96px 64px;
     background:
       radial-gradient(75rem 50rem at 72% 8%, color-mix(in srgb, var(--chapter) 11%, transparent), transparent 60%),
       radial-gradient(60rem 48rem at 10% 100%, rgba(91,157,255,.06), transparent 60%),
       var(--ink);
     color: var(--body); font-family: var(--font);
-    font-size: calc(30px * var(--deck-font-scale, 1)); line-height: 1.78; letter-spacing: .01em;
+    font-size: calc(40px * var(--deck-font-scale, 1)); line-height: 1.65; letter-spacing: .01em;
     -webkit-font-smoothing: antialiased;
   }
   .slide h1, .slide h2, .slide h3 {
@@ -30,78 +34,79 @@
 
   .topbar {
     display: flex; align-items: baseline; justify-content: space-between;
-    border-bottom: 1px solid var(--hair); padding-bottom: 24px; flex: none;
+    border-bottom: 1px solid var(--hair); padding-bottom: 20px; flex: none;
   }
-  .eyebrow { font-size: calc(30px * var(--deck-font-scale, 1)); font-weight: 700; letter-spacing: .28em; color: var(--chapter); }
-  .chap { font-size: calc(30px * var(--deck-font-scale, 1)); letter-spacing: .14em; color: var(--muted); }
+  .eyebrow { font-size: calc(34px * var(--deck-font-scale, 1)); font-weight: 700; letter-spacing: .2em; color: var(--chapter); }
+  .chap { font-size: calc(34px * var(--deck-font-scale, 1)); letter-spacing: .08em; color: var(--body); }
   .chap b { color: var(--text); font-weight: 700; }
 
-  .content { flex: 1; display: flex; flex-direction: column; justify-content: center; min-height: 0; padding-top: 40px; }
+  .content { flex: 1; display: flex; flex-direction: column; justify-content: center; min-height: 0; padding-top: 32px; }
 
   .railtop { position: absolute; inset: 0 0 auto 0; height: 6px; flex: none;
     background: linear-gradient(90deg, var(--c1), var(--c2), var(--c3), var(--c4)); opacity: .85; }
 
   /* ---------- typography helpers ---------- */
-  .title  { font-size: calc(76px * var(--deck-font-scale, 1)); line-height: 1.24; margin: 0 0 28px; }
+  .title  { font-size: calc(76px * var(--deck-font-scale, 1)); line-height: 1.24; margin: 0 0 24px; }
   .title .hl { color: var(--chapter); }
   .kicker { font-size: calc(56px * var(--deck-font-scale, 1)); line-height: 1.3; margin: 0 0 28px; color: var(--text); }
   .kicker .hl { color: var(--chapter); }
-  .lead   { font-size: calc(34px * var(--deck-font-scale, 1)); line-height: 1.7; color: var(--body); max-width: 1360px; margin: 0; }
+  .lead   { font-size: calc(40px * var(--deck-font-scale, 1)); line-height: 1.6; color: var(--body); max-width: 1600px; margin: 0; }
   .lead strong, .slide strong { color: var(--text); font-weight: 700; }
   .lead em, .slide em { color: var(--chapter); font-style: normal; font-weight: 700; }
   .muted { color: var(--muted); }
-  .mt { margin-top: 30px; }
+  .mt { margin-top: 28px; }
 
   /* ---------- grids & cards ---------- */
-  .grid { display: grid; gap: 34px; }
+  .grid { display: grid; gap: 28px; }
   .grid.two { grid-template-columns: 1fr 1fr; }
   .grid.three { grid-template-columns: repeat(3,1fr); }
-  .cols { display: grid; gap: 56px; align-items: start; }
+  .cols { display: grid; gap: 48px; align-items: start; }
   .cols.split { grid-template-columns: 1fr 1fr; }
 
   .card {
     background: linear-gradient(180deg, var(--ink-3), var(--ink-2));
     border: 1px solid var(--hair); border-radius: 18px;
-    padding: 38px 40px; box-shadow: var(--shadow-lg); position: relative; overflow: hidden;
+    padding: 32px 34px; box-shadow: var(--shadow-lg); position: relative; overflow: hidden;
   }
   .card::before { content:""; position:absolute; inset:0 0 auto 0; height:4px; background: var(--chapter); opacity:.85; }
-  .card h3 { font-size: calc(38px * var(--deck-font-scale, 1)); margin: 0 0 14px; }
-  .card p { font-size: calc(30px * var(--deck-font-scale, 1)); line-height: 1.55; margin: 0 0 14px; }
+  .card h3 { font-size: calc(46px * var(--deck-font-scale, 1)); margin: 0 0 12px; }
+  .card p { font-size: calc(40px * var(--deck-font-scale, 1)); line-height: 1.5; margin: 0 0 12px; }
   .card p:last-child { margin-bottom: 0; }
-  .card .tag { display:inline-block; font-size: calc(30px * var(--deck-font-scale, 1)); letter-spacing:.16em; color:var(--chapter); font-weight:700; margin-bottom:14px; }
-  .card ul.clean li { font-size: calc(30px * var(--deck-font-scale, 1)); }
+  .card .tag { display:inline-block; font-size: calc(34px * var(--deck-font-scale, 1)); letter-spacing:.12em; color:var(--chapter); font-weight:700; margin-bottom:10px; }
+  .card ul.clean li { font-size: calc(40px * var(--deck-font-scale, 1)); line-height: 1.5; }
 
   /* ---------- comparison table ---------- */
-  table.cmp { width:100%; border-collapse: collapse; font-size: calc(30px * var(--deck-font-scale, 1)); }
-  table.cmp caption { text-align:left; color:var(--muted); font-size: calc(30px * var(--deck-font-scale, 1)); letter-spacing:.1em; padding-bottom:18px; }
-  table.cmp th, table.cmp td { text-align:left; padding: 20px 22px; border-bottom: 1px solid var(--hair); vertical-align: top; line-height:1.55; }
-  /* .tight: many rows (six or more) fit without shrinking the text below 30px */
-  table.cmp.tight th, table.cmp.tight td { padding: 12px 20px; }
-  table.cmp thead th { color: var(--text); font-size: calc(30px * var(--deck-font-scale, 1)); }
-  table.cmp tbody th { color: var(--muted); font-weight:400; width:26%; }
+  table.cmp { width:100%; border-collapse: collapse; font-size: calc(34px * var(--deck-font-scale, 1)); }
+  table.cmp caption { text-align:left; color:var(--body); font-size: calc(34px * var(--deck-font-scale, 1)); letter-spacing:.06em; padding-bottom:14px; }
+  table.cmp th, table.cmp td { text-align:left; padding: 16px 20px; border-bottom: 1px solid var(--hair); vertical-align: top; line-height:1.45; }
+  /* .tight: six or more rows fit without shrinking the text below 34px; past
+     about four columns × five rows, split the table across slides instead */
+  table.cmp.tight th, table.cmp.tight td { padding: 8px 16px; line-height: 1.35; }
+  table.cmp thead th { color: var(--text); font-size: calc(34px * var(--deck-font-scale, 1)); }
+  table.cmp tbody th { color: var(--text); font-weight:700; width:24%; }
   table.cmp td { color: var(--body); }
 
   /* ---------- pull quote ---------- */
   blockquote.pull {
-    margin: 0; padding: 30px 44px; border-left: 5px solid var(--chapter);
+    margin: 0; padding: 28px 40px; border-left: 5px solid var(--chapter);
     font-size: calc(50px * var(--deck-font-scale, 1)); line-height: 1.42; color: var(--text); font-weight: 700; letter-spacing:.01em;
     background: linear-gradient(90deg, color-mix(in srgb, var(--chapter) 14%, transparent), transparent);
     border-radius: 0 14px 14px 0;
   }
-  blockquote.pull cite { display:block; margin-top:22px; font-size: calc(30px * var(--deck-font-scale, 1)); font-style:normal; font-weight:400; color:var(--muted); line-height:1.6; }
+  blockquote.pull cite { display:block; margin-top:20px; font-size: calc(34px * var(--deck-font-scale, 1)); font-style:normal; font-weight:400; color:var(--body); line-height:1.5; }
 
   /* ---------- stats ---------- */
-  .stats { display:grid; grid-template-columns: repeat(3,1fr); gap: 34px; }
+  .stats { display:grid; grid-template-columns: repeat(3,1fr); gap: 28px; }
   .stats.four { grid-template-columns: repeat(4,1fr); }
-  .stat { text-align:center; padding: 44px 30px; border:1px solid var(--hair); border-radius:18px; background:var(--ink-2); }
-  .stat .n { font-weight:700; font-size: calc(90px * var(--deck-font-scale, 1)); color: var(--chapter); line-height:1.1; }
-  .stat .l { color: var(--muted); font-size: calc(30px * var(--deck-font-scale, 1)); margin-top:14px; line-height:1.5; }
+  .stat { text-align:center; padding: 40px 26px; border:1px solid var(--hair); border-radius:18px; background:var(--ink-2); }
+  .stat .n { font-weight:700; font-size: calc(96px * var(--deck-font-scale, 1)); color: var(--chapter); line-height:1.1; }
+  .stat .l { color: var(--body); font-size: calc(36px * var(--deck-font-scale, 1)); margin-top:12px; line-height:1.4; }
 
   /* ---------- clean bullet list ---------- */
-  ul.clean { list-style:none; padding:0; margin:0; display:grid; gap:20px; }
-  ul.clean.lead-size li { font-size: calc(33px * var(--deck-font-scale, 1)); line-height:1.6; }
-  ul.clean li { padding-left: 38px; position:relative; line-height:1.7; }
-  ul.clean li::before { content:""; position:absolute; left:0; top:.72em; width:13px; height:13px; border-radius:50%; background: var(--chapter); }
+  ul.clean { list-style:none; padding:0; margin:0; display:grid; gap:16px; }
+  ul.clean.lead-size li { font-size: calc(40px * var(--deck-font-scale, 1)); line-height:1.55; }
+  ul.clean li { padding-left: 40px; position:relative; line-height:1.55; }
+  ul.clean li::before { content:""; position:absolute; left:0; top:.6em; width:14px; height:14px; border-radius:50%; background: var(--chapter); }
 
   /* ---------- SVG art ---------- */
   svg.art { display:block; width:100%; height:auto; overflow:visible; }
@@ -109,10 +114,10 @@
   /* ---------- diagram SVG (svg.art.dg): redrawn source figures ----------
      Classes instead of fill/stroke attributes, so a redrawn figure follows the
      theme and the chapter colour like the rest of the slide. Size the viewBox
-     to the slide pixels it fills (≈1680 wide at full width), so 30px text
-     stays 30px on screen instead of shrinking with the figure. */
-  svg.dg text { font-family: var(--font); font-size: calc(30px * var(--deck-font-scale, 1)); fill: var(--text); }
-  svg.dg text.sub { fill: var(--muted); }
+     to the slide pixels it fills (≈1720 wide at full width), so 34px text
+     stays 34px on screen instead of shrinking with the figure. */
+  svg.dg text { font-family: var(--font); font-size: calc(34px * var(--deck-font-scale, 1)); fill: var(--text); }
+  svg.dg text.sub { fill: var(--body); }
   svg.dg text.acc { fill: var(--chapter); font-weight: 700; }
   svg.dg text.b { font-weight: 700; }
   svg.dg .box { fill: var(--ink-2); stroke: var(--hair); stroke-width: 2; }
@@ -126,16 +131,16 @@
   svg.dg .seg.mid { fill: color-mix(in srgb, var(--chapter) 30%, var(--ink-2)); }
   svg.dg .seg.small { fill: var(--ink-3); }
   svg.dg .kline { stroke: var(--text); stroke-width: 4; stroke-dasharray: 8 8; }
-  .art-cap { text-align:center; color:var(--muted); font-size: calc(30px * var(--deck-font-scale, 1)); margin-top:18px; letter-spacing:.03em; }
+  .art-cap { text-align:center; color:var(--body); font-size: calc(34px * var(--deck-font-scale, 1)); margin-top:16px; letter-spacing:.03em; }
   .artbox { display:flex; flex-direction:column; justify-content:center; }
 
   /* ---------- flow diagram (分析框架) ---------- */
   .flowdiag { display:grid; grid-template-columns: 1fr auto 1fr auto 1fr auto 1fr; gap: 0; align-items:center; margin-top: 12px; }
   .flownode { border:1px solid var(--hair); border-top:4px solid var(--chapter); border-radius:16px;
-    background: var(--ink-2); padding: 34px 26px; text-align:center; }
-  .flownode h3 { font-size: calc(34px * var(--deck-font-scale, 1)); margin:0 0 8px; }
-  .flownode p { margin:0; font-size: calc(30px * var(--deck-font-scale, 1)); color:var(--muted); line-height:1.5; }
-  .flowarrow { display:grid; place-items:center; color:var(--chapter); font-size: calc(48px * var(--deck-font-scale, 1)); font-weight:700; }
+    background: var(--ink-2); padding: 30px 18px; text-align:center; }
+  .flownode h3 { font-size: calc(44px * var(--deck-font-scale, 1)); margin:0 0 8px; }
+  .flownode p { margin:0; font-size: calc(40px * var(--deck-font-scale, 1)); color:var(--body); line-height:1.45; }
+  .flowarrow { display:grid; place-items:center; padding: 0 6px; color:var(--chapter); font-size: calc(48px * var(--deck-font-scale, 1)); font-weight:700; }
 
   /* ============================================================
      CONTENT-SHAPE COMPONENTS — see reference/content-shapes.md
@@ -144,66 +149,66 @@
      ============================================================ */
 
   /* ---------- one claim (shape 1) ---------- */
-  .claim { font-size: calc(64px * var(--deck-font-scale, 1)); line-height: 1.35; color: var(--text); font-weight: 700; max-width: 1560px; margin: 0; }
+  .claim { font-size: calc(64px * var(--deck-font-scale, 1)); line-height: 1.35; color: var(--text); font-weight: 700; max-width: 1640px; margin: 0; }
   .claim .hl { color: var(--chapter); }
-  .claim + .lead { margin-top: 36px; }
+  .claim + .lead { margin-top: 32px; }
 
   /* ---------- definition (shape 2): term + definition | example ---------- */
-  .defn { display:grid; grid-template-columns: 1.1fr 1fr; gap: 56px; align-items: start; }
+  .defn { display:grid; grid-template-columns: 1.1fr 1fr; gap: 48px; align-items: start; }
   .defn .term h3 { font-size: calc(50px * var(--deck-font-scale, 1)); margin: 0 0 18px; }
-  .defn .term h3 small { display:block; font-size: calc(30px * var(--deck-font-scale, 1)); color: var(--muted); font-weight: 400; letter-spacing: .12em; margin-top: 6px; }
-  .defn .term p { font-size: calc(31px * var(--deck-font-scale, 1)); line-height: 1.65; margin: 0; }
+  .defn .term h3 small { display:block; font-size: calc(34px * var(--deck-font-scale, 1)); color: var(--body); font-weight: 400; letter-spacing: .08em; margin-top: 6px; }
+  .defn .term p { font-size: calc(40px * var(--deck-font-scale, 1)); line-height: 1.55; margin: 0; }
   .defn .example { border-left: 5px solid var(--chapter); padding: 6px 0 6px 30px; }
-  .defn .example b { display:block; color: var(--chapter); font-size: calc(30px * var(--deck-font-scale, 1)); letter-spacing: .16em; margin-bottom: 10px; }
-  .defn .example p { font-size: calc(30px * var(--deck-font-scale, 1)); line-height: 1.6; margin: 0; color: var(--body); }
+  .defn .example b { display:block; color: var(--chapter); font-size: calc(34px * var(--deck-font-scale, 1)); letter-spacing: .12em; margin-bottom: 8px; }
+  .defn .example p { font-size: calc(40px * var(--deck-font-scale, 1)); line-height: 1.55; margin: 0; color: var(--body); }
 
   /* ---------- two-axis matrix (shape 4): 2×2 / 3×3 typology, payoff ---------- */
   .matrix { display:grid; grid-template-columns: auto 1fr; grid-template-rows: 1fr auto; gap: 0 20px; align-items: stretch; }
   .matrix .axis-y { grid-row: 1; writing-mode: vertical-rl; text-align: center; /* upright CJK, reads top→bottom */
-    color: var(--chapter); font-weight: 700; font-size: calc(30px * var(--deck-font-scale, 1)); letter-spacing: .2em; }
-  .matrix .axis-x { grid-column: 2; grid-row: 2; text-align: center; color: var(--chapter); font-weight: 700; font-size: calc(30px * var(--deck-font-scale, 1)); letter-spacing: .2em; margin-top: 16px; }
-  .matrix table { grid-column: 2; grid-row: 1; width: 100%; height: 100%; border-collapse: separate; border-spacing: 14px; font-size: calc(30px * var(--deck-font-scale, 1)); }
-  .matrix th { color: var(--muted); font-weight: 400; font-size: calc(30px * var(--deck-font-scale, 1)); padding: 6px 10px; line-height: 1.4; }
+    color: var(--chapter); font-weight: 700; font-size: calc(34px * var(--deck-font-scale, 1)); letter-spacing: .16em; }
+  .matrix .axis-x { grid-column: 2; grid-row: 2; text-align: center; color: var(--chapter); font-weight: 700; font-size: calc(34px * var(--deck-font-scale, 1)); letter-spacing: .16em; margin-top: 12px; }
+  .matrix table { grid-column: 2; grid-row: 1; width: 100%; height: 100%; border-collapse: separate; border-spacing: 12px; font-size: calc(34px * var(--deck-font-scale, 1)); }
+  .matrix th { color: var(--text); font-weight: 700; font-size: calc(34px * var(--deck-font-scale, 1)); padding: 4px 8px; line-height: 1.35; }
   .matrix thead th { text-align: center; vertical-align: bottom; }
   .matrix tbody th { text-align: right; white-space: nowrap; vertical-align: middle; }
-  .matrix td { background: var(--ink-2); border: 1px solid var(--hair); border-radius: 14px; padding: 16px 24px; vertical-align: top; line-height: 1.5; color: var(--body); }
-  .matrix td b { display:block; color: var(--text); font-size: calc(32px * var(--deck-font-scale, 1)); margin-bottom: 6px; }
+  .matrix td { background: var(--ink-2); border: 1px solid var(--hair); border-radius: 14px; padding: 14px 20px; vertical-align: top; line-height: 1.4; color: var(--body); }
+  .matrix td b { display:block; color: var(--text); font-size: calc(38px * var(--deck-font-scale, 1)); margin-bottom: 4px; }
   .matrix td.hi { border-color: var(--chapter); box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--chapter) 60%, transparent); }
   .matrix td.dim { color: var(--muted); }
 
   /* ---------- spectrum (shape 5): two poles, positions marked ---------- */
   .spectrum { padding-top: 10px; }
-  .spectrum .marks { position: relative; height: 230px; }
-  .spectrum .mark { position: absolute; bottom: 0; transform: translateX(-50%); width: 320px; text-align: center; }
-  .spectrum .mark b { display:block; color: var(--text); font-size: calc(30px * var(--deck-font-scale, 1)); line-height: 1.3; }
-  .spectrum .mark span { display:block; color: var(--muted); font-size: calc(30px * var(--deck-font-scale, 1)); line-height: 1.45; margin-top: 4px; }
+  .spectrum .marks { position: relative; height: 270px; }
+  .spectrum .mark { position: absolute; bottom: 0; transform: translateX(-50%); width: 360px; text-align: center; }
+  .spectrum .mark b { display:block; color: var(--text); font-size: calc(40px * var(--deck-font-scale, 1)); line-height: 1.25; }
+  .spectrum .mark span { display:block; color: var(--body); font-size: calc(34px * var(--deck-font-scale, 1)); line-height: 1.35; margin-top: 4px; }
   .spectrum .mark::after { content:""; display:block; width: 20px; height: 20px; border-radius: 50%; background: var(--chapter); margin: 14px auto -4px; }
   .spectrum .bar { height: 12px; border-radius: 6px; background: linear-gradient(90deg, var(--c1), var(--c3)); }
-  .spectrum .ends { display:flex; justify-content: space-between; margin-top: 18px; font-size: calc(30px * var(--deck-font-scale, 1)); color: var(--text); font-weight: 700; }
+  .spectrum .ends { display:flex; justify-content: space-between; margin-top: 16px; font-size: calc(38px * var(--deck-font-scale, 1)); color: var(--text); font-weight: 700; }
 
   /* ---------- timeline (shape 9) ---------- */
-  .timeline { display:grid; grid-auto-flow: column; grid-auto-columns: 1fr; position: relative; padding-top: 40px; }
-  .timeline::before { content:""; position:absolute; left: 0; right: 0; top: 14px; height: 4px; background: var(--hair); }
-  .tl { position: relative; padding: 0 24px 0 0; }
+  .timeline { display:grid; grid-auto-flow: column; grid-auto-columns: 1fr; position: relative; padding-top: 52px; }
+  .timeline::before { content:""; position:absolute; left: 0; right: 0; top: 29px; height: 4px; background: var(--hair); }
+  .tl { position: relative; padding: 0 20px 0 0; }
   .tl::before { content:""; position:absolute; top: -34px; left: 0; width: 20px; height: 20px; border-radius: 50%; background: var(--chapter); border: 3px solid var(--ink); }
-  .tl time { display:block; color: var(--chapter); font-weight: 700; font-size: calc(30px * var(--deck-font-scale, 1)); letter-spacing: .1em; margin-bottom: 8px; }
-  .tl b { display:block; color: var(--text); font-size: calc(30px * var(--deck-font-scale, 1)); line-height: 1.3; margin-bottom: 8px; }
-  .tl p { margin: 0; font-size: calc(30px * var(--deck-font-scale, 1)); color: var(--muted); line-height: 1.5; }
+  .tl time { display:block; color: var(--chapter); font-weight: 700; font-size: calc(36px * var(--deck-font-scale, 1)); letter-spacing: .06em; margin-bottom: 6px; }
+  .tl b { display:block; color: var(--text); font-size: calc(40px * var(--deck-font-scale, 1)); line-height: 1.25; margin-bottom: 6px; }
+  .tl p { margin: 0; font-size: calc(34px * var(--deck-font-scale, 1)); color: var(--body); line-height: 1.4; }
 
   /* ---------- levels / hierarchy (shape 10): stacked tiers ---------- */
-  .tiers { display:grid; gap: 16px; }
-  .tier { display:grid; grid-template-columns: 340px 1fr; gap: 32px; align-items: center;
-    padding: 24px 34px; border: 1px solid var(--hair); border-left: 8px solid var(--chapter); border-radius: 14px; background: var(--ink-2); }
-  .tier h3 { font-size: calc(32px * var(--deck-font-scale, 1)); margin: 0; }
-  .tier p { margin: 0; font-size: calc(30px * var(--deck-font-scale, 1)); color: var(--body); line-height: 1.5; }
+  .tiers { display:grid; gap: 14px; }
+  .tier { display:grid; grid-template-columns: 400px 1fr; gap: 28px; align-items: center;
+    padding: 20px 30px; border: 1px solid var(--hair); border-left: 8px solid var(--chapter); border-radius: 14px; background: var(--ink-2); }
+  .tier h3 { font-size: calc(44px * var(--deck-font-scale, 1)); margin: 0; }
+  .tier p { margin: 0; font-size: calc(40px * var(--deck-font-scale, 1)); color: var(--body); line-height: 1.45; }
 
   /* ---------- discussion question (shape 13): claim, two sides, ask ---------- */
-  .debate .claim { font-size: calc(50px * var(--deck-font-scale, 1)); margin-bottom: 34px; }
-  .debate .sides { display:grid; grid-template-columns: 1fr 1fr; gap: 34px; }
-  .debate .side { border: 1px solid var(--hair); border-radius: 18px; padding: 30px 34px; background: var(--ink-2); border-top: 4px solid var(--chapter); }
-  .debate .side h3 { font-size: calc(32px * var(--deck-font-scale, 1)); color: var(--chapter); margin: 0 0 12px; }
-  .debate .side p { margin: 0; font-size: calc(30px * var(--deck-font-scale, 1)); line-height: 1.6; }
-  .debate .ask { margin-top: 30px; font-size: calc(30px * var(--deck-font-scale, 1)); color: var(--muted); }
+  .debate .claim { font-size: calc(52px * var(--deck-font-scale, 1)); margin-bottom: 28px; }
+  .debate .sides { display:grid; grid-template-columns: 1fr 1fr; gap: 28px; }
+  .debate .side { border: 1px solid var(--hair); border-radius: 18px; padding: 26px 30px; background: var(--ink-2); border-top: 4px solid var(--chapter); }
+  .debate .side h3 { font-size: calc(44px * var(--deck-font-scale, 1)); color: var(--chapter); margin: 0 0 10px; }
+  .debate .side p { margin: 0; font-size: calc(40px * var(--deck-font-scale, 1)); line-height: 1.5; }
+  .debate .ask { margin-top: 26px; font-size: calc(40px * var(--deck-font-scale, 1)); color: var(--body); }
   .debate .ask strong { color: var(--text); }
 
   /* ============================================================
@@ -226,9 +231,10 @@
     background: linear-gradient(180deg, #fff 0%, #cdd4e4 62%, var(--accent) 125%);
     -webkit-background-clip: text; background-clip: text; color: transparent;
   }
-  .hero__sub { font-size: calc(40px * var(--deck-font-scale, 1)); color: var(--body); margin: 40px auto 0; max-width: 1100px; line-height:1.5; }
-  .hero__meta { margin-top: 54px; color: var(--muted); font-size: calc(30px * var(--deck-font-scale, 1)); line-height:1.7; }
+  .hero__sub { font-size: calc(48px * var(--deck-font-scale, 1)); color: var(--body); margin: 36px auto 0; max-width: 1500px; line-height:1.45; }
+  .hero__meta { margin-top: 48px; color: var(--body); font-size: calc(40px * var(--deck-font-scale, 1)); line-height:1.6; }
   .hero__meta strong { color: var(--text); font-weight:700; }
+  /* .hero__hint is presenter chrome (key hints), so it stays below the 34px floor */
   .hero__hint { position:absolute; right:120px; bottom:64px; z-index:2; color:var(--muted); font-size: calc(22px * var(--deck-font-scale, 1)); letter-spacing:.04em; }
   .hero__hint kbd { display:inline-block; padding:3px 12px; margin:0 4px; border:1px solid var(--hair); border-radius:7px; background:var(--ink-2); color:var(--text); font-family:var(--font); font-size: calc(20px * var(--deck-font-scale, 1)); }
 
@@ -238,7 +244,7 @@
   .finale { align-items:center; }
   .finale .content { text-align:center; align-items:center; }
   .finale h2 { font-size: calc(120px * var(--deck-font-scale, 1)); line-height:1.2; margin:0 0 28px; }
-  .onesentence { font-size: calc(40px * var(--deck-font-scale, 1)); color:var(--text); max-width: 1280px; margin: 0 auto; line-height:1.55; }
+  .onesentence { font-size: calc(48px * var(--deck-font-scale, 1)); color:var(--text); max-width: 1500px; margin: 0 auto; line-height:1.5; }
 
   /* ============================================================
      ENTRANCE ANIMATION — 投影片成為 active 時播放
@@ -280,20 +286,20 @@
   }
 
   /* ---------- two-column text block (.colblock) — used by reading-guide ---------- */
-  .colblock h3 { font-size: calc(38px * var(--deck-font-scale, 1)); margin: 0 0 18px; color: var(--chapter); }
-  .colblock ul.clean li { font-size: calc(30px * var(--deck-font-scale, 1)); line-height: 1.55; }
+  .colblock h3 { font-size: calc(46px * var(--deck-font-scale, 1)); margin: 0 0 16px; color: var(--chapter); }
+  .colblock ul.clean li { font-size: calc(40px * var(--deck-font-scale, 1)); line-height: 1.5; }
   /* claim vs weakness (shape 6): .against keeps the rebuttal column's heading
      neutral so the chapter colour marks the author's side; .verdict closes the
      slide with the judgment or the question it leaves. */
   .colblock.against h3 { color: var(--text); }
-  .verdict { margin-top: 34px; padding-top: 24px; border-top: 1px solid var(--hair); font-size: calc(32px * var(--deck-font-scale, 1)); color: var(--text); }
+  .verdict { margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--hair); font-size: calc(40px * var(--deck-font-scale, 1)); color: var(--text); }
   .verdict em { color: var(--chapter); }
 
   /* ---------- numbered list (ol.num) — used by reading-guide 討論問題 ---------- */
-  ol.num { list-style:none; padding:0; margin:0; counter-reset:q; display:grid; gap:22px; }
-  ol.num li { padding-left: 76px; position:relative; line-height:1.6; font-size: calc(33px * var(--deck-font-scale, 1)); counter-increment:q; }
-  ol.num li::before { content:counter(q); position:absolute; left:0; top:0; width:50px; height:50px; border-radius:50%;
-    background:var(--chapter); color:#07090f; font-weight:700; display:grid; place-items:center; font-size: calc(28px * var(--deck-font-scale, 1)); }
+  ol.num { list-style:none; padding:0; margin:0; counter-reset:q; display:grid; gap:20px; }
+  ol.num li { padding-left: 84px; position:relative; line-height:1.5; font-size: calc(40px * var(--deck-font-scale, 1)); counter-increment:q; }
+  ol.num li::before { content:counter(q); position:absolute; left:0; top:0; width:60px; height:60px; border-radius:50%;
+    background:var(--chapter); color:#07090f; font-weight:700; display:grid; place-items:center; font-size: calc(34px * var(--deck-font-scale, 1)); }
 
   /* ---------- live font size (asset/deck-font-controls.js) ----------
      Every font-size above multiplies by --deck-font-scale so +/− resizes the

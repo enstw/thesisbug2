@@ -17,6 +17,30 @@ REPO = Path(__file__).resolve().parents[1]
 spec = importlib.util.spec_from_file_location("course_init", REPO / "scripts/course-init.py")
 course_init = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(course_init)
+spec = importlib.util.spec_from_file_location("unit_init", REPO / "scripts/unit-init.py")
+unit_init = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(unit_init)
+
+
+class DeckScaffoldTests(unittest.TestCase):
+    def test_every_deck_asset_is_copied_and_loaded(self):
+        # A JS asset copied into the unit but not loaded by the starter does
+        # nothing; unit-init's deck check is what catches that drift.
+        for variant in ("thesis", "reading-guide"):
+            with self.subTest(variant=variant), tempfile.TemporaryDirectory() as tmp:
+                files = unit_init.presentation_files(variant)
+                self.assertIn("asset/deck-check.js", files)
+                unit = Path(tmp)
+                for dst, src in files.items():
+                    self.assertTrue(src.is_file(), src)
+                    if dst == "deck.html" or dst.endswith(".js"):
+                        (unit / dst).parent.mkdir(parents=True, exist_ok=True)
+                        shutil.copy2(src, unit / dst)
+                self.assertEqual(unit_init.deck_problems(unit), [])
+                html = unit / "deck.html"
+                html.write_text(html.read_text(encoding="utf-8").replace(
+                    '<script src="asset/deck-check.js"></script>', ""), encoding="utf-8")
+                self.assertEqual(unit_init.deck_problems(unit), ["deck.html does not load asset/deck-check.js"])
 
 
 class CourseInitTests(unittest.TestCase):

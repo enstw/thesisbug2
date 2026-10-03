@@ -11,6 +11,7 @@
      · asset/deck.css        ← deck-svg：版面／元件／動態（手寫投影片的詞彙）
      · asset/deck-stage.js   ← deck-runtime：投影片引擎（換頁、列印、講者視窗）
      · asset/deck-font-controls.js ← deck-svg：全份字級快捷鍵（+／− 每次 10%，80–150%）
+     · asset/deck-check.js   ← deck-svg：開 deck.html#debug 時檢查字級下限與溢出，平常不作用
      · asset/ENSFont{,-Bold}.woff2 ← house-style：全字集中文字型（Regular＋Bold）
      手寫的部分只有底下 <deck-stage> 內的投影片與 speaker-notes。 -->
 <link rel="stylesheet" href="asset/tokens.css" />
@@ -190,6 +191,8 @@
 ]
 </script>
 
+<!-- deck-check.js 要在 deck-stage.js 之前：deck-stage 一啟動就把網址的 #debug 改成頁碼 -->
+<script src="asset/deck-check.js"></script>
 <script src="asset/deck-stage.js"></script>
 <script src="asset/presenter-stage.js"></script>
 <script src="asset/deck-font-controls.js"></script>

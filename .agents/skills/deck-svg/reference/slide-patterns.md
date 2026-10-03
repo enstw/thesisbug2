@@ -17,8 +17,9 @@ house-style tokens — drive accents off `var(--chapter)` (set per slide via
 - `.rise` + `.d1`/`.d2`/`.d3`/`.d4` — staggered fade-up; plays when the slide becomes active. Respects `prefers-reduced-motion`.
 
 ## Type
+Sized for a classroom projector at 1920×1080: body 40px, tables / labels / captions 34px at least, `.hero__hint` key hints the only smaller text (presenter chrome). `deck.html#debug` reports anything under 34px.
 - `.title` (76px) / `.kicker` (56px) — headline; `.hl` inside = accent colour.
-- `.lead` (34px) — body paragraph; `strong` = bright, `em` = accent (not italic).
+- `.lead` (40px) — body paragraph; `strong` = bright, `em` = accent (not italic).
 - `.muted` — dimmed; `.mt` — top margin.
 
 ## Layout containers
@@ -27,7 +28,7 @@ house-style tokens — drive accents off `var(--chapter)` (set per slide via
 
 ## Components
 - `.card` (+ `.tag`, `h3`, `p`, `ul.clean`) — bordered panel with accent top-rule.
-- `table.cmp` — comparison table (`caption`, `thead th`, row-header `tbody th`); `.tight` halves the cell padding for six or more rows, instead of shrinking the text.
+- `table.cmp` — comparison table at 34px (`caption`, `thead th`, row-header `tbody th`); `.tight` halves the cell padding for six or more rows, instead of shrinking the text. Past about four columns × five rows, split it across slides.
 - `blockquote.pull` (+ `cite`) — large pull quote with accent bar.
 - `.stats` > `.stat` (`.n` number, `.l` label) — metric trio; `.n` with `data-to="47.2"` animates the count on arrival; `.stats.four` for four figures.
 - `ul.clean` (+ `.lead-size`) — dotted bullet list with accent markers.
@@ -44,7 +45,7 @@ house-style tokens — drive accents off `var(--chapter)` (set per slide via
 
 ## Inline SVG art
 - `svg.art` — responsive inline SVG (vector-crisp; keep CJK as `<text>`, never rasterize).
-- `svg.art.dg` — a redrawn source figure in theme colours: `.box` (`.hi` outlined, `.fill` tinted), `.edge` (`.off` dashed) with `.ah` arrowheads, `.seg` (`.big`/`.mid`/`.small`) for shares, `.kline` threshold line; `text` is 30px, `.sub` muted, `.acc` chapter colour, `.b` bold. Size the viewBox to the slide pixels the figure fills so the text is not scaled down.
+- `svg.art.dg` — a redrawn source figure in theme colours: `.box` (`.hi` outlined, `.fill` tinted), `.edge` (`.off` dashed) with `.ah` arrowheads, `.seg` (`.big`/`.mid`/`.small`) for shares, `.kline` threshold line; `text` is 34px, `.sub` secondary, `.acc` chapter colour, `.b` bold. Size the viewBox to the slide pixels the figure fills so the text is not scaled down.
 - `.cols.split` of `.colblock` (`h3` + `ul.clean`) — two text columns; `.colblock.against` on the rebuttal column keeps its heading neutral, and a `p.verdict` (with `em`) under the columns closes on the judgment.
 - Loop animation hooks: `.flow` (dashed stroke march), `.pulse` (`.b`/`.c` = phase offsets), `.aurora` (slow drift). All freeze under `prefers-reduced-motion` and in print.
 - `.art-cap` — centred caption under art.

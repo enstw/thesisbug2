@@ -212,6 +212,26 @@ class WorkflowTests(unittest.TestCase):
         self.assertNotEqual(blocked.returncode, 0)
         self.assertIn("Build blocked", blocked.stderr)
 
+    def test_storyboard_template_rows_match_slides(self):
+        # The template's 前提 section is bullets, so only real slide rows count
+        # toward the gate's slide-count comparison; the placeholder row is dropped.
+        (self.unit / "WORK.json").write_text('{"type":"presentation"}', encoding="utf-8")
+        template = (REPO / "assets/templates/presentation/scaffold/storyboard.md").read_text(encoding="utf-8")
+        self.assertIn("## 前提", template)
+        self.assertIn("AI 協助", template)
+        self.assertIn("口說重點", template)
+        rows = "".join(f"| {i} | notes/a.md | 1 一個主張 | `.claim` | 1 min | 主張一句 | 解釋與引用 | 作者自寫 |\n"
+                       for i in (1, 2))
+        (self.unit / "storyboard.md").write_text(template + rows, encoding="utf-8")
+        slide = '<section class="slide" data-label="x"><p class="claim">x</p></section>\n'
+        hero = '<section class="slide hero" data-label="t"><h1>t</h1></section>\n'
+        deck = self.unit / "deck.html"
+        deck.write_text(hero + slide * 2, encoding="utf-8")
+        self.cli("build", "hw")                                   # 3 rows (0, 1, 2), 3 slides
+        deck.write_text(hero + slide * 6, encoding="utf-8")
+        mismatch = self.cli("build", "hw", ok=False)
+        self.assertIn("storyboard has 3 rows but the deck has 7 slides", mismatch.stderr)
+
     def test_add_retry_with_same_id_is_idempotent(self):
         added = self.add()
         again = self.data("todo", "hw", "add", "查核來源", "--id", added["id"])

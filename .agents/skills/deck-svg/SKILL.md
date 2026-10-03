@@ -80,16 +80,24 @@ placeholder slides.
 
 ## Storyboard before slides
 
+The deck is the bottom of one chain — report `draft.qmd` (every claim cited)
+→ `points.md` (~8–12 points, each naming its report section) → storyboard →
+`deck.html` — and nothing enters a lower layer that the layer above lacks,
+because that is what lets every slide sentence trace back to a cited report
+sentence; fix an error at the highest layer that has it, then carry it down
+(the presentation protocol's § Source Files has the rules).
+
 Write `<unit>/storyboard.md` (scaffolded by `unit-init`) before `deck.html`.
-It opens with a bullet list of **前提** — audience, time limit, room and
-projection (type floor, theme), wording conventions — because those set type
-size, slide count and terms for every slide. Then one table row per slide with
-the source paragraph it condenses, its **content shape** (numbered in
-`reference/content-shapes.md`), the pattern, the minutes, **畫面內容** (what is
+It opens with a bullet list of **前提** — title (main title + subtitle),
+audience, time limit, room and projection (type floor, theme), wording
+conventions — because those set type size, pace and terms for every slide.
+Then one table row per slide with the point it condenses, its **content
+shape** (numbered in `reference/content-shapes.md`), the pattern, the minutes, **畫面內容** (what is
 on the slide), **口說重點** (explanation, citations with locators, transitions,
 anticipated questions — the talk lives in the notes once the slide is sparse,
 so the author reviews it here and it becomes `#speaker-notes` when the deck is
-built), and **AI 協助** (what AI drafted or verified, what the author wrote or
+built — never derive the notes from the slides, which are the sparsest
+layer), and **AI 協助** (what AI drafted or verified, what the author wrote or
 changed), because courses increasingly ask for per-slide AI disclosure and it
 is reliable only when recorded as the slide is planned. The author reviews the
 storyboard; `deck.html` is written only after that sign-off.
@@ -113,7 +121,8 @@ debate, cards, grids, `table.cmp`, `blockquote.pull`, stats, `ul.clean`,
 flowdiag, inline `svg.art`). Stagger entrance with
 `class="rise d1|d2|d3|d4"`. Keep one idea per slide, graspable in about ten
 seconds, because the audience is listening while it reads; detail goes to the
-speaker notes.
+speaker notes. Time never justifies cramming or pre-cutting — the presenter
+adjusts pace or skips slides live.
 
 **Keep look and structure separate (the whole point of the split):**
 - Re-theme by editing token *values* in `asset/tokens.css` — never hard-code

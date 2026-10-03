@@ -20,6 +20,9 @@ spec.loader.exec_module(course_init)
 spec = importlib.util.spec_from_file_location("unit_init", REPO / "scripts/unit-init.py")
 unit_init = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(unit_init)
+spec = importlib.util.spec_from_file_location("build", REPO / "scripts/build.py")
+build = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(build)
 
 
 class DeckScaffoldTests(unittest.TestCase):
@@ -41,6 +44,39 @@ class DeckScaffoldTests(unittest.TestCase):
                 html.write_text(html.read_text(encoding="utf-8").replace(
                     '<script src="asset/deck-check.js"></script>', ""), encoding="utf-8")
                 self.assertEqual(unit_init.deck_problems(unit), ["deck.html does not load asset/deck-check.js"])
+
+
+    def test_presentation_scaffolds_the_upstream_chain(self):
+        # Report → points → storyboard → deck: points.md is the layer every
+        # storyboard row names, so unit-init must copy it beside the others.
+        for variant in ("thesis", "reading-guide"):
+            with self.subTest(variant=variant):
+                files = unit_init.presentation_files(variant)
+                for name in ("draft.qmd", "points.md", "storyboard.md"):
+                    self.assertIn(name, files)
+                    self.assertTrue(files[name].is_file(), files[name])
+        storyboard = unit_init.presentation_files("thesis")["storyboard.md"].read_text(encoding="utf-8")
+        self.assertIn("points.md", storyboard)
+
+    def test_report_includes_the_generated_preamble(self):
+        # The template preamble's font path is the {{FW}} token, which only
+        # build resolves (into _preamble.tex); including the template directly
+        # made XeLaTeX miss the font. Older units are rewritten at build time.
+        draft = unit_init.presentation_files("thesis")["draft.qmd"].read_text(encoding="utf-8")
+        self.assertIn("- _preamble.tex", draft)
+        self.assertNotIn("assets/templates", draft)
+        self.assertNotIn("bibliography:", draft)   # would hide the library tier
+        with tempfile.TemporaryDirectory() as tmp:
+            unit = Path(tmp)
+            old = ("---\nformat:\n  pdf:\n    include-in-header:\n"
+                   "      - ../../.framework/assets/templates/presentation/preamble.tex\n"
+                   "    documentclass: article\n---\n\n# 緒論\n")
+            (unit / "draft.qmd").write_text(old, encoding="utf-8")
+            with contextlib.redirect_stdout(io.StringIO()):
+                build.fix_preamble_include(unit, "draft.qmd")
+            fixed = (unit / "draft.qmd").read_text(encoding="utf-8")
+            self.assertEqual(fixed, old.replace("../../.framework/assets/templates/presentation/preamble.tex",
+                                                "_preamble.tex"))
 
 
 class CourseInitTests(unittest.TestCase):

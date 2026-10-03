@@ -13,7 +13,7 @@
 
 ## What is graded
 
-[待完成] — assignments, weights, length limits (字數), deadlines.
+[待完成] — assignments, weights, length limits (字數), deadlines, and whether and how AI use must be disclosed (agents then keep the AI-use log from the start, see AGENT-GUIDE.md).
 
 ## Course notes for agents
 

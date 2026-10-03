@@ -1,12 +1,9 @@
 ---
-bibliography: references.bib
-csl: {{FW}}/assets/chicago-fullnote-bibliography.csl
-lang: zh-Hant
 format:
   pdf:
     pdf-engine: xelatex
     include-in-header:
-      - {{FW}}/assets/templates/presentation/preamble.tex
+      - _preamble.tex
     documentclass: article
     geometry:
       - margin=2.5cm
@@ -16,19 +13,28 @@ format:
     citecolor: black
 ---
 
+<!-- 報告：這場簡報的完整論證，以散文寫成，是 points.md、storyboard.md 與 deck.html 的唯一上游。
+     每個主張都附 [@key, 頁碼]，因為 ./fw check-citations 只檢查 .qmd、不讀 deck.html；引用在這裡查核過，投影片就繼承查核過的句子。
+     下游（論點、分鏡、投影片）發現錯誤時，回到這裡對照來源改正，再往下傳。
+     課程要求逐段說明 AI 使用時，就以這份報告的段落為單位記錄。
+     建置：./fw build <unit> --target draft.qmd。標題、作者、兩層書目與 _preamble.tex 都由 ./fw build 產生，這裡不重寫，
+     因為寫在這裡會蓋掉 build 的設定（例如只剩單元書目，引用 library/ 的來源就找不到）。 -->
+
 # 緒論
 
-[待完成核心問題與導讀動機]
+[要回答的問題、為何重要、範圍]
 
-# 主要段落
+# 論證
 
-[以 Phase 2 `reading-map.md` 的主題結構為骨架展開；個別論點細節從 Phase 1 `notes/{bibkey}.md` 取材]
+<!-- 論文型：問題 → 缺口 → 研究問題 → 方法 → 證據 → 發現 → 貢獻。
+     導讀型：各篇論證取材自 notes/<key>.md；三篇以上以交叉閱讀圖的主題結構為骨架，綜合比較，而非逐篇摘要。 -->
 
-# 個人評析
+[主要論證，每個主張都附引用與頁碼]
 
-[從使用者的專業視角提出批判]
+# 評析
+
+[限制、爭議與作者自己的判斷]
 
 # 討論問題
 
-1. [問題一]
-1. [問題二]
+1. [一個有爭議的主張與兩個可辯護的立場]

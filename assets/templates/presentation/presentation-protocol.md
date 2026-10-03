@@ -12,14 +12,29 @@ This protocol is engine-specific (the `deck-stage` contract, the slide patterns,
 
 ## Source Files
 
-- **Main deck:** `<unit>/deck.html` — the canonical deliverable, a self-contained deck-stage deck (committed).
+A talk is built in layers, each derived only from the one above it:
+
+```mermaid
+flowchart LR
+    R["refs/<br>sources"] --> N["notes/<br>reading notes"] --> D["draft.qmd<br>report"] --> P["points.md<br>points"] --> S["storyboard.md<br>storyboard"] --> K["deck.html<br>slides + notes"]
+```
+
+- **Sources and notes:** `<unit>/refs/`, `<unit>/references.bib`, `<unit>/notes/<bibkey>.md`.
+- **Report:** `<unit>/draft.qmd` — the full argument in prose, every claim cited `[@key, locator]`. Citations are checked here because `./fw check-citations` reads `.qmd` and not the HTML deck, so the deck inherits checked sentences; its paragraphs are also the unit for per-paragraph AI-use disclosure. Build it with `./fw build --target draft.qmd`.
+- **Points:** `<unit>/points.md` — about 8–12 points the audience should take away, each naming the report section it condenses, because a talk is a selection from the argument and the selection should be reviewable on one page.
+- **Storyboard:** `<unit>/storyboard.md` — one row per slide naming its point, with 畫面內容 (on-slide content) and 口說重點 (spoken points).
+- **Main deck:** `<unit>/deck.html` — the canonical deliverable, a self-contained deck-stage deck (committed); its on-slide content and `#speaker-notes` are both written from the storyboard.
 - **Engine assets:** `<unit>/asset/deck-stage.js`, `<unit>/asset/presenter-stage.js`, `<unit>/asset/deck-font-controls.js`, `<unit>/asset/deck-check.js`, `<unit>/asset/ENSFont.woff2` — ship as-is; do not edit the JS.
 - **Image-deck mode adds:** `<unit>/prompts-and-page-content.md` (per-page copy + accepted prompts — the deck's source code) and `<unit>/generated-slides/*.png` (one full-bleed bitmap per slide).
 - **Beamer fallback deck:** `<unit>/presentation.qmd`
-- **Optional Quarto prose draft:** `<unit>/draft.qmd`
-- **Source reading / notes:** `<unit>/notes/`, `<unit>/refs/`, `<unit>/references.bib`
 
-There is **no build step** for `deck.html` and **no `slides.md`** — you author the HTML directly. `./fw build` for a presentation just points you at the deck and the fallback; the `.qmd` target runs the Beamer fallback.
+**One source of truth, one direction** (the Biba integrity model: content flows from the more-checked layer down to the less-checked one, never back up):
+
+1. A lower layer never introduces a claim absent from the layer above, so every sentence on a slide traces back to a cited report sentence; a new idea found while building slides goes into the report first.
+1. An error found downstream is corrected at the highest layer that contains it, against the source, and then carried down, because patching only the slide leaves the report and storyboard saying something else and the layers drift.
+1. Speaker notes are written from the storyboard's 口說重點, never derived from the slides, because the slide is the sparsest layer and notes rebuilt from it lose the explanations and locators.
+
+There is **no build step** for `deck.html` and **no `slides.md`** — you author the HTML directly. `./fw build` for a presentation runs the deck gate and points you at the deck; a `.qmd` target renders the report (`draft.qmd`) or the Beamer fallback (`presentation.qmd`).
 
 ## How a PDF is produced — manual browser print
 
@@ -41,7 +56,7 @@ python3 -m http.server 8000        # then open http://localhost:8000/deck.html  
 
 # Beamer fallback PDF (Pandoc citations / formal venue / no browser):
 ./fw build --target presentation.qmd
-./fw build --target draft.qmd          # optional Quarto prose/PDF draft
+./fw build --target draft.qmd          # the report (PDF), upstream of points, storyboard and deck
 ```
 
 `./fw build` with no target on a presentation prints these instructions and verifies `<unit>/deck.html` exists.
@@ -91,7 +106,8 @@ Reference these `asset/` files relative to `<unit>/deck.html` (i.e. `<unit>/asse
 ## Authoring the deck
 
 1. **Draft the spine first** (problem → gap → question → method → evidence → finding → contribution for a thesis; range → author → arguments → synthesis → concepts → critique → questions for a reading guide). The starter `deck.html` already encodes the spine for your variant — edit its sections rather than starting blank.
-1. **One idea per slide**, graspable in about ten seconds, because the audience reads while listening. Title names the topic; the on-slide text is the signpost; the **note carries the talk** (the storyboard's 口說重點 column plans it). Prefer 2–6 bullets; never paste a manuscript paragraph onto a slide.
+1. **One idea per slide**, graspable in about ten seconds, because the audience reads while listening. Title names the topic; the on-slide text is the signpost; the **note carries the talk** (the storyboard's 口說重點 column plans it). Prefer 2–6 bullets; never paste a manuscript paragraph onto a slide. Time never drives cuts or cramming — keep the density limit and let the presenter adjust pace or skip slides live, because content cut in advance is lost even when time turns out to suffice.
+1. **Title the talk with a main title and a subtitle:** the main title catches interest or uses the course's theme, the subtitle carries the specific case and scope, and neither states an unverified allegation as fact (ask a question or name the phenomenon instead), because a title is quoted without the evidence that qualifies it.
 1. **Keep notes index-aligned.** Every `<section>` needs one entry in the `#speaker-notes` array, same order. If you add or remove a slide, add or remove its note. Reformat note beats with `\n・` separators for presenter readability. Verify alignment (§ Verification).
 1. **A prose-heavy source slide** becomes a short on-slide statement plus the full detail in the note.
 
@@ -304,7 +320,7 @@ deck-stage runs no Pandoc citation processing. On the deck, use:
 - Speaker-note locator: `[@bibkey, p. 15]`
 - A final reference slide listing the core works
 
-Maintain `<unit>/references.bib` and fetch full text into `<unit>/refs/` so claims can be checked. `./fw check-citations <unit>` validates `.qmd` prose drafts, not the HTML deck. **If exact Chicago-style rendered references are required in the deck, use the Quarto Beamer fallback.**
+Maintain `<unit>/references.bib` and fetch full text into `<unit>/refs/` so claims can be checked. `./fw check-citations <unit>` validates `.qmd` files — the report `draft.qmd` and the Beamer fallback — not the HTML deck, so cite in the report and copy the short citation and locator down with the sentence instead of adding a citation on the slide that the report lacks. **If exact Chicago-style rendered references are required in the deck, use the Quarto Beamer fallback.**
 
 ## Quarto Beamer Fallback
 
@@ -318,18 +334,22 @@ Build it with `./fw build --target presentation.qmd` → `_output/<unit>-present
 
 ## Reading-Guide Workflow
 
+The same chain as § Source Files. The notes and the cross-reading map are Markdown that `check-citations` does not read, so the map is not a layer of its own but the outline of the report.
+
 1. Create per-source notes in `<unit>/notes/<bibkey>.md`.
-1. Build a short cross-reading map when there are three or more sources.
-1. Convert the map into `<unit>/deck.html` (start from the reading-guide starter), keeping the deck focused on what classmates need to understand and discuss.
+1. With three or more sources, sketch a short cross-reading map and use it as the report's structure.
+1. Write `<unit>/draft.qmd` as the written guide: the map's synthesis in prose, every claim cited; it can stay short.
+1. Condense it into `points.md`, storyboard, then `<unit>/deck.html` (start from the reading-guide starter), keeping the deck focused on what classmates need to understand and discuss.
 1. If the class requires Pandoc-rendered references, mirror the final structure into `presentation.qmd` and export that fallback.
 
 Single- or two-source guides may skip the cross-reading map and emphasize argument structure, author background, key concepts, and discussion questions.
 
 ## Thesis Presentation Workflow
 
-1. Identify audience and time limit.
-1. Draft the narrative spine: problem, gap, research question, method, evidence, finding, contribution.
-1. Build `<unit>/deck.html` around that spine (start from the thesis starter).
+1. Identify audience and time limit (the storyboard's 前提).
+1. Write the report `<unit>/draft.qmd` along the narrative spine — problem, gap, research question, method, evidence, finding, contribution — and run `./fw check-citations`.
+1. Condense it into `points.md`, then the storyboard; the author reviews both.
+1. Build `<unit>/deck.html` from the storyboard (start from the thesis starter).
 1. Use `presentation.qmd` only for a Beamer/Pandoc citation fallback.
 1. Print to PDF from the browser; review for text overflow, clutter, tofu, and missing source support.
 
@@ -342,7 +362,8 @@ Single- or two-source guides may skip the cross-reading map and emphasize argume
 - [ ] Text meets 4.5:1 contrast in the chosen theme; `#debug` reports `minfont=ok` and `overflow=none` on every slide.
 - [ ] Engine scripts load last, in order: `deck-check.js` (first, because deck-stage rewrites the `#debug` hash on start), `deck-stage.js`, then `presenter-stage.js`.
 - [ ] An `@media print` block forces `.rise` visible (so every slide prints, not just the active one).
-- [ ] Clear title slide and Q&A / closing slide; slide count fits the time limit.
+- [ ] Title slide with main title and subtitle; Q&A / closing slide.
+- [ ] Every slide traces to a point in `points.md` and a cited sentence in `draft.qmd`; `./fw check-citations` passes.
 - [ ] Key claims have source support in `<unit>/refs/`.
 - [ ] (Image-deck mode) `<unit>/prompts-and-page-content.md` matches the shipped PNGs; every page passed the string/digit proofread; every `<img>` carries a content-bearing `alt`.
 - [ ] `<unit>/presentation.qmd` exists as a Beamer fallback.

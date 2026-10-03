@@ -47,7 +47,8 @@ def copy_tree(src: Path, dst: Path) -> None:
 
 
 def presentation_files(variant: str) -> dict[str, Path]:
-    """A deck is assembled from three skill layers plus the Beamer fallback.
+    """A deck is assembled from three skill layers, the upstream chain it is
+    derived from (report → points → storyboard), and the Beamer fallback.
 
     Keeping this map in one place is what lets a look or runtime change land
     in one skill and reach every deck scaffolded afterwards.
@@ -66,8 +67,9 @@ def presentation_files(variant: str) -> dict[str, Path]:
         "asset/deck-stage.js": runtime / "deck-stage.js",                # runtime
         "asset/presenter-stage.js": runtime / "presenter-stage.js",
         "presentation.qmd": scaffold / "variants" / variant / "presentation.qmd",
-        "draft.qmd": scaffold / "draft.qmd",
-        "storyboard.md": scaffold / "storyboard.md",                     # shape → layout, per slide
+        "draft.qmd": scaffold / "draft.qmd",                             # report: the cited argument
+        "points.md": scaffold / "points.md",                             # report → ~8–12 points
+        "storyboard.md": scaffold / "storyboard.md",                     # point → slide, shape → layout
         "notes/.gitkeep": scaffold / "notes" / ".gitkeep",
     }
 
@@ -95,7 +97,7 @@ def deck_problems(unit: Path) -> list[str]:
 
 def fill_placeholders(unit: Path, work: dict, fw_rel: str) -> None:
     """Scaffold files carry [標題]-style slots and the {{FW}} path token."""
-    slots = {"[論文標題]": "title", "[論文主標題]": "title", "[簡報標題]": "title",
+    slots = {"[論文標題]": "title", "[論文主標題]": "title", "[簡報標題]": "title", "[簡報主標題]": "title",
              "[作業標題]": "title", "[準備標題]": "title", "[副標題]": "subtitle",
              "[作者]": "author", "[日期]": "date"}
     for f in unit.rglob("*"):
@@ -138,7 +140,8 @@ def main() -> None:
                     help="short ASCII slug for the directory, e.g. final, midterm-blockade")
     ap.add_argument("--title", required=True)
     ap.add_argument("--author", help="default: the Author row of COURSE.md")
-    ap.add_argument("--subtitle", default="")
+    ap.add_argument("--subtitle", default="",
+                    help="the specific case and scope; the title itself is the hook or course theme")
     ap.add_argument("--date", default=dt.date.today().isoformat())
     ap.add_argument("--citation", choices=("apa", "apa-zh"),
                     help="paper only; default: the Citation style row of COURSE.md, else apa")

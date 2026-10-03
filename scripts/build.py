@@ -17,8 +17,9 @@ then runs `quarto render` in the unit and copies the PDF to
 
 Presentations are hand-authored deck.html files printed from a browser, so
 for them this runs the deck gate (storyboard present, no single pattern
-carrying the deck) instead of rendering — unless --target names the Beamer
-fallback .qmd. --no-deck-gate skips it once.
+carrying the deck; a note when points.md is still the template) instead of
+rendering — unless --target names a .qmd: the report (draft.qmd) or the
+Beamer fallback (presentation.qmd). --no-deck-gate skips it once.
 """
 
 from __future__ import annotations
@@ -37,7 +38,7 @@ sys.path.insert(0, str(HERE))
 from _paths import course_root, library, rel, resolve_unit  # noqa: E402
 
 PLACEHOLDERS = {
-    "[論文標題]": "title", "[論文主標題]": "title", "[簡報標題]": "title",
+    "[論文標題]": "title", "[論文主標題]": "title", "[簡報標題]": "title", "[簡報主標題]": "title",
     "[作業標題]": "title", "[準備標題]": "title",
     "[副標題]": "subtitle", "[作者]": "author", "[日期]": "date",
 }
@@ -213,10 +214,18 @@ def deck_gate(unit: Path, root: Path) -> None:
     n = len(body)
     problems: list[str] = []
 
+    # A note, not a block: units created before points.md existed have none,
+    # and the layer's value is traceability the author reviews, not a count.
+    points = unit / "points.md"
+    if not points.is_file() or "[論點：一句話]" in points.read_text(encoding="utf-8"):
+        print(f"note: {rel(points, root)} is missing or still the template — each storyboard row "
+              "should name a point condensed from the report (draft.qmd), so no slide carries a "
+              "claim the report lacks (presentation-protocol.md § Source Files)")
+
     storyboard = unit / "storyboard.md"
     if not storyboard.is_file():
         problems.append(f"no {rel(storyboard, root)} — write the storyboard (one row per slide: "
-                        "source paragraph, content shape, pattern) and have the author review it "
+                        "source point, content shape, pattern) and have the author review it "
                         "before the deck; see deck-svg reference/content-shapes.md")
     else:
         rows = [ln for ln in storyboard.read_text(encoding="utf-8").splitlines()
@@ -240,6 +249,25 @@ def deck_gate(unit: Path, root: Path) -> None:
     if problems:
         sys.exit("deck gate: " + "\n            ".join(problems) +
                  "\n(./fw build --no-deck-gate skips this once)")
+
+
+def fix_preamble_include(unit: Path, target: str) -> None:
+    """Point a target .qmd's header include at the generated _preamble.tex.
+
+    Older scaffolds included the template preamble itself, whose font path is
+    still the {{FW}} token, so XeLaTeX could not find the font. Only build
+    resolves that token, into _preamble.tex; rewriting the one include line
+    lets units created before the fix build without a manual migration.
+    """
+    qmd = unit / target
+    if not qmd.is_file():
+        return
+    s = qmd.read_text(encoding="utf-8")
+    fixed = re.sub(r"^(\s*-\s*)\S*/assets/templates/\w+/preamble\.tex[ \t]*$",
+                   rf"\g<1>{GEN_PREAMBLE}", s, count=1, flags=re.M)
+    if fixed != s:
+        qmd.write_text(fixed, encoding="utf-8")
+        print(f"note: {target} included the unresolved template preamble; now includes {GEN_PREAMBLE}")
 
 
 def render(unit: Path, root: Path, target: str | None) -> None:
@@ -289,6 +317,8 @@ def main() -> None:
 
     bib_gate(unit, work)
     generate(unit, root, work)
+    if target:
+        fix_preamble_include(unit, target)
     render(unit, root, target)
 
 

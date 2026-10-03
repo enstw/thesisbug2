@@ -86,6 +86,10 @@ Each rule has a reason; apply the reason when a case is not listed.
 - **Write the closing summary for someone who did not watch.** Outcome first, then what you need from the author. Full sentences; re-introduce any label you coined while working.
 - **Reply in the author's language.** Traditional Chinese output uses Taiwan usage; `fix-terms` has the rules.
 
+## Recording AI use
+
+When the course requires disclosing AI use (`COURSE.md` § What is graded), keep a running log in the unit from topic selection on — `<unit>/notes/ai-usage.md`, one line per use: date, tool, purpose, what it produced, what the author decided or changed — because a log reconstructed at hand-in is unreliable. A report's paragraphs and a storyboard's 「AI 協助」 column are the per-paragraph and per-slide layers of the same record. At hand-in, if your environment keeps session transcripts locally, archive this unit's sessions compressed into the unit (for example `<unit>/notes/ai-sessions/`) as evidence, because such transcripts are machine-local and may be deleted automatically. Transcripts can contain personal data such as email addresses and local paths, so they go only into a private course repository.
+
 ## The framework directory
 
 `.framework/` is a git submodule pinned to one commit, so a unit handed in last term still rebuilds the same way. Coursework never writes into it. If you find a framework bug while doing coursework, tell the author; when they want it fixed, make the change inside `.framework/` as its own commit, push it to the framework's remote, then `./fw update` in the course. Read `.framework/AGENTS.md` before editing the framework — it is a public repository and the course is private, so nothing from the course may be copied into it.

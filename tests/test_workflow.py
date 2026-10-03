@@ -227,7 +227,8 @@ class WorkflowTests(unittest.TestCase):
         hero = '<section class="slide hero" data-label="t"><h1>t</h1></section>\n'
         deck = self.unit / "deck.html"
         deck.write_text(hero + slide * 2, encoding="utf-8")
-        self.cli("build", "hw")                                   # 3 rows (0, 1, 2), 3 slides
+        built = self.cli("build", "hw")                           # 3 rows (0, 1, 2), 3 slides
+        self.assertIn("points.md", built.stdout)                  # a note, not a block
         deck.write_text(hero + slide * 6, encoding="utf-8")
         mismatch = self.cli("build", "hw", ok=False)
         self.assertIn("storyboard has 3 rows but the deck has 7 slides", mismatch.stderr)

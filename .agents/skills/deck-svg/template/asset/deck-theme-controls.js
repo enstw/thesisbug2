@@ -2,6 +2,8 @@
    c ／ Shift+C  下一個／上一個固定主題（tokens.css 的 --deck-themes，依序循環）
    g ／ Shift+G  產生一組種子隨機配色／回到上一組隨機配色（記住最近 10 組）
    網址 #theme=paper 或 #theme=r4821 直接載入該主題或種子；可與 #debug 並用（#debug&theme=r4821）。
+   起始主題：網址 #theme= ＞ 觀眾上次的選擇 ＞ 本份簡報的預設（<html data-deck-theme-default="projector-light">，
+   可填主題 id 或種子 r4821）＞ --deck-themes 的第一個。預設寫在 deck.html，讓每份簡報依場地選起始主題而不必改 tokens.css。
    選擇依每份簡報記住，並與講者視窗及縮圖同步（同字級控制）；存的是主題 id 或種子，不存顏色。
    隨機配色由 deck-palette.js 依 deck-theme-rules.js 產生並驗證，載入順序：rules → palette → 本檔。
    必須在 deck-stage.js 之前載入，因為 deck-stage 一啟動就把網址的 # 改成頁碼。 */
@@ -14,6 +16,12 @@
   const rules = window.deckThemeRules, palette = window.deckPalette;
   const tokenNames = rules ? ['theme-name', ...rules.tokens, 'shadow-lg'] : [];
   const themes = getComputedStyle(root).getPropertyValue('--deck-themes').trim().split(/\s+/).filter(Boolean);
+  const isTheme = (v) => themes.includes(v) || /^r\d+$/.test(v || '');
+  // 本份簡報的預設；寫錯的 id 退回主題 1 並在主控台提醒，免得以為設定生效。
+  const declared = root.dataset.deckThemeDefault || '';
+  if (declared && !isTheme(declared)) console.warn(`[deck-theme] data-deck-theme-default="${declared}" 不在 --deck-themes，也不是種子 r<數字>；改用主題 1`);
+  const fixedDefault = themes.includes(declared) ? declared : themes[0] || '';
+  const startTheme = isTheme(declared) ? declared : fixedDefault;
   let current = themes[0] || '', lastFixed = 0, timer;
 
   const status = document.createElement('output');
@@ -38,7 +46,8 @@
   function clearInline() { for (const k of tokenNames) root.style.removeProperty('--' + k); }
 
   function apply(value, announce = false) {
-    const seed = /^r(\d+)$/.exec(value || '');
+    if (!isTheme(value)) value = startTheme;      // 沒存過、存的主題已不存在、或 storage 被清空
+    const seed = /^r(\d+)$/.exec(value);
     clearInline();
     if (seed && rules && palette) {
       const made = palette.generate(Number(seed[1]), rules);
@@ -51,7 +60,9 @@
         return;
       }
     }
-    const index = Math.max(0, themes.indexOf(value));
+    // 種子產生失敗（或缺配色兩檔）時退回預設的固定主題。主題 1 就是 :root 本身，所以清掉屬性，
+    // 而存下的是它的 id，不是空字串，下次開啟才不會被預設蓋過。
+    const index = Math.max(0, themes.indexOf(themes.includes(value) ? value : fixedDefault));
     if (index) root.dataset.deckTheme = themes[index]; else delete root.dataset.deckTheme;
     current = themes[index] || '';
     lastFixed = index;

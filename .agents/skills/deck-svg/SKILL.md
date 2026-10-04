@@ -18,7 +18,7 @@ You touch neither of those — you compose `<section class="slide">` elements fr
 the component vocabulary.
 
 ```
-look      house-style    asset/tokens.css + ENSFont{,-Bold}.woff2   (theme — don't edit here)
+look      house-style    asset/tokens.css + ENSFont{,-Bold}.woff2   (themes — don't edit here)
 runtime   deck-runtime   asset/deck-stage.js + presenter-stage.js  (shell — frozen)
 engine    deck-svg       asset/deck.css + deck-font-controls.js + deck-theme-controls.js + deck-check.js + deck.html  ← you work here
 ```
@@ -28,7 +28,7 @@ engine    deck-svg       asset/deck.css + deck-font-controls.js + deck-theme-con
 | File | Role | You edit it? |
 |---|---|---|
 | `template/variants/<thesis\|reading-guide>/deck.html` | The starter deck you author: `<deck-stage>` with placeholder slides + `#speaker-notes` + the number-counter script. Links `asset/tokens.css` and `asset/deck.css`. | **Yes** — this is the work surface. |
-| `template/asset/deck.css` | Component / layout / motion CSS — the slide vocabulary. | Rarely (it's the engine style); extend with a new component if a slide needs one. |
+| `template/asset/deck.css` | Component / layout / motion CSS — the slide vocabulary. | Rarely (it's the engine style); extend here with a new component if a slide needs one, then `./fw deck-refresh`. |
 | `template/asset/deck-font-controls.js` | Deck-wide font size: `+`/`=` and `-` step `--deck-font-scale` by 10% (80–150%), remembered per deck and synced across its windows. | No. |
 | `template/asset/deck-theme-controls.js` | Live colour: `c`/Shift+C cycle the fixed themes in `tokens.css`, `g`/Shift+G generate or step back through seeded palettes; `#theme=<id>` or `#theme=r<seed>` loads one. Remembered per deck and synced across its windows like the font size. Needs house-style's `deck-theme-rules.js` + `deck-palette.js` loaded before it. | No. |
 | `template/asset/deck-check.js` | The `deck.html#debug` self-check (type floor, overflow, rendered contrast, § Run & verify); does nothing without `#debug`. | No. |
@@ -69,7 +69,7 @@ Resulting deck is portable and offline:
 <unit>/
   deck.html              # you author this
   asset/
-    tokens.css           # house-style (theme — swap to re-theme)
+    tokens.css           # house-style (all themes; deck-refresh updates it)
     deck.css             # deck-svg (components)
     deck-font-controls.js # deck-svg (+/− font size)
     deck-theme-controls.js # deck-svg (c / g live themes)
@@ -84,6 +84,17 @@ Resulting deck is portable and offline:
 
 Verify it opens before authoring (see § Run & verify), then replace the
 placeholder slides.
+
+**Updating an existing deck.** The copies in `asset/` are frozen at scaffold
+time so the deck opens offline, which also means a framework update never
+reaches them. `./fw deck-refresh <unit> [--dry-run]` re-copies every file in
+`asset/` above from the current skills (the map `unit-init` uses), lists each
+as new / updated / unchanged, skips one with uncommitted changes, and never
+writes `deck.html`, `storyboard.md` or any other author file. Because
+`deck.html` is yours, it only prints the `<script>`/`<link>` tags the current
+starter loads and your deck lacks, with where each goes; add them by hand. A
+local edit to an `asset/` file is replaced (it shows in `git diff`), so put a
+needed component or theme into the framework's skill instead.
 
 ## Storyboard before slides
 
@@ -113,7 +124,7 @@ The shape column exists because an agent choosing layouts from the class list
 picks whatever is easiest to type — bullets, cards, `table.cmp` — and then
 trims or reshapes the content to fit, so a 3×3 typology becomes a list and the
 examples disappear. **The shape of the content chooses the layout; if no
-pattern fits, add a component to `asset/deck.css`, never bend the content.**
+pattern fits, add a component to `deck.css`, never bend the content.**
 Putting the choice in a table the author reads makes a bad fit visible before
 the slide exists. `./fw build` checks that the storyboard is there and that the
 deck does not lean on one pattern (`table.cmp` share, bullets per slide); it
@@ -132,12 +143,21 @@ speaker notes. Time never justifies cramming or pre-cutting — the presenter
 adjusts pace or skips slides live.
 
 **Keep look and structure separate (the whole point of the split):**
-- Re-theme by editing token *values* in `asset/tokens.css` — never hard-code
-  colours in `deck.html`. Use `var(--chapter)`, `var(--text)`, etc.
+- Never hard-code colours in `deck.html`; use `var(--chapter)`, `var(--text)`,
+  etc. To start the deck on a theme other than theme 1, set it on the root
+  element — `<html lang="zh-Hant" data-deck-theme-default="projector-light">`
+  — with a theme id from `--deck-themes` or a seed (`r4821`). Set it when the
+  room is known, e.g. a lit classroom → a light theme, because the first slide
+  is what the audience sees before anyone presses `c`. Precedence: `#theme=` in
+  the URL > the viewer's stored `c`/`g` choice > this default > theme 1. A new
+  theme or palette goes into house-style's `tokens.css`, not the deck's copy,
+  which `deck-refresh` replaces.
 - Don't paste the `@font-face` or palette back into `deck.html`; they live in
   `tokens.css`.
-- Add a genuinely new visual? Add a component class to `asset/deck.css`, don't
-  inline a one-off `<style>` blob.
+- Add a genuinely new visual? Add a component class to this skill's
+  `template/asset/deck.css` and run `./fw deck-refresh`, don't inline a
+  one-off `<style>` blob — an edit made only to the deck's `asset/deck.css`
+  is lost at the next refresh, and other decks never get the component.
 - Keep body text at 40px and nothing the audience reads below 34px (tables,
   labels, captions; the stock components already comply), because type that
   reads on a laptop washes out on a classroom projector. Only presenter chrome
@@ -194,7 +214,9 @@ this engine was carved out of; consult it for anything not covered here.
   capture commands.
   Do not assume a home-directory path, because agents install skills differently.
   Without browser access, run the structure check and mark visual QA as pending.
-- **Structure check (no browser):** confirm `deck.html` links `asset/tokens.css`
+- **Structure check (no browser):** `./fw deck-refresh <unit> --dry-run`
+  reports stale assets and any tag the current starter loads that the deck
+  does not. Otherwise confirm `deck.html` links `asset/tokens.css`
   + `asset/deck.css`, loads `asset/deck-check.js`, `asset/deck-theme-rules.js`,
   `asset/deck-palette.js` and `asset/deck-theme-controls.js` first (because
   deck-stage rewrites the `#debug` / `#theme=` hash to the slide number as it

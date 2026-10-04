@@ -33,6 +33,8 @@ Run everything from the course root through the dispatcher:
 ./fw update                            # pull the framework and commit the new pinned version
 ```
 
+`./fw update` changes the framework, not the copies already inside a unit: an HTML deck carries its engine, look and runtime in `<unit>/asset/` so it opens offline, and `./fw deck-refresh <unit>` brings those up to date without touching the author's files.
+
 `<unit>` may be a path or a bare unit name. Without it, the unit is the nearest `WORK.json` above your working directory; from the course root `fw` lists the units and stops rather than guessing. A skill may name a command that this framework version does not have yet — `./fw help` is the truth, so say a gate was not run when its command is missing; never report it as passed.
 
 ## Skills

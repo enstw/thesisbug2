@@ -30,10 +30,10 @@ HERE = Path(__file__).resolve().parent
 FRAMEWORK = HERE.parent
 sys.path.insert(0, str(HERE))
 from _paths import course_root, list_units, rel  # noqa: E402
+from _deck import presentation_files  # noqa: E402  (one map, shared with deck-refresh)
 
 TYPES = ("preparation", "homework", "paper", "journal", "thesis", "presentation")
 CITATION_TYPES = ("preparation", "paper", "journal", "thesis", "presentation")
-SKILLS = FRAMEWORK / ".agents" / "skills"
 TEMPLATES = FRAMEWORK / "assets" / "templates"
 SHARED = FRAMEWORK / "assets" / "scaffold"
 
@@ -44,37 +44,6 @@ def copy_tree(src: Path, dst: Path) -> None:
             target = dst / path.relative_to(src)
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(path, target)
-
-
-def presentation_files(variant: str) -> dict[str, Path]:
-    """A deck is assembled from three skill layers, the upstream chain it is
-    derived from (report → points → storyboard), and the Beamer fallback.
-
-    Keeping this map in one place is what lets a look or runtime change land
-    in one skill and reach every deck scaffolded afterwards.
-    """
-    deck, house = SKILLS / "deck-svg" / "template", SKILLS / "house-style" / "assets"
-    runtime = SKILLS / "deck-runtime" / "template" / "asset"
-    scaffold = TEMPLATES / "presentation" / "scaffold"
-    return {
-        "deck.html": deck / "variants" / variant / "deck.html",          # engine
-        "asset/deck.css": deck / "asset" / "deck.css",
-        "asset/deck-font-controls.js": deck / "asset" / "deck-font-controls.js",
-        "asset/deck-check.js": deck / "asset" / "deck-check.js",         # deck.html#debug self-check
-        "asset/deck-theme-controls.js": deck / "asset" / "deck-theme-controls.js",   # c/g live themes
-        "asset/deck-theme-rules.js": house / "themes" / "deck-theme-rules.js",      # colour rules (one source)
-        "asset/deck-palette.js": house / "themes" / "deck-palette.js",              # check + seeded generator
-        "asset/tokens.css": house / "css" / "tokens.css",                # look
-        "asset/ENSFont.woff2": house / "fonts" / "ENSFont.woff2",
-        "asset/ENSFont-Bold.woff2": house / "fonts" / "ENSFont-Bold.woff2",
-        "asset/deck-stage.js": runtime / "deck-stage.js",                # runtime
-        "asset/presenter-stage.js": runtime / "presenter-stage.js",
-        "presentation.qmd": scaffold / "variants" / variant / "presentation.qmd",
-        "draft.qmd": scaffold / "draft.qmd",                             # report: the cited argument
-        "points.md": scaffold / "points.md",                             # report → ~8–12 points
-        "storyboard.md": scaffold / "storyboard.md",                     # point → slide, shape → layout
-        "notes/.gitkeep": scaffold / "notes" / ".gitkeep",
-    }
 
 
 def deck_problems(unit: Path) -> list[str]:

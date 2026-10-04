@@ -1,5 +1,9 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
+<!-- 起始主題（選用）：場地燈光已知時在上面的 <html> 加 data-deck-theme-default，例如教室燈全開
+     <html lang="zh-Hant" data-deck-theme-default="projector-light">；值是 tokens.css --deck-themes 的 id
+     或種子 r4821。不改 tokens.css，因為 ./fw deck-refresh 會用框架版本覆蓋 asset/。
+     優先序：網址 #theme= ＞ 觀眾按 c／g 存下的選擇 ＞ 這個預設 ＞ 主題 1。 -->
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -7,7 +11,7 @@
 <meta name="description" content="[副標題]。以 deck-stage 簡報引擎呈現，含講者備註。" />
 
 <!-- 三層資產（由 deck-svg 在建檔時組裝，皆為本地檔、可離線）：
-     · asset/tokens.css      ← house-style：字型 @font-face + 色盤 token（換主題只改這裡）
+     · asset/tokens.css      ← house-style：字型 @font-face + 各主題的色盤 token（框架檔，deck-refresh 會更新；本份的起始主題設在 <html>）
      · asset/deck.css        ← deck-svg：版面／元件／動態（手寫投影片的詞彙）
      · asset/deck-stage.js   ← deck-runtime：投影片引擎（換頁、列印、講者視窗）
      · asset/deck-font-controls.js ← deck-svg：全份字級快捷鍵（+／− 每次 10%，80–150%）
@@ -15,7 +19,7 @@
      · asset/deck-theme-rules.js + deck-palette.js ← house-style：配色規則與檢查／產生器
      · asset/deck-check.js   ← deck-svg：開 deck.html#debug 時檢查字級下限、溢出與對比，平常不作用
      · asset/ENSFont{,-Bold}.woff2 ← house-style：全字集中文字型（Regular＋Bold）
-     手寫的部分只有底下 <deck-stage> 內的投影片與 speaker-notes。 -->
+     手寫的部分只有底下 <deck-stage> 內的投影片與 speaker-notes（及 <html> 的起始主題）。 -->
 <link rel="stylesheet" href="asset/tokens.css" />
 <link rel="stylesheet" href="asset/deck.css" />
 </head>

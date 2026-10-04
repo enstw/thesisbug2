@@ -24,7 +24,7 @@ flowchart LR
 - **Points:** `<unit>/points.md` — about 8–12 points the audience should take away, each naming the report section it condenses, because a talk is a selection from the argument and the selection should be reviewable on one page.
 - **Storyboard:** `<unit>/storyboard.md` — one row per slide naming its point, with 畫面內容 (on-slide content) and 口說重點 (spoken points).
 - **Main deck:** `<unit>/deck.html` — the canonical deliverable, a self-contained deck-stage deck (committed); its on-slide content and `#speaker-notes` are both written from the storyboard.
-- **Engine assets:** `<unit>/asset/deck-stage.js`, `<unit>/asset/presenter-stage.js`, `<unit>/asset/deck-font-controls.js`, `<unit>/asset/deck-theme-controls.js`, `<unit>/asset/deck-theme-rules.js`, `<unit>/asset/deck-palette.js`, `<unit>/asset/deck-check.js`, `<unit>/asset/ENSFont.woff2` — ship as-is; do not edit the JS.
+- **Engine assets:** `<unit>/asset/deck-stage.js`, `<unit>/asset/presenter-stage.js`, `<unit>/asset/deck-font-controls.js`, `<unit>/asset/deck-theme-controls.js`, `<unit>/asset/deck-theme-rules.js`, `<unit>/asset/deck-palette.js`, `<unit>/asset/deck-check.js`, `<unit>/asset/ENSFont.woff2` — ship as-is; do not edit the JS. They are copies frozen at scaffold time so the deck opens offline, so a framework update reaches them only through `./fw deck-refresh <unit>` (`--dry-run` first), which re-copies these framework-owned files, never writes `deck.html` or any other author file, and prints any `<script>`/`<link>` tag the current starter loads that `deck.html` lacks — add those by hand, because a new script does nothing until the deck loads it.
 - **Image-deck mode adds:** `<unit>/prompts-and-page-content.md` (per-page copy + accepted prompts — the deck's source code) and `<unit>/generated-slides/*.png` (one full-bleed bitmap per slide).
 - **Beamer fallback deck:** `<unit>/presentation.qmd`
 
@@ -117,7 +117,7 @@ Reference these `asset/` files relative to `<unit>/deck.html` (i.e. `<unit>/asse
 
 **The look is not fixed.** Theme (light/dark), palette, typography, and art style can vary per deck. Start with house-style tokens and adapt them to the user's requested look; an installed design skill can help. The scaffolded starter is dark because that is one proven example; **dark is not a rule** — in a lit classroom a light theme usually projects better, because a projector cannot make a dark ground dark and the text loses contrast with it.
 
-**Switch themes in the room.** The lighting cannot be tested beforehand, so the deck ships 14 fixed themes (half light, half dark, each half with a high-contrast 投影高對比 theme) that `c` / Shift+C cycle live, and `g` / Shift+G generate seeded palettes that already pass the contrast rules; the choice syncs to the presenter window and prints. Before the talk, project one dark and one light slide from the back row and keep whichever reads; a seed worth keeping becomes a fixed theme via `./fw check-contrast --emit r<seed>`.
+**Switch themes in the room.** The lighting cannot be tested beforehand, so the deck ships 14 fixed themes (half light, half dark, each half with a high-contrast 投影高對比 theme) that `c` / Shift+C cycle live, and `g` / Shift+G generate seeded palettes that already pass the contrast rules; the choice syncs to the presenter window and prints. Before the talk, project one dark and one light slide from the back row and keep whichever reads; a seed worth keeping becomes a fixed theme via `./fw check-contrast --emit r<seed>`. When the room is known in advance (the storyboard's 前提 records it), set the starting theme in `deck.html` — `<html lang="zh-Hant" data-deck-theme-default="projector-light">`, a theme id or a seed such as `r4821` — e.g. a light theme for a lit classroom, because the audience sees the first slide before anyone presses `c`; set it there rather than editing `asset/tokens.css`, which `deck-refresh` replaces. Precedence: `#theme=` in the URL > the viewer's stored `c`/`g` choice > the deck default > theme 1.
 
 **Fixed vs. free:**
 
@@ -361,6 +361,7 @@ Single- or two-source guides may skip the cross-reading map and emphasize argume
 - [ ] No tofu (the shipped full font covers everything; only an issue if you chose to subset).
 - [ ] Every animation is disabled under `prefers-reduced-motion`.
 - [ ] No emoji; all icons/art are inline SVG inheriting `--chapter`.
+- [ ] `./fw deck-refresh <unit> --dry-run` reports no stale asset and no missing tag.
 - [ ] `./fw check-contrast <unit>` passes; `#debug` reports `minfont=ok`, `overflow=none` and `contrast=ok` on every slide.
 - [ ] Engine scripts load last, in order: `deck-check.js`, `deck-theme-rules.js`, `deck-palette.js`, `deck-theme-controls.js` (before deck-stage, because it rewrites the `#debug` / `#theme=` hash on start), `deck-stage.js`, `presenter-stage.js`, then `deck-font-controls.js`.
 - [ ] An `@media print` block forces `.rise` visible (so every slide prints, not just the active one).

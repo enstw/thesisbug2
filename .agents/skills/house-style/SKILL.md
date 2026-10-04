@@ -30,7 +30,9 @@ house-style tokens; change the **navigation/print** → edit deck-runtime; chang
 | Path | Role | Consumed by |
 |---|---|---|
 | `assets/fonts/ENSFont.woff2` + `ENSFont-Bold.woff2` | Full-glyph CJK web font, Regular + real Bold (no tofu, no subsetting needed). | deck-svg, deck-image |
-| `assets/css/tokens.css` | `@font-face` + `:root` design tokens (palette, type scale, easing). **Theme = token values.** | every deck engine (linked as `asset/tokens.css`) |
+| `assets/css/tokens.css` | `@font-face` + design tokens: theme 1 on `:root`, the other fixed themes as complete token sets on `:root[data-deck-theme="<id>"]`, key order in `--deck-themes`. **Theme = token values.** | every deck engine (linked as `asset/tokens.css`) |
+| `assets/themes/deck-theme-rules.js` | Every palette rule (pairs, thresholds, colour-vision ΔE, generator ranges), JSON in a `.js` wrapper because a `file://` deck cannot fetch JSON. | `./fw check-contrast`, `deck-palette.js` |
+| `assets/themes/deck-palette.js` | The same checker in JS plus the seeded OKLCH palette generator. | deck-svg (`asset/`) |
 | `assets/tex/preamble-cjk.tex` | xeCJK font + Chinese line-breaking fragment. | deck-beamer, paper engines |
 | `reference/content-integrity.md` | Disputed-claims / speculation / citation / do-not-misphrase rules for graded work. | every engine that renders cited content |
 
@@ -53,6 +55,7 @@ HS="$SKILL_DIR/../house-style/assets"
 cp "$HS/css/tokens.css"             <deck>/asset/tokens.css
 cp "$HS/fonts/ENSFont.woff2"        <deck>/asset/ENSFont.woff2
 cp "$HS/fonts/ENSFont-Bold.woff2"   <deck>/asset/ENSFont-Bold.woff2
+cp "$HS/themes/deck-theme-rules.js" "$HS/themes/deck-palette.js" <deck>/asset/
 ```
 
 The engine links `asset/tokens.css` from its `deck.html` and ships the font
@@ -66,6 +69,18 @@ re-scaffold.
 - **Theme / palette / type:** edit token *values* in `assets/css/tokens.css`
   only — never the component or motion CSS (that lives in the engines). Existing
   decks adopt it when re-scaffolded or by re-copying `tokens.css`.
+- **Themes and contrast:** 14 fixed themes, 7 dark (夜幕 default, 石墨, 深海,
+  森夜, 暮紫, 黑板, 投影高對比・暗) and 7 light (投影高對比・亮, 紙白, 米黃, 霧藍,
+  石灰, 薄荷, 杏粉), because classroom lighting cannot be tested before the talk;
+  the two 投影高對比 themes are for a washed-out projector. A theme defines every
+  colour token in the rules file so no dark default leaks into a light theme.
+  After any token edit run `./fw check-contrast` (exit 1 on failure); change a
+  threshold only in `deck-theme-rules.js`, since Python and the deck both read it.
+  To keep a seeded palette someone liked on stage (toast 「隨機 #4821」), run
+  `./fw check-contrast --emit r4821` (needs `node`; without it, open the deck at
+  `#debug&theme=r4821` and copy the block from the console), paste the block
+  into `tokens.css`, give it an id and `--theme-name`, and add the id to
+  `--deck-themes`.
 - **Citation style:** the CSL files do NOT live here — their canonical home is
   the framework's `assets/`: `apa.csl` (paper & thesis default), `apa-zh-TW.csl`
   (paper option, `./fw unit-init --citation apa-zh`, with `multibib.lua`), and
@@ -88,6 +103,7 @@ re-scaffold.
   blocks — `src: url('ENSFont.woff2')` weight 100 500 and
   `src: url('ENSFont-Bold.woff2')` weight 600 900 (relative — the fonts ship
   beside it).
+- `./fw check-contrast` passes for every theme.
 - `assets/fonts/ENSFont.woff2` and `ENSFont-Bold.woff2` present and non-empty
   (the xelatex `.ttf`s live at the framework's `assets/fonts/` until the
   deck-beamer migration).

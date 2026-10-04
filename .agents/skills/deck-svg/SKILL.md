@@ -20,7 +20,7 @@ the component vocabulary.
 ```
 look      house-style    asset/tokens.css + ENSFont{,-Bold}.woff2   (theme — don't edit here)
 runtime   deck-runtime   asset/deck-stage.js + presenter-stage.js  (shell — frozen)
-engine    deck-svg       asset/deck.css + deck-font-controls.js + deck-check.js + deck.html  ← you work here
+engine    deck-svg       asset/deck.css + deck-font-controls.js + deck-theme-controls.js + deck-check.js + deck.html  ← you work here
 ```
 
 ## What's in the box (`template/`, `reference/`)
@@ -30,7 +30,8 @@ engine    deck-svg       asset/deck.css + deck-font-controls.js + deck-check.js 
 | `template/variants/<thesis\|reading-guide>/deck.html` | The starter deck you author: `<deck-stage>` with placeholder slides + `#speaker-notes` + the number-counter script. Links `asset/tokens.css` and `asset/deck.css`. | **Yes** — this is the work surface. |
 | `template/asset/deck.css` | Component / layout / motion CSS — the slide vocabulary. | Rarely (it's the engine style); extend with a new component if a slide needs one. |
 | `template/asset/deck-font-controls.js` | Deck-wide font size: `+`/`=` and `-` step `--deck-font-scale` by 10% (80–150%), remembered per deck and synced across its windows. | No. |
-| `template/asset/deck-check.js` | The `deck.html#debug` self-check (type floor and overflow, § Run & verify); does nothing without `#debug`. | No. |
+| `template/asset/deck-theme-controls.js` | Live colour: `c`/Shift+C cycle the fixed themes in `tokens.css`, `g`/Shift+G generate or step back through seeded palettes; `#theme=<id>` or `#theme=r<seed>` loads one. Remembered per deck and synced across its windows like the font size. Needs house-style's `deck-theme-rules.js` + `deck-palette.js` loaded before it. | No. |
+| `template/asset/deck-check.js` | The `deck.html#debug` self-check (type floor, overflow, rendered contrast, § Run & verify); does nothing without `#debug`. | No. |
 | `reference/content-shapes.md` | Content shape → pattern: which layout fits what kind of material, the storyboard format, and the anti-patterns. Read **first**. | No. |
 | `reference/slide-patterns.md` | The component cheat-sheet (what classes exist). | No. |
 
@@ -48,11 +49,14 @@ cp "$SKILL_DIR/template/variants/thesis/deck.html" "$DST/deck.html"   # or varia
 cp "$SKILL_DIR/template/asset/deck.css"     "$DST/asset/deck.css"
 cp "$SKILL_DIR/template/asset/deck-font-controls.js" "$DST/asset/"
 cp "$SKILL_DIR/template/asset/deck-check.js" "$DST/asset/"
+cp "$SKILL_DIR/template/asset/deck-theme-controls.js" "$DST/asset/"
 
 # house-style: theme + font
 cp "$SKILL_DIR/../house-style/assets/css/tokens.css"           "$DST/asset/tokens.css"
 cp "$SKILL_DIR/../house-style/assets/fonts/ENSFont.woff2"      "$DST/asset/ENSFont.woff2"
 cp "$SKILL_DIR/../house-style/assets/fonts/ENSFont-Bold.woff2" "$DST/asset/ENSFont-Bold.woff2"
+cp "$SKILL_DIR/../house-style/assets/themes/deck-theme-rules.js"  "$DST/asset/"
+cp "$SKILL_DIR/../house-style/assets/themes/deck-palette.js"      "$DST/asset/"
 
 # deck-runtime: the shell
 cp "$SKILL_DIR/../deck-runtime/template/asset/deck-stage.js"      "$DST/asset/"
@@ -68,7 +72,10 @@ Resulting deck is portable and offline:
     tokens.css           # house-style (theme — swap to re-theme)
     deck.css             # deck-svg (components)
     deck-font-controls.js # deck-svg (+/− font size)
+    deck-theme-controls.js # deck-svg (c / g live themes)
     deck-check.js        # deck-svg (#debug self-check)
+    deck-theme-rules.js  # house-style (palette rules, one source)
+    deck-palette.js      # house-style (contrast check + seeded generator)
     ENSFont.woff2        # house-style (font, regular ≤500)
     ENSFont-Bold.woff2   # house-style (font, bold ≥600)
     deck-stage.js        # deck-runtime (shell)
@@ -145,8 +152,9 @@ columns × five rows at most) rather than on whitespace, because the back row
 reads size, not elegance. When content does not fit, split the slide rather
 than cramming it or shrinking the type. Keep contrast high — no muted-grey
 secondary text, no thin weights — since projectors wash out low-contrast text;
-in a lit classroom a light theme usually projects better than a dark one
-(re-theme in `tokens.css`).
+in a lit classroom a light theme usually projects better than a dark one, so
+try `c` in the room before the talk. Colours come only from tokens, so a slide
+that hard-codes one stays put when the theme changes.
 
 **Speaker notes:** keep the `#speaker-notes` JSON array in lockstep with slide
 order — one string per `<section>`, same sequence.
@@ -163,8 +171,10 @@ this engine was carved out of; consult it for anything not covered here.
 
 - **Run:** open `deck.html` directly — no build, no server. Click = next; arrows/
   Esc/digits secondary; `F` = fullscreen; `P` = presenter console; `+`/`−` =
-  whole-deck font size (also from the presenter console; Cmd/Ctrl +/− stays
-  browser zoom).
+  whole-deck font size; `c`/Shift+C = next/previous fixed theme; `g`/Shift+G =
+  new seeded palette / previous one (toast 「隨機 #4821」; `#theme=r4821`
+  reloads it). All of these also work from the presenter console; Cmd/Ctrl +/−
+  stays browser zoom. Print uses the active theme.
 - **Self-check:** open `deck.html#debug` and step through every slide.
   `asset/deck-check.js` checks each slide once its entrance animation ends and
   sets `document.body.dataset` `minfont` (`ok` = all visible text on the
@@ -172,18 +182,26 @@ this engine was carved out of; consult it for anything not covered here.
   `overflow` (`none` = no text leaves the slide, no `.content` overflows into
   the header, no clipping container cuts text, else `found`); offenders are
   listed in `minfontBad` / `overflowBad` as `<slide number> <element> <px>`,
-  checked slide numbers in `checked`, and on the console. `+`/`−` resets the
-  results and rechecks the current slide. Use the available browser tools; if
+  checked slide numbers in `checked`, and on the console. It also sets
+  `contrast` (`ok` = every visible text ≥ the label floor, 4.5:1, against its
+  composited background, else `low`, offenders in `contrastBad`);
+  `contrastNote` lists body-size text (38–42px nominal) under the body floor,
+  7:1, and `contrastUnknown` text over an image, which is reported rather than
+  guessed. Thresholds come from `asset/deck-theme-rules.js`. `+`/`−`, `c` and
+  `g` reset the results and recheck the current slide; combine as
+  `#debug&theme=paper`. Use the available browser tools; if
   `browser-cdp` is installed, read its discovered `SKILL.md` for the current
   capture commands.
   Do not assume a home-directory path, because agents install skills differently.
   Without browser access, run the structure check and mark visual QA as pending.
 - **Structure check (no browser):** confirm `deck.html` links `asset/tokens.css`
-  + `asset/deck.css`, loads `asset/deck-check.js` (first, because deck-stage
-  rewrites the `#debug` hash to the slide number as it starts), then
-  `asset/deck-stage.js`, `asset/presenter-stage.js` and
+  + `asset/deck.css`, loads `asset/deck-check.js`, `asset/deck-theme-rules.js`,
+  `asset/deck-palette.js` and `asset/deck-theme-controls.js` first (because
+  deck-stage rewrites the `#debug` / `#theme=` hash to the slide number as it
+  starts), then `asset/deck-stage.js`, `asset/presenter-stage.js` and
   `asset/deck-font-controls.js`, and that `#speaker-notes` has one entry per
-  `<section class="slide">`. Run `node --check` on the four JS assets.
+  `<section class="slide">`. Run `node --check` on the seven JS assets and
+  `./fw check-contrast <unit>` on the deck's `tokens.css`.
 - **Present / PDF:** `P` pops the presenter console → **開啟簡報視窗** for the
   projector window; **列印投影片** (or browser Print → Save as PDF, enable
   "Background graphics") gives one 1920×1080 slide per page.

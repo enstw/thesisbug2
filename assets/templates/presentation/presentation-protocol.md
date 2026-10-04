@@ -24,7 +24,7 @@ flowchart LR
 - **Points:** `<unit>/points.md` — about 8–12 points the audience should take away, each naming the report section it condenses, because a talk is a selection from the argument and the selection should be reviewable on one page.
 - **Storyboard:** `<unit>/storyboard.md` — one row per slide naming its point, with 畫面內容 (on-slide content) and 口說重點 (spoken points).
 - **Main deck:** `<unit>/deck.html` — the canonical deliverable, a self-contained deck-stage deck (committed); its on-slide content and `#speaker-notes` are both written from the storyboard.
-- **Engine assets:** `<unit>/asset/deck-stage.js`, `<unit>/asset/presenter-stage.js`, `<unit>/asset/deck-font-controls.js`, `<unit>/asset/deck-check.js`, `<unit>/asset/ENSFont.woff2` — ship as-is; do not edit the JS.
+- **Engine assets:** `<unit>/asset/deck-stage.js`, `<unit>/asset/presenter-stage.js`, `<unit>/asset/deck-font-controls.js`, `<unit>/asset/deck-theme-controls.js`, `<unit>/asset/deck-theme-rules.js`, `<unit>/asset/deck-palette.js`, `<unit>/asset/deck-check.js`, `<unit>/asset/ENSFont.woff2` — ship as-is; do not edit the JS.
 - **Image-deck mode adds:** `<unit>/prompts-and-page-content.md` (per-page copy + accepted prompts — the deck's source code) and `<unit>/generated-slides/*.png` (one full-bleed bitmap per slide).
 - **Beamer fallback deck:** `<unit>/presentation.qmd`
 
@@ -117,12 +117,14 @@ Reference these `asset/` files relative to `<unit>/deck.html` (i.e. `<unit>/asse
 
 **The look is not fixed.** Theme (light/dark), palette, typography, and art style can vary per deck. Start with house-style tokens and adapt them to the user's requested look; an installed design skill can help. The scaffolded starter is dark because that is one proven example; **dark is not a rule** — in a lit classroom a light theme usually projects better, because a projector cannot make a dark ground dark and the text loses contrast with it.
 
+**Switch themes in the room.** The lighting cannot be tested beforehand, so the deck ships 14 fixed themes (half light, half dark, each half with a high-contrast 投影高對比 theme) that `c` / Shift+C cycle live, and `g` / Shift+G generate seeded palettes that already pass the contrast rules; the choice syncs to the presenter window and prints. Before the talk, project one dark and one light slide from the back row and keep whichever reads; a seed worth keeping becomes a fixed theme via `./fw check-contrast --emit r<seed>`.
+
 **Fixed vs. free:**
 
 | Fixed — always honor | Free — vary per deck |
 |---|---|
 | The `deck-stage` contract above | Theme: **light or dark** |
-| Hard rules below (SVG-not-emoji, reduced-motion, WCAG 4.5:1 contrast in the chosen theme, visible focus, 150–300ms transitions) | Palette + accent scheme (`--chapter` colors) |
+| Hard rules below (SVG-not-emoji, reduced-motion, the contrast rule in every theme, visible focus, 150–300ms transitions) | Palette + accent scheme (`--chapter` colors) |
 | 1920×1080 frame, one `<section>` per slide | Typography, art style/density, layout |
 
 The token **mechanism** is theme-agnostic: name a grayscale + accents, then derive every per-slide accent from one `--chapter` variable (each `<section>` sets `style="--chapter:var(--cN)"`). Swapping the token *values* retints the whole deck — light or dark — without touching the layout or motion CSS. The starter's `:root` block is the place to paste the skill's recommended palette/typography/effects. When flipping light↔dark, re-check accent contrast: saturated colors that pass on black often fail on white — darken them (and vice versa).
@@ -240,7 +242,7 @@ Apply these checks to every slide. They are self-contained so verification does 
 1. **SVG icons/illustrations only — never emoji.**
 1. **`prefers-reduced-motion`** — every animation must be disabled under it (the starter has the `@media` block). High severity.
 1. **Transitions 150–300ms**, eased; no janky or gratuitous motion.
-1. **Contrast** — text must meet **WCAG 4.5:1 against its own background**, in whichever theme you chose. A light deck must pass too.
+1. **Contrast** — body text ≥ **7:1** and labels, muted and accent text ≥ **4.5:1** against their own background (WCAG 2), still ≥ 4.5:1 / 3:1 with a lit room's reflected light added, and chapter colours tellable apart under colour-blindness (CIEDE2000 ≥ 10), in every theme the deck offers — stricter than WCAG AA because projection washes contrast out. The numbers live only in house-style `deck-theme-rules.js`; `./fw check-contrast` checks the tokens and `#debug` checks the rendered slides.
 1. **Theme-aware art** — SVGs inherit `--chapter` / `currentColor`; never hard-code a one-off accent.
 1. **Visible focus / `cursor:pointer`** for any interactive element (mostly N/A for a deck, but holds if you add links/buttons).
 
@@ -359,8 +361,8 @@ Single- or two-source guides may skip the cross-reading map and emphasize argume
 - [ ] No tofu (the shipped full font covers everything; only an issue if you chose to subset).
 - [ ] Every animation is disabled under `prefers-reduced-motion`.
 - [ ] No emoji; all icons/art are inline SVG inheriting `--chapter`.
-- [ ] Text meets 4.5:1 contrast in the chosen theme; `#debug` reports `minfont=ok` and `overflow=none` on every slide.
-- [ ] Engine scripts load last, in order: `deck-check.js` (first, because deck-stage rewrites the `#debug` hash on start), `deck-stage.js`, then `presenter-stage.js`.
+- [ ] `./fw check-contrast <unit>` passes; `#debug` reports `minfont=ok`, `overflow=none` and `contrast=ok` on every slide.
+- [ ] Engine scripts load last, in order: `deck-check.js`, `deck-theme-rules.js`, `deck-palette.js`, `deck-theme-controls.js` (before deck-stage, because it rewrites the `#debug` / `#theme=` hash on start), `deck-stage.js`, `presenter-stage.js`, then `deck-font-controls.js`.
 - [ ] An `@media print` block forces `.rise` visible (so every slide prints, not just the active one).
 - [ ] Title slide with main title and subtitle; Q&A / closing slide.
 - [ ] Every slide traces to a point in `points.md` and a cited sentence in `draft.qmd`; `./fw check-citations` passes.

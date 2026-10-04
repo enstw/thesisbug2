@@ -11,7 +11,9 @@
      · asset/deck.css        ← deck-svg：版面／元件／動態（手寫投影片的詞彙）
      · asset/deck-stage.js   ← deck-runtime：投影片引擎（換頁、列印、講者視窗）
      · asset/deck-font-controls.js ← deck-svg：全份字級快捷鍵（+／− 每次 10%，80–150%）
-     · asset/deck-check.js   ← deck-svg：開 deck.html#debug 時檢查字級下限與溢出，平常不作用
+     · asset/deck-theme-controls.js ← deck-svg：c／Shift+C 換主題、g／Shift+G 種子隨機配色
+     · asset/deck-theme-rules.js + deck-palette.js ← house-style：配色規則與檢查／產生器
+     · asset/deck-check.js   ← deck-svg：開 deck.html#debug 時檢查字級下限、溢出與對比，平常不作用
      · asset/ENSFont{,-Bold}.woff2 ← house-style：全字集中文字型（Regular＋Bold）
      手寫的部分只有底下 <deck-stage> 內的投影片與 speaker-notes。 -->
 <link rel="stylesheet" href="asset/tokens.css" />
@@ -26,14 +28,14 @@
     <div class="railtop"></div>
     <div class="hero__layers" aria-hidden="true">
       <div class="grid-layer"></div>
-      <svg class="art aurora" viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMid slice" style="position:absolute;inset:0;opacity:.9;color:var(--accent)">
+      <svg class="art aurora" viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMid slice" style="position:absolute;inset:0;opacity:.9;color:var(--art-glow, var(--accent))">
         <defs>
           <radialGradient id="nodeG" cx="50%" cy="50%" r="50%">
             <stop offset="0%" stop-color="currentColor" stop-opacity=".85"/>
             <stop offset="100%" stop-color="currentColor" stop-opacity="0"/>
           </radialGradient>
         </defs>
-        <g fill="none" stroke="rgba(255,255,255,.13)" stroke-width="1.5">
+        <g fill="none" style="stroke:var(--art-line)" stroke-width="1.5">
           <path class="flow" d="M300 300 L860 540"/>
           <path class="flow" style="animation-delay:-.6s" d="M860 540 L1480 300"/>
           <path class="flow" style="animation-delay:-1.2s" d="M860 540 L1040 880"/>
@@ -56,7 +58,7 @@
       <p class="hero__sub rise d1">[副標題]</p>
       <p class="hero__meta rise d2"><strong>導讀人：[作者]</strong><br>[日期]</p>
     </div>
-    <span class="hero__hint"><kbd>→</kbd> 換頁　<kbd>P</kbd> 講者視窗</span>
+    <span class="hero__hint"><kbd>→</kbd> 換頁　<kbd>P</kbd> 講者視窗　<kbd>C</kbd> 換主題</span>
   </section>
 
   <!-- ============ 1 · 導讀範圍 ============ -->
@@ -192,8 +194,11 @@
 ]
 </script>
 
-<!-- deck-check.js 要在 deck-stage.js 之前：deck-stage 一啟動就把網址的 #debug 改成頁碼 -->
+<!-- deck-check.js 與配色三檔要在 deck-stage.js 之前：deck-stage 一啟動就把網址的 #debug、#theme= 改成頁碼 -->
 <script src="asset/deck-check.js"></script>
+<script src="asset/deck-theme-rules.js"></script>
+<script src="asset/deck-palette.js"></script>
+<script src="asset/deck-theme-controls.js"></script>
 <script src="asset/deck-stage.js"></script>
 <script src="asset/presenter-stage.js"></script>
 <script src="asset/deck-font-controls.js"></script>

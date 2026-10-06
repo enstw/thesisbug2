@@ -117,7 +117,7 @@ def compile_storyboard(talk: Path) -> tuple[str, list[str]]:
             slide_num=slide_num,
             total_slides=total - 1 if total > 1 else 1,
             eyebrow=shape_col.split()[0] if shape_col else "研討進度",
-            title=slots.get("title", ""),
+            title=slots.get("label") or slots.get("data_label") or slots.get("title", ""),
         )
 
         # Render slide HTML

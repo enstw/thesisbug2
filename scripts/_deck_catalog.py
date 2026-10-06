@@ -217,14 +217,19 @@ def _render_topbar(ctx: SlideContext) -> str:
       </div>"""
 
 
+def _dlabel(slots: dict[str, Any], default: str) -> str:
+    return esc(slots.get("label") or slots.get("data_label") or default)
+
+
 def render_hero_title(slots: dict[str, Any], variant: str, ctx: SlideContext) -> str:
     title = esc(slots.get("title") or "未命名簡報")
+    dlabel = _dlabel(slots, title)
     sub = esc(slots.get("sub") or slots.get("subtitle") or "")
     meta = esc(slots.get("meta") or slots.get("author") or "")
     sub_html = f'<p class="hero__sub rise d1">{sub}</p>' if sub else ""
     meta_html = f'<p class="hero__meta rise d2">{meta}</p>' if meta else ""
 
-    return f"""  <section class="slide hero" data-label="{title}">
+    return f"""  <section class="slide hero" data-label="{dlabel}">
     <div class="railtop"></div>
     <div class="hero__layers" aria-hidden="true">
       <div class="grid-layer"></div>
@@ -240,6 +245,7 @@ def render_hero_title(slots: dict[str, Any], variant: str, ctx: SlideContext) ->
 
 def render_finale_summary(slots: dict[str, Any], variant: str, ctx: SlideContext) -> str:
     heading = esc(slots.get("heading") or slots.get("title") or "結語與討論")
+    dlabel = _dlabel(slots, heading)
     onesentence = esc(slots.get("onesentence") or slots.get("verdict") or slots.get("body") or "")
     pts = slots.get("points") or slots.get("items") or []
 
@@ -248,7 +254,7 @@ def render_finale_summary(slots: dict[str, Any], variant: str, ctx: SlideContext
         li_items = "".join(f"<li>{esc(p.get('head', p) if isinstance(p, dict) else p)}</li>" for p in pts)
         pts_html = f'<ul class="clean lead-size rise d2 mt">{li_items}</ul>'
 
-    return f"""  <section class="slide finale" data-label="{heading}">
+    return f"""  <section class="slide finale" data-label="{dlabel}">
     <div class="railtop"></div>
     <div class="content">
       <h2 class="rise">{heading}</h2>
@@ -260,6 +266,7 @@ def render_finale_summary(slots: dict[str, Any], variant: str, ctx: SlideContext
 
 def render_3card_verdict(slots: dict[str, Any], variant: str, ctx: SlideContext) -> str:
     title = esc(slots.get("title") or "")
+    dlabel = _dlabel(slots, title)
     lead = esc(slots.get("lead") or "")
     cards = slots.get("cards") or slots.get("items") or []
     verdict = esc(slots.get("verdict") or "")
@@ -282,7 +289,7 @@ def render_3card_verdict(slots: dict[str, Any], variant: str, ctx: SlideContext)
 
     verdict_html = f'<div class="verdict box rise d4"><em>結論：</em>{verdict}</div>' if verdict else ""
 
-    return f"""  <section class="slide" style="--chapter:{ctx.accent}" data-label="{title}">
+    return f"""  <section class="slide" style="--chapter:{ctx.accent}" data-label="{dlabel}">
 {_render_topbar(ctx)}
     <div class="content">
       <h2 class="kicker rise">{title}</h2>
@@ -297,6 +304,7 @@ def render_3card_verdict(slots: dict[str, Any], variant: str, ctx: SlideContext)
 
 def render_4card_grid(slots: dict[str, Any], variant: str, ctx: SlideContext) -> str:
     title = esc(slots.get("title") or "")
+    dlabel = _dlabel(slots, title)
     lead = esc(slots.get("lead") or "")
     cards = slots.get("cards") or slots.get("items") or []
     verdict = esc(slots.get("verdict") or "")
@@ -319,7 +327,7 @@ def render_4card_grid(slots: dict[str, Any], variant: str, ctx: SlideContext) ->
 
     verdict_html = f'<div class="verdict box rise d4"><em>定論：</em>{verdict}</div>' if verdict else ""
 
-    return f"""  <section class="slide" style="--chapter:{ctx.accent}" data-label="{title}">
+    return f"""  <section class="slide" style="--chapter:{ctx.accent}" data-label="{dlabel}">
 {_render_topbar(ctx)}
     <div class="content">
       <h2 class="kicker rise">{title}</h2>
@@ -334,6 +342,7 @@ def render_4card_grid(slots: dict[str, Any], variant: str, ctx: SlideContext) ->
 
 def render_bento_focus(slots: dict[str, Any], variant: str, ctx: SlideContext) -> str:
     title = esc(slots.get("title") or "")
+    dlabel = _dlabel(slots, title)
     lead = esc(slots.get("lead") or "")
     hero = slots.get("hero_card") or (slots.get("cards") or [{}])[0]
     subs = slots.get("sub_cards") or (slots.get("cards") or [{}, {}, {}])[1:3]
@@ -358,7 +367,7 @@ def render_bento_focus(slots: dict[str, Any], variant: str, ctx: SlideContext) -
 
     verdict_html = f'<div class="verdict box rise d4"><em>定論：</em>{verdict}</div>' if verdict else ""
 
-    return f"""  <section class="slide" style="--chapter:{ctx.accent}" data-label="{title}">
+    return f"""  <section class="slide" style="--chapter:{ctx.accent}" data-label="{dlabel}">
 {_render_topbar(ctx)}
     <div class="content">
       <h2 class="kicker rise">{title}</h2>
@@ -378,6 +387,7 @@ def render_bento_focus(slots: dict[str, Any], variant: str, ctx: SlideContext) -
 
 def render_split_anchor(slots: dict[str, Any], variant: str, ctx: SlideContext) -> str:
     title = esc(slots.get("title") or "")
+    dlabel = _dlabel(slots, title)
     anchor = esc(slots.get("anchor_statement") or slots.get("anchor") or "")
     items = slots.get("items") or slots.get("cards") or []
     cite = esc(slots.get("footer_cite") or slots.get("cite") or "")
@@ -396,7 +406,7 @@ def render_split_anchor(slots: dict[str, Any], variant: str, ctx: SlideContext) 
 
     cite_html = f'<div class="muted mt" style="font-size:32px">出處：{cite}</div>' if cite else ""
 
-    return f"""  <section class="slide" style="--chapter:{ctx.accent}" data-label="{title}">
+    return f"""  <section class="slide" style="--chapter:{ctx.accent}" data-label="{dlabel}">
 {_render_topbar(ctx)}
     <div class="content">
       <h2 class="kicker rise">{title}</h2>
@@ -417,6 +427,7 @@ def render_split_anchor(slots: dict[str, Any], variant: str, ctx: SlideContext) 
 
 def render_vs_confront(slots: dict[str, Any], variant: str, ctx: SlideContext) -> str:
     title = esc(slots.get("title") or "")
+    dlabel = _dlabel(slots, title)
     issue = esc(slots.get("issue") or slots.get("claim") or "")
     side_a = slots.get("side_a") or {}
     side_b = slots.get("side_b") or {}
@@ -433,7 +444,7 @@ def render_vs_confront(slots: dict[str, Any], variant: str, ctx: SlideContext) -
     issue_html = f'<p class="lead rise" style="color:var(--text);font-weight:700">{issue}</p>' if issue else ""
     verdict_html = f'<div class="verdict box rise d3"><em>裁決／提問：</em>{verdict}</div>' if verdict else ""
 
-    return f"""  <section class="slide" style="--chapter:{ctx.accent}" data-label="{title}">
+    return f"""  <section class="slide" style="--chapter:{ctx.accent}" data-label="{dlabel}">
 {_render_topbar(ctx)}
     <div class="content">
       <h2 class="kicker rise">{title}</h2>
@@ -462,6 +473,7 @@ def render_vs_confront(slots: dict[str, Any], variant: str, ctx: SlideContext) -
 
 def render_matrix_deepdive(slots: dict[str, Any], variant: str, ctx: SlideContext) -> str:
     title = esc(slots.get("title") or "")
+    dlabel = _dlabel(slots, title)
     axis_x = slots.get("axis_x") or {"name": "X 軸", "low": "低", "high": "高"}
     axis_y = slots.get("axis_y") or {"name": "Y 軸", "low": "低", "high": "高"}
     cells = slots.get("cells") or []
@@ -492,7 +504,7 @@ def render_matrix_deepdive(slots: dict[str, Any], variant: str, ctx: SlideContex
           <div class="axis-x">{esc(axis_x.get('name'))}</div>
         </div>"""
 
-    return f"""  <section class="slide" style="--chapter:{ctx.accent}" data-label="{title}">
+    return f"""  <section class="slide" style="--chapter:{ctx.accent}" data-label="{dlabel}">
 {_render_topbar(ctx)}
     <div class="content">
       <h2 class="kicker rise">{title}</h2>
@@ -509,6 +521,7 @@ def render_matrix_deepdive(slots: dict[str, Any], variant: str, ctx: SlideContex
 
 def render_spectrum_poles(slots: dict[str, Any], variant: str, ctx: SlideContext) -> str:
     title = esc(slots.get("title") or "")
+    dlabel = _dlabel(slots, title)
     pole_l = esc(slots.get("pole_left") or "極端 A")
     pole_r = esc(slots.get("pole_right") or "極端 B")
     markers = slots.get("markers") or slots.get("items") or []
@@ -526,7 +539,7 @@ def render_spectrum_poles(slots: dict[str, Any], variant: str, ctx: SlideContext
 
     verdict_html = f'<div class="verdict box rise d3 mt"><em>定論：</em>{verdict}</div>' if verdict else ""
 
-    return f"""  <section class="slide" style="--chapter:{ctx.accent}" data-label="{title}">
+    return f"""  <section class="slide" style="--chapter:{ctx.accent}" data-label="{dlabel}">
 {_render_topbar(ctx)}
     <div class="content">
       <h2 class="kicker rise">{title}</h2>
@@ -547,6 +560,7 @@ def render_spectrum_poles(slots: dict[str, Any], variant: str, ctx: SlideContext
 
 def render_flow_3stage(slots: dict[str, Any], variant: str, ctx: SlideContext) -> str:
     title = esc(slots.get("title") or "")
+    dlabel = _dlabel(slots, title)
     lead = esc(slots.get("lead") or "")
     stages = slots.get("stages") or slots.get("items") or []
     verdict = esc(slots.get("verdict") or "")
@@ -566,7 +580,7 @@ def render_flow_3stage(slots: dict[str, Any], variant: str, ctx: SlideContext) -
 
     verdict_html = f'<div class="verdict box rise d4 mt"><em>最終均衡：</em>{verdict}</div>' if verdict else ""
 
-    return f"""  <section class="slide" style="--chapter:{ctx.accent}" data-label="{title}">
+    return f"""  <section class="slide" style="--chapter:{ctx.accent}" data-label="{dlabel}">
 {_render_topbar(ctx)}
     <div class="content">
       <h2 class="kicker rise">{title}</h2>
@@ -581,6 +595,7 @@ def render_flow_3stage(slots: dict[str, Any], variant: str, ctx: SlideContext) -
 
 def render_timeline_rail(slots: dict[str, Any], variant: str, ctx: SlideContext) -> str:
     title = esc(slots.get("title") or "")
+    dlabel = _dlabel(slots, title)
     events = slots.get("events") or slots.get("items") or []
     takeaway = esc(slots.get("takeaway") or slots.get("verdict") or "")
 
@@ -597,7 +612,7 @@ def render_timeline_rail(slots: dict[str, Any], variant: str, ctx: SlideContext)
 
     takeaway_html = f'<div class="verdict box rise d4 mt"><em>歷史啟示：</em>{takeaway}</div>' if takeaway else ""
 
-    return f"""  <section class="slide" style="--chapter:{ctx.accent}" data-label="{title}">
+    return f"""  <section class="slide" style="--chapter:{ctx.accent}" data-label="{dlabel}">
 {_render_topbar(ctx)}
     <div class="content">
       <h2 class="kicker rise">{title}</h2>
@@ -611,6 +626,7 @@ def render_timeline_rail(slots: dict[str, Any], variant: str, ctx: SlideContext)
 
 def render_cascade_funnel(slots: dict[str, Any], variant: str, ctx: SlideContext) -> str:
     title = esc(slots.get("title") or "")
+    dlabel = _dlabel(slots, title)
     levels = slots.get("levels") or slots.get("items") or []
     verdict = esc(slots.get("core_focus") or slots.get("verdict") or "")
 
@@ -629,7 +645,7 @@ def render_cascade_funnel(slots: dict[str, Any], variant: str, ctx: SlideContext
 
     verdict_html = f'<div class="verdict box rise d4 mt"><em>核心焦點：</em>{verdict}</div>' if verdict else ""
 
-    return f"""  <section class="slide" style="--chapter:{ctx.accent}" data-label="{title}">
+    return f"""  <section class="slide" style="--chapter:{ctx.accent}" data-label="{dlabel}">
 {_render_topbar(ctx)}
     <div class="content">
       <h2 class="kicker rise">{title}</h2>
@@ -643,6 +659,7 @@ def render_cascade_funnel(slots: dict[str, Any], variant: str, ctx: SlideContext
 
 def render_quote_critique(slots: dict[str, Any], variant: str, ctx: SlideContext) -> str:
     title = esc(slots.get("title") or "")
+    dlabel = _dlabel(slots, title)
     quote = esc(slots.get("quote") or slots.get("body") or "")
     cite = esc(slots.get("citation") or slots.get("cite") or "")
     critiques = slots.get("critiques") or slots.get("items") or []
@@ -656,7 +673,7 @@ def render_quote_critique(slots: dict[str, Any], variant: str, ctx: SlideContext
             <p class="lead-size mt">{pt}</p>
           </div>""")
 
-    return f"""  <section class="slide" style="--chapter:{ctx.accent}" data-label="{title}">
+    return f"""  <section class="slide" style="--chapter:{ctx.accent}" data-label="{dlabel}">
 {_render_topbar(ctx)}
     <div class="content">
       <h2 class="kicker rise">{title}</h2>
@@ -675,6 +692,7 @@ def render_quote_critique(slots: dict[str, Any], variant: str, ctx: SlideContext
 
 def render_hypothesis_test(slots: dict[str, Any], variant: str, ctx: SlideContext) -> str:
     title = esc(slots.get("title") or "")
+    dlabel = _dlabel(slots, title)
     hypo = slots.get("hypothesis") or {}
     finding = slots.get("finding") or {}
     puzzle = esc(slots.get("theoretical_puzzle") or slots.get("puzzle") or "")
@@ -686,7 +704,7 @@ def render_hypothesis_test(slots: dict[str, Any], variant: str, ctx: SlideContex
     f_ev = esc(finding.get("empirical_evidence") or finding.get("head") or "")
     f_stat = esc(finding.get("status") or "實證落差")
 
-    return f"""  <section class="slide" style="--chapter:{ctx.accent}" data-label="{title}">
+    return f"""  <section class="slide" style="--chapter:{ctx.accent}" data-label="{dlabel}">
 {_render_topbar(ctx)}
     <div class="content">
       <h2 class="kicker rise">{title}</h2>
@@ -708,6 +726,7 @@ def render_hypothesis_test(slots: dict[str, Any], variant: str, ctx: SlideContex
 
 def render_stat_hero(slots: dict[str, Any], variant: str, ctx: SlideContext) -> str:
     title = esc(slots.get("title") or "")
+    dlabel = _dlabel(slots, title)
     num = esc(slots.get("stat_number") or slots.get("number") or "0")
     lbl = esc(slots.get("stat_label") or slots.get("label") or "")
     context = esc(slots.get("context") or "")
@@ -722,7 +741,7 @@ def render_stat_hero(slots: dict[str, Any], variant: str, ctx: SlideContext) -> 
             <p>{body}</p>
           </div>""")
 
-    return f"""  <section class="slide" style="--chapter:{ctx.accent}" data-label="{title}">
+    return f"""  <section class="slide" style="--chapter:{ctx.accent}" data-label="{dlabel}">
 {_render_topbar(ctx)}
     <div class="content">
       <h2 class="kicker rise">{title}</h2>
@@ -742,6 +761,7 @@ def render_stat_hero(slots: dict[str, Any], variant: str, ctx: SlideContext) -> 
 
 def render_defn_example(slots: dict[str, Any], variant: str, ctx: SlideContext) -> str:
     title = esc(slots.get("title") or "")
+    dlabel = _dlabel(slots, title)
     term = esc(slots.get("term") or "")
     etym = esc(slots.get("etymology") or slots.get("context") or "")
     defn = esc(slots.get("formal_definition") or slots.get("defn") or slots.get("body") or "")
@@ -752,7 +772,7 @@ def render_defn_example(slots: dict[str, Any], variant: str, ctx: SlideContext) 
     pos_html = f'<div class="example"><b>典型例證</b><p>{pos}</p></div>' if pos else ""
     neg_html = f'<div class="example mt" style="border-left-color:var(--hair)"><b>邊界／反例</b><p>{neg}</p></div>' if neg else ""
 
-    return f"""  <section class="slide" style="--chapter:{ctx.accent}" data-label="{title}">
+    return f"""  <section class="slide" style="--chapter:{ctx.accent}" data-label="{dlabel}">
 {_render_topbar(ctx)}
     <div class="content">
       <h2 class="kicker rise">{title}</h2>

@@ -98,11 +98,14 @@ needed component or theme into the framework's skill instead.
 
 ## Storyboard before slides
 
-The deck is the bottom of one chain — report `draft.qmd` (every claim cited)
-→ `points.md` (~8–12 points, each naming its report section) → storyboard →
-`deck.html` — and nothing enters a lower layer that the layer above lacks,
-because that is what lets every slide sentence trace back to a cited report
-sentence; fix an error at the highest layer that has it, then carry it down
+A deck is organized as Model–View–Controller. The Model is the source of
+fact: the report `draft.qmd` (every claim cited) with its notes and sources.
+The Controller is the angle and the flow: `points.md` (~8–12 points, each
+naming its report section) and the storyboard. Each slide with its speaker
+note is a View. Facts enter only the Model, because that is what lets every
+slide sentence trace back to a cited report sentence; a factual error is fixed
+in the Model and re-rendered in the rows and slides that use it, a change of
+order or emphasis goes to the Controller, a layout change stays in the View
 (the presentation protocol's § Source Files has the rules).
 
 Write `<unit>/storyboard.md` (scaffolded by `unit-init`) before `deck.html`.

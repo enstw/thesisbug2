@@ -12,27 +12,38 @@ This protocol is engine-specific (the `deck-stage` contract, the slide patterns,
 
 ## Source Files
 
-A talk is built in layers, each derived only from the one above it:
+A talk is organized as **Model–View–Controller**. The Model is the source of fact; the Controller decides the angle and the flow — which parts of the Model this audience sees, in what order, from what point of view; each View renders one slide. The split tells you where every change belongs (a fact to the Model, an order or emphasis to the Controller, a layout to the View), and it lets the same sources serve more than one talk.
 
 ```mermaid
 flowchart LR
-    R["refs/<br>sources"] --> N["notes/<br>reading notes"] --> D["draft.qmd<br>report"] --> P["points.md<br>points"] --> S["storyboard.md<br>storyboard"] --> K["deck.html<br>slides + notes"]
+    subgraph M["Model：source of fact"]
+        R["refs/<br>sources"] --> N["notes/<br>reading notes"] --> D["draft.qmd<br>report"]
+    end
+    subgraph C["Controller：angle and flow"]
+        P["points.md<br>angle"] --> S["storyboard.md<br>flow"]
+    end
+    subgraph V["View：each slide"]
+        K["deck.html<br>slide + its note"]
+    end
+    D -->|selected by| P
+    S -->|routes each slide| K
+    D -.->|content of each slide| K
 ```
 
-- **Sources and notes:** `<unit>/refs/`, `<unit>/references.bib`, `<unit>/notes/<bibkey>.md`.
-- **Report:** `<unit>/draft.qmd` — the full argument in prose, every claim cited `[@key, locator]`. Citations are checked here because `./fw check-citations` reads `.qmd` and not the HTML deck, so the deck inherits checked sentences; its paragraphs are also the unit for per-paragraph AI-use disclosure. Build it with `./fw build --target draft.qmd`.
-- **Points:** `<unit>/points.md` — about 8–12 points the audience should take away, each naming the report section it condenses, because a talk is a selection from the argument and the selection should be reviewable on one page.
-- **Storyboard:** `<unit>/storyboard.md` — one row per slide naming its point, with 畫面內容 (on-slide content) and 口說重點 (spoken points).
-- **Main deck:** `<unit>/deck.html` — the canonical deliverable, a self-contained deck-stage deck (committed); its on-slide content and `#speaker-notes` are both written from the storyboard.
+- **Model — the source of fact:** `<unit>/refs/`, `<unit>/references.bib`, `<unit>/notes/<bibkey>.md`, and the report `<unit>/draft.qmd` — the full argument in prose, every claim cited `[@key, locator]`. Citations are checked here because `./fw check-citations` reads `.qmd` and not the HTML deck, so every View inherits checked sentences; the report's paragraphs are also the unit for per-paragraph AI-use disclosure. Build it with `./fw build --target draft.qmd`.
+- **Controller, the angle — `<unit>/points.md`:** about 8–12 points this audience should take away, each naming the report section it draws on, because a talk is one selection from the argument and the selection should be reviewable on one page.
+- **Controller, the flow — `<unit>/storyboard.md`:** its 前提 (audience, time, room, wording) set the viewing conditions, and each row routes one slide: which point, in what order, with what content shape and layout, what is said (口說重點) and how it hands over to the next.
+- **View — each slide:** one `<section>` of `<unit>/deck.html` together with its entry in `#speaker-notes`, both written from the slide's storyboard row and the report passage its point names. `deck.html` is the canonical deliverable, a self-contained deck-stage deck (committed).
 - **Engine assets:** `<unit>/asset/deck-stage.js`, `<unit>/asset/presenter-stage.js`, `<unit>/asset/deck-font-controls.js`, `<unit>/asset/deck-theme-controls.js`, `<unit>/asset/deck-theme-rules.js`, `<unit>/asset/deck-palette.js`, `<unit>/asset/deck-check.js`, `<unit>/asset/ENSFont.woff2` — ship as-is; do not edit the JS. They are copies frozen at scaffold time so the deck opens offline, so a framework update reaches them only through `./fw deck-refresh <unit>` (`--dry-run` first), which re-copies these framework-owned files, never writes `deck.html` or any other author file, and prints any `<script>`/`<link>` tag the current starter loads that `deck.html` lacks — add those by hand, because a new script does nothing until the deck loads it.
-- **Image-deck mode adds:** `<unit>/prompts-and-page-content.md` (per-page copy + accepted prompts — the deck's source code) and `<unit>/generated-slides/*.png` (one full-bleed bitmap per slide).
-- **Beamer fallback deck:** `<unit>/presentation.qmd`
+- **Image-deck mode** is another set of Views for the same Controller: `<unit>/prompts-and-page-content.md` (per-page copy + accepted prompts — the deck's source code) and `<unit>/generated-slides/*.png` (one full-bleed bitmap per slide).
+- **Beamer fallback deck:** `<unit>/presentation.qmd`, likewise a View of the same Controller.
 
-**One source of truth, one direction** (the Biba integrity model: content flows from the more-checked layer down to the less-checked one, never back up):
+**The Model–View–Controller rules:**
 
-1. A lower layer never introduces a claim absent from the layer above, so every sentence on a slide traces back to a cited report sentence; a new idea found while building slides goes into the report first.
-1. An error found downstream is corrected at the highest layer that contains it, against the source, and then carried down, because patching only the slide leaves the report and storyboard saying something else and the layers drift.
-1. Speaker notes are written from the storyboard's 口說重點, never derived from the slides, because the slide is the sparsest layer and notes rebuilt from it lose the explanations and locators.
+1. Facts live only in the Model. The Controller selects, orders and frames — which points, in which sequence, from which angle, with which transitions and discussion questions — and the View renders; neither adds a factual claim, so every sentence on a slide traces back to a cited report sentence. A new idea found while building slides goes into the report first.
+1. Each change goes to the part that owns it. An error of fact is corrected in the Model, against the source, and then re-rendered in every storyboard row and slide that uses it, because patching only the slide leaves the report and the storyboard saying something else. A change of order, emphasis or audience goes to the Controller and leaves the Model untouched; a change of layout or look stays in the View.
+1. Speaker notes belong to the View and are written from the storyboard's 口說重點 and the report passage, never derived from the slide, because the slide is the sparsest View and notes rebuilt from it lose the explanations and locators.
+1. A different talk from the same sources — a shorter version, a co-presented week that covers only some of the readings, a discussion-first order — is a new Controller over the same Model, and an image deck or the Beamer fallback is a new View of the same Controller, because neither should require touching the facts.
 
 There is **no build step** for `deck.html` and **no `slides.md`** — you author the HTML directly. `./fw build` for a presentation runs the deck gate and points you at the deck; a `.qmd` target renders the report (`draft.qmd`) or the Beamer fallback (`presentation.qmd`).
 
@@ -56,7 +67,7 @@ python3 -m http.server 8000        # then open http://localhost:8000/deck.html  
 
 # Beamer fallback PDF (Pandoc citations / formal venue / no browser):
 ./fw build --target presentation.qmd
-./fw build --target draft.qmd          # the report (PDF), upstream of points, storyboard and deck
+./fw build --target draft.qmd          # the report (PDF): the Model that points, storyboard and deck draw on
 ```
 
 `./fw build` with no target on a presentation prints these instructions and verifies `<unit>/deck.html` exists.
@@ -336,12 +347,12 @@ Build it with `./fw build --target presentation.qmd` → `_output/<unit>-present
 
 ## Reading-Guide Workflow
 
-The same chain as § Source Files. The notes and the cross-reading map are Markdown that `check-citations` does not read, so the map is not a layer of its own but the outline of the report.
+The same Model–View–Controller split as § Source Files. The notes and the cross-reading map are Model material that `check-citations` does not read, so the map is not a separate part but the outline of the report.
 
 1. Create per-source notes in `<unit>/notes/<bibkey>.md`.
 1. With three or more sources, sketch a short cross-reading map and use it as the report's structure.
 1. Write `<unit>/draft.qmd` as the written guide: the map's synthesis in prose, every claim cited; it can stay short.
-1. Condense it into `points.md`, storyboard, then `<unit>/deck.html` (start from the reading-guide starter), keeping the deck focused on what classmates need to understand and discuss.
+1. Write the Controller from it — `points.md`, then the storyboard — and render the Views in `<unit>/deck.html` (start from the reading-guide starter), keeping the deck focused on what classmates need to understand and discuss.
 1. If the class requires Pandoc-rendered references, mirror the final structure into `presentation.qmd` and export that fallback.
 
 Single- or two-source guides may skip the cross-reading map and emphasize argument structure, author background, key concepts, and discussion questions.
@@ -350,8 +361,8 @@ Single- or two-source guides may skip the cross-reading map and emphasize argume
 
 1. Identify audience and time limit (the storyboard's 前提).
 1. Write the report `<unit>/draft.qmd` along the narrative spine — problem, gap, research question, method, evidence, finding, contribution — and run `./fw check-citations`.
-1. Condense it into `points.md`, then the storyboard; the author reviews both.
-1. Build `<unit>/deck.html` from the storyboard (start from the thesis starter).
+1. Write the Controller from it: `points.md`, then the storyboard; the author reviews both.
+1. Render the Views in `<unit>/deck.html` from the storyboard (start from the thesis starter).
 1. Use `presentation.qmd` only for a Beamer/Pandoc citation fallback.
 1. Print to PDF from the browser; review for text overflow, clutter, tofu, and missing source support.
 
@@ -366,7 +377,7 @@ Single- or two-source guides may skip the cross-reading map and emphasize argume
 - [ ] Engine scripts load last, in order: `deck-check.js`, `deck-theme-rules.js`, `deck-palette.js`, `deck-theme-controls.js` (before deck-stage, because it rewrites the `#debug` / `#theme=` hash on start), `deck-stage.js`, `presenter-stage.js`, then `deck-font-controls.js`.
 - [ ] An `@media print` block forces `.rise` visible (so every slide prints, not just the active one).
 - [ ] Title slide with main title and subtitle; Q&A / closing slide.
-- [ ] Every slide traces to a point in `points.md` and a cited sentence in `draft.qmd`; `./fw check-citations` passes.
+- [ ] Every slide and its note come from one storyboard row, which names a point in `points.md`, which names a cited section of `draft.qmd`; no slide carries a fact the report lacks; `./fw check-citations` passes.
 - [ ] Key claims have source support in `<unit>/refs/`.
 - [ ] (Image-deck mode) `<unit>/prompts-and-page-content.md` matches the shipped PNGs; every page passed the string/digit proofread; every `<img>` carries a content-bearing `alt`.
 - [ ] `<unit>/presentation.qmd` exists as a Beamer fallback.

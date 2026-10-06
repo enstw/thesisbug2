@@ -46,8 +46,8 @@ def starter_deck(variant: str) -> Path:
 
 
 def presentation_files(variant: str) -> dict[str, Path]:
-    """A deck is assembled from three skill layers, the upstream chain it is
-    derived from (report → points → storyboard), and the Beamer fallback.
+    """A deck is assembled from three skill layers, its Model and Controller
+    (the report; points → storyboard), and the Beamer fallback.
 
     Keeping this map in one place is what lets a look or runtime change land
     in one skill and reach every deck scaffolded afterwards — and, through
@@ -59,9 +59,9 @@ def presentation_files(variant: str) -> dict[str, Path]:
         "deck.html": starter_deck(variant),
         **deck_assets(),
         "presentation.qmd": scaffold / "variants" / variant / "presentation.qmd",
-        "draft.qmd": scaffold / "draft.qmd",                             # report: the cited argument
-        "points.md": scaffold / "points.md",                             # report → ~8–12 points
-        "storyboard.md": scaffold / "storyboard.md",                     # point → slide, shape → layout
+        "draft.qmd": scaffold / "draft.qmd",                             # Model: the cited argument
+        "points.md": scaffold / "points.md",                             # Controller: angle, ~8–12 points
+        "storyboard.md": scaffold / "storyboard.md",                     # Controller: flow, point → slide
         "notes/.gitkeep": scaffold / "notes" / ".gitkeep",
     }
 

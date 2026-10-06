@@ -41,7 +41,9 @@ Diagrams and generated art are covered in the presentation protocol
 ## Storyboard first
 
 Write `<unit>/storyboard.md` before `deck.html`, from `points.md` (which
-condenses the report `draft.qmd`), never adding a claim the points lack. It
+selects from the report `draft.qmd`). The storyboard is the Controller's flow:
+it orders and frames what the points select and never adds a claim they lack,
+because facts live only in the report. It
 opens with a short **前提** list — title (main title + subtitle), audience,
 time limit, room and projection (type floor, light or dark theme), wording
 conventions — because those decide type size, pace and terms, and changing

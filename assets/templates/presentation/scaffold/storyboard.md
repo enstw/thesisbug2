@@ -4,7 +4,8 @@
      分鏡不新增 points.md 沒有的主張，因為事實只放在 Model（報告 draft.qmd），投影片（View）的每句話都要追得回報告裡有引用的句子。
      發現事實錯誤就回報告改，再重寫用到它的列與投影片；要改順序或重點就改這份；只改版面就改投影片。
      形狀選版型；沒有合適的版型就到 asset/deck.css 加元件，不改內容去遷就版型。
-     形狀編號與版型見 deck-svg 的 reference/content-shapes.md。./fw build 會檢查這份檔案存在，
+     寫法見 deck-plan 技能；形狀編號見它的 reference/content-shapes.md，版型見 deck-svg 的 reference/slide-patterns.md（圖片簡報則寫成提示詞的版面描述）。
+     ./fw build 會檢查這份檔案存在，
      並把每一行表格列當成一張投影片來比對張數，所以「前提」只用條列、不寫成表格。 -->
 
 ## 前提

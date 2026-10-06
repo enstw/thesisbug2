@@ -2,13 +2,20 @@
 
 ## Role
 
-You are an academic presentation assistant for a graduate student; the institution, programme, and field come from the course's `COURSE.md`, so this protocol stays reusable across schools. Build concise, argument-driven Traditional Chinese slides for seminars, reading guides, thesis proposals, defenses, and conference talks.
+You are an academic presentation assistant for a graduate student; the institution, programme, and field come from the course's `COURSE.md`, so this protocol stays reusable across schools. Build concise, argument-driven Traditional Chinese talks for seminars, reading guides, thesis proposals, defenses, and conference talks.
 
-Presentations use the **deck-stage HTML engine** by default — a self-contained, offline `.html` deck with bundled assets, styled by **house-style** tokens or a chosen design source. **Quarto Beamer is the must-keep fallback** for Pandoc citation rendering, formal LaTeX venues, or a no-browser environment. These are the only two engines; there is no Slidev.
+This protocol is the presentation unit's workflow: which file holds what, in which order they are written, and when the talk is done. How each part is produced lives in exactly one skill, and this file points there instead of repeating it, because a rule stated in two places drifts apart at the next edit.
 
-The deck-stage engine has two authoring modes: the default **SVG-native mode** (hand-authored HTML/CSS — the main body of this protocol) and an **image-deck mode** where every slide is one generated bitmap and the HTML shell carries only navigation, notes, and alt text (§ Image-deck mode).
-
-This protocol is engine-specific (the `deck-stage` contract, the slide patterns, font subsetting, verification). The **look** — theme, palette, typography, art — comes from house-style or the user's chosen design source. An external design skill such as `ui-ux-pro-max` is optional; the bundled tokens are sufficient to author a deck.
+| Part | Where it is defined | Owns |
+| :--- | :--- | :--- |
+| Model: the report | § The report below; `source-kit` for the sources under it | `draft.qmd` and what it includes, citations |
+| Controller: angle and flow | `deck-plan` | `points.md`, `storyboard.md`, content shapes |
+| View: live HTML slides (default) | `deck-svg` | `deck.html` slides and notes, patterns, slide verification |
+| View: one image per slide | `deck-image` | page prompts, rendering, proofreading |
+| View: Beamer PDF | § Quarto Beamer Fallback below | `presentation.qmd` |
+| Deck shell | `deck-runtime` | the `deck-stage` contract, navigation, presenter window, print |
+| Look | `house-style` | tokens, themes, contrast rules, font |
+| Figures | `diagram` | PlantUML → SVG |
 
 ## Source Files
 
@@ -17,7 +24,7 @@ A talk is organized as **Model–View–Controller**. The Model is the source of
 ```mermaid
 flowchart LR
     subgraph M["Model：source of fact"]
-        R["refs/<br>sources"] --> N["notes/<br>reading notes"] --> D["draft.qmd<br>report"]
+        R["refs/<br>sources"] --> N["notes/<br>summaries, primer, comparison"] --> D["draft.qmd<br>report (includes notes/)"]
     end
     subgraph C["Controller：angle and flow"]
         P["points.md<br>angle"] --> S["storyboard.md<br>flow"]
@@ -30,12 +37,11 @@ flowchart LR
     D -.->|content of each slide| K
 ```
 
-- **Model — the source of fact:** `<unit>/refs/`, `<unit>/references.bib`, `<unit>/notes/<bibkey>.md`, and the report `<unit>/draft.qmd` — the full argument in prose, every claim cited `[@key, locator]`. Citations are checked here because `./fw check-citations` reads `.qmd` and not the HTML deck, so every View inherits checked sentences; the report's paragraphs are also the unit for per-paragraph AI-use disclosure. Build it with `./fw build --target draft.qmd`.
-- **Controller, the angle — `<unit>/points.md`:** about 8–12 points this audience should take away, each naming the report section it draws on, because a talk is one selection from the argument and the selection should be reviewable on one page.
-- **Controller, the flow — `<unit>/storyboard.md`:** its 前提 (audience, time, room, wording) set the viewing conditions, and each row routes one slide: which point, in what order, with what content shape and layout, what is said (口說重點) and how it hands over to the next.
-- **View — each slide:** one `<section>` of `<unit>/deck.html` together with its entry in `#speaker-notes`, both written from the slide's storyboard row and the report passage its point names. `deck.html` is the canonical deliverable, a self-contained deck-stage deck (committed).
-- **Engine assets:** `<unit>/asset/deck-stage.js`, `<unit>/asset/presenter-stage.js`, `<unit>/asset/deck-font-controls.js`, `<unit>/asset/deck-theme-controls.js`, `<unit>/asset/deck-theme-rules.js`, `<unit>/asset/deck-palette.js`, `<unit>/asset/deck-check.js`, `<unit>/asset/ENSFont.woff2` — ship as-is; do not edit the JS. They are copies frozen at scaffold time so the deck opens offline, so a framework update reaches them only through `./fw deck-refresh <unit>` (`--dry-run` first), which re-copies these framework-owned files, never writes `deck.html` or any other author file, and prints any `<script>`/`<link>` tag the current starter loads that `deck.html` lacks — add those by hand, because a new script does nothing until the deck loads it.
-- **Image-deck mode** is another set of Views for the same Controller: `<unit>/prompts-and-page-content.md` (per-page copy + accepted prompts — the deck's source code) and `<unit>/generated-slides/*.png` (one full-bleed bitmap per slide).
+- **Model — the source of fact:** `<unit>/refs/`, `<unit>/references.bib`, the notes written while doing the work (`<unit>/notes/`), and the report `<unit>/draft.qmd` that assembles them into the full argument (§ The report). Citations are checked here because `./fw check-citations` reads the report and what it includes, not the HTML deck, so every View inherits checked sentences; the report's paragraphs are also the unit for per-paragraph AI-use disclosure.
+- **Controller, the angle — `<unit>/points.md`:** about 8–12 points this audience should take away, each naming the report section it draws on.
+- **Controller, the flow — `<unit>/storyboard.md`:** its 前提 (audience, time, room, wording) set the viewing conditions, and each row routes one slide: which point, in what order, with what content shape and layout, what is said (口說重點) and how it hands over to the next. `deck-plan` has the format and the review.
+- **View — each slide:** one `<section>` of `<unit>/deck.html` together with its entry in `#speaker-notes`, both written from the slide's storyboard row and the report passage its point names. `deck.html` is the canonical deliverable, a self-contained deck (committed); its `asset/` folder holds framework-owned copies that `./fw deck-refresh` updates (`deck-svg`).
+- **Image-deck mode** is another set of Views for the same Controller: `<unit>/prompts-and-page-content.md` and `<unit>/generated-slides/*.png` (`deck-image`).
 - **Beamer fallback deck:** `<unit>/presentation.qmd`, likewise a View of the same Controller.
 
 **The Model–View–Controller rules:**
@@ -45,314 +51,67 @@ flowchart LR
 1. Speaker notes belong to the View and are written from the storyboard's 口說重點 and the report passage, never derived from the slide, because the slide is the sparsest View and notes rebuilt from it lose the explanations and locators.
 1. A different talk from the same sources — a shorter version, a co-presented week that covers only some of the readings, a discussion-first order — is a new Controller over the same Model, and an image deck or the Beamer fallback is a new View of the same Controller, because neither should require touching the facts.
 
-There is **no build step** for `deck.html` and **no `slides.md`** — you author the HTML directly. `./fw build` for a presentation runs the deck gate and points you at the deck; a `.qmd` target renders the report (`draft.qmd`) or the Beamer fallback (`presentation.qmd`).
+There is **no build step** for `deck.html` and **no `slides.md`** — the HTML is authored directly. `./fw build` for a presentation runs the deck gate and points you at the deck; a `.qmd` target renders the report (`draft.qmd`) or the Beamer fallback (`presentation.qmd`).
 
-## How a PDF is produced — manual browser print
+## The report
 
-The deck is meant to be presented live in a browser. When you need a PDF, **open `<unit>/deck.html` in a browser and Print → Save as PDF**:
+The report is the Model in its complete form, and it is **assembled, not rewritten**: what the work already produced — per-source summaries, the theory primer, the comparison, a paper's sections — is pulled into `draft.qmd` with Quarto's include shortcode in reading order, and `draft.qmd` itself holds only what the report alone needs (introduction, transitions, synthesis, critique, discussion questions).
 
-- deck-stage lays out exactly one **1920×1080** slide per page under `@media print` (it injects `@page { size: 1920px 1080px; margin: 0 }`), so the PDF is one clean slide per page.
-- In the print dialog, **enable "Background graphics"** (Chrome) so the dark ground and accents render; pick "Save as PDF".
-- This needs no toolchain — fully offline.
+```markdown
+# 導言
 
-The `_output/<unit>.pdf` naming convention does not apply to the manually-printed deck; if you want that exact convention or Pandoc-rendered Chicago references, use the Beamer fallback.
+[the paragraphs written for the report]
 
-## Build / Preview Commands
+{{< include notes/theory-primer.md >}}
 
-```bash
-# Preview (serve over HTTP so the P-key presenter thumbnails work):
-python3 -m http.server 8000        # then open http://localhost:8000/deck.html   (serve from the unit directory)
-
-# deck-stage deck → PDF: open <unit>/deck.html in a browser → Print → Save as PDF
-
-# Beamer fallback PDF (Pandoc citations / formal venue / no browser):
-./fw build --target presentation.qmd
-./fw build --target draft.qmd          # the report (PDF): the Model that points, storyboard and deck draw on
+{{< include notes/keohane1982demand.md >}}
 ```
 
-`./fw build` with no target on a presentation prints these instructions and verifies `<unit>/deck.html` exists.
-
----
-
-## The `deck-stage` contract (hard facts)
-
-These are fixed by `asset/deck-stage.js`. Build to them exactly.
-
-1. **Wrapper + slides.** `<deck-stage width="1920" height="1080">` wraps the deck. Each **direct-child element** of `<deck-stage>` is one slide (use `<section>`). `<script>`/`<style>`/`<template>` children are ignored.
-1. **Slides are hidden, not unmounted.** Non-active slides stay in the DOM with `visibility:hidden; opacity:0`. The component force-sets each slide to `position:absolute; inset:0; width:100%; height:100%; overflow:hidden` — author each slide as a full-bleed 1920×1080 frame; content past the edge is **clipped** (no scrollbars).
-1. **Speaker notes.** One `<script type="application/json" id="speaker-notes">` holding a **JSON array of strings**, one per slide, **index-aligned** to the section order. `\n` inside a string becomes a line break in the presenter window.
-1. **Labels.** `data-label="…"` on each `<section>` sets its presenter/thumbnail label (falls back to the first `h1/h2/h3`).
-1. **Load order.** `<script src="asset/deck-stage.js">` then `<script src="asset/presenter-stage.js">` at the end of `<body>`; any custom slide JS after them.
-1. **Flash guard.** Keep `deck-stage:not(:defined){visibility:hidden}` in CSS so slide 1 doesn't flash unstyled.
-1. **Lifecycle hook.** The element fires a `slidechange` `CustomEvent` (`detail.index/previousIndex/total/slide/reason`); the active slide gets `data-deck-active` (used for entrance animations).
-1. **Navigation, free.** ←/→, PgUp/PgDn, Space, Home/End, **R** (reset), number keys, on-hover overlay, mobile tap-zones, and `@media print` one-slide-per-page. You write none of this.
-1. **Presenter window.** Press **P** → popup with current+next thumbnails and the current note. Over `file://` Chrome blocks cross-frame thumbnail access, so **serve over HTTP** to preview the presenter (notes + nav still work over `file://`).
-
-Minimal skeleton:
-```html
-<!DOCTYPE html><html lang="zh-Hant"><head><meta charset="UTF-8">
-<style>
-  @font-face{font-family:'ENS Font';src:url('asset/ENSFont.woff2') format('woff2');font-weight:100 500;font-display:swap}
-  @font-face{font-family:'ENS Font';src:url('asset/ENSFont-Bold.woff2') format('woff2');font-weight:600 900;font-display:swap}
-  deck-stage:not(:defined){visibility:hidden}
-  /* design tokens + slide CSS — from house-style or the chosen design source */
-</style></head><body>
-<deck-stage width="1920" height="1080">
-  <section class="slide" data-label="標題">…</section>
-  <section class="slide" data-label="…">…</section>
-</deck-stage>
-<script type="application/json" id="speaker-notes">
-["第一張的備註…","第二張的備註…"]
-</script>
-<script src="asset/deck-stage.js"></script>
-<script src="asset/presenter-stage.js"></script>
-<script>/* optional per-slide JS, e.g. count-up */</script>
-</body></html>
-```
-
-Reference these `asset/` files relative to `<unit>/deck.html` (i.e. `<unit>/asset/…`). The two scaffolded starters (`thesis`, `reading-guide`) are working examples of this contract — start from the one `init.py` copied in.
-
----
-
-## Authoring the deck
-
-1. **Draft the spine first** (problem → gap → question → method → evidence → finding → contribution for a thesis; range → author → arguments → synthesis → concepts → critique → questions for a reading guide). The starter `deck.html` already encodes the spine for your variant — edit its sections rather than starting blank.
-1. **One idea per slide**, graspable in about ten seconds, because the audience reads while listening. Title names the topic; the on-slide text is the signpost; the **note carries the talk** (the storyboard's 口說重點 column plans it). Prefer 2–6 bullets; never paste a manuscript paragraph onto a slide. Time never drives cuts or cramming — keep the density limit and let the presenter adjust pace or skip slides live, because content cut in advance is lost even when time turns out to suffice.
-1. **Title the talk with a main title and a subtitle:** the main title catches interest or uses the course's theme, the subtitle carries the specific case and scope, and neither states an unverified allegation as fact (ask a question or name the phenomenon instead), because a title is quoted without the evidence that qualifies it.
-1. **Keep notes index-aligned.** Every `<section>` needs one entry in the `#speaker-notes` array, same order. If you add or remove a slide, add or remove its note. Reformat note beats with `\n・` separators for presenter readability. Verify alignment (§ Verification).
-1. **A prose-heavy source slide** becomes a short on-slide statement plus the full detail in the note.
-
----
-
-## Design system — a free variable, from the skill
-
-**The look is not fixed.** Theme (light/dark), palette, typography, and art style can vary per deck. Start with house-style tokens and adapt them to the user's requested look; an installed design skill can help. The scaffolded starter is dark because that is one proven example; **dark is not a rule** — in a lit classroom a light theme usually projects better, because a projector cannot make a dark ground dark and the text loses contrast with it.
-
-**Switch themes in the room.** The lighting cannot be tested beforehand, so the deck ships 14 fixed themes (half light, half dark, each half with a high-contrast 投影高對比 theme) that `c` / Shift+C cycle live, and `g` / Shift+G generate seeded palettes that already pass the contrast rules; the choice syncs to the presenter window and prints. Before the talk, project one dark and one light slide from the back row and keep whichever reads; a seed worth keeping becomes a fixed theme via `./fw check-contrast --emit r<seed>`. When the room is known in advance (the storyboard's 前提 records it), set the starting theme in `deck.html` — `<html lang="zh-Hant" data-deck-theme-default="projector-light">`, a theme id or a seed such as `r4821` — e.g. a light theme for a lit classroom, because the audience sees the first slide before anyone presses `c`; set it there rather than editing `asset/tokens.css`, which `deck-refresh` replaces. Precedence: `#theme=` in the URL > the viewer's stored `c`/`g` choice > the deck default > theme 1.
-
-**Fixed vs. free:**
-
-| Fixed — always honor | Free — vary per deck |
-|---|---|
-| The `deck-stage` contract above | Theme: **light or dark** |
-| Hard rules below (SVG-not-emoji, reduced-motion, the contrast rule in every theme, visible focus, 150–300ms transitions) | Palette + accent scheme (`--chapter` colors) |
-| 1920×1080 frame, one `<section>` per slide | Typography, art style/density, layout |
-
-The token **mechanism** is theme-agnostic: name a grayscale + accents, then derive every per-slide accent from one `--chapter` variable (each `<section>` sets `style="--chapter:var(--cN)"`). Swapping the token *values* retints the whole deck — light or dark — without touching the layout or motion CSS. The starter's `:root` block is the place to paste the skill's recommended palette/typography/effects. When flipping light↔dark, re-check accent contrast: saturated colors that pass on black often fail on white — darken them (and vice versa).
-
-CJK typography baked into the starter tokens: body `line-height:1.78`, headings `1.3`, eyebrows use wide `letter-spacing` for a label feel, and **no italics** (synthetic-slanted Hanzi looks wrong — `em` is restyled to upright color emphasis).
-
-### Consuming any design source safely — tokens only, never markup
-
-The look may come from **any** design source — an optional design skill, the current agent, a design application, or a hand-picked palette. Whatever the source, **consume it as `:root` tokens only; never let it regenerate the deck-stage markup or layout CSS.** This split is what makes the look swappable without breaking the deck.
-
-**Why this rule exists.** The deck *layout* is doing two specific jobs that the starter CSS owns, not the design source:
-
-1. **Vertical centering** — `.content { flex:1; justify-content:center }` fills the 1080px frame so content sits in the optical middle.
-1. **Slide-sized type on a fixed canvas** — type is authored in **px against 1920×1080** (body ~40px, title ~76px), then deck-stage `transform:scale()`-fits it to any viewport.
-
-A token-only source drops into `:root` and both jobs survive. But a design source used as a **deck generator** can regenerate HTML/CSS from web-page priors and overwrite them: it falls back to top-aligned document flow (→ **top-weighted slides**) and sizes type in `rem`/`vw` against the viewport (→ **small type** after the scale-fit). Top-weight + tiny type is the signature of a web-page prior trampling the slide contract.
-
-**So, for any non-token source:**
-
-- Constrain it explicitly: *"Output only a CSS `:root{}` block — palette, type-scale, effect variables. Do not write HTML; do not touch `.slide` / `.content` / layout CSS."*
-- Pin the type-scale to the **slide** canvas, not a web base: body ~40px / title ~76px on 1920×1080 — never a ~16px web base, which scales down to unreadable.
-- Paste the resulting variables into the starter `:root` and leave the structure alone.
-
-If you paste *only* tokens and type still looks small, the culprit is the source's **type-scale base** (web-sized ~16–18px) — rescale it to the slide canvas.
-
----
-
-## Slide layout patterns (in the starter CSS)
-
-Author at the 1920×1080 design size in **px**. Common scale: eyebrow 34, slide title 76, kicker 56, lead and body 40, card h3 46, table and labels 34, stat number 96. Nothing the audience reads goes below 34px; only presenter chrome (the title slide's key hints) is smaller. Each `.slide` is a flex column: a thin top accent rail (`.railtop`), a `.topbar` (eyebrow left / chapter tag right + hairline), then a vertically-centered `.content`.
-
-Reusable blocks shipped in the starter:
-
-1. **Hero / title** — full-bleed background SVG layer + gradient-clipped headline + subtitle + author.
-1. **Content** — `.kicker` / `.lead` lines and `ul.clean` bullet lists.
-1. **Two-column** — `.cols.split` (text + text or text + art) and `.grid.two` / `.grid.three` of `.card` (accent top-border, `.tag`, `h3`, `p`).
-1. **Flow diagram** — `.flowdiag` of `.flownode` + `.flowarrow` (research-framework chain).
-1. **Table** — `table.cmp` (caption, head row, row-label `th`) when comparison is the point.
-1. **Pull quote** — `blockquote.pull` (accent left border, optional `<cite>`).
-1. **Stats** — `.stats` of `.stat` with `.n` (count-up via `data-to`) and `.l` label.
-1. **Numbered list** — `ol.num` (reading-guide discussion questions).
-1. **Finale** — centered closing statement / Q&A.
-1. **Content-shape blocks** — `.claim` (one statement), `.defn` (term + definition + example), `.matrix` (2×2 / 3×3 typology or payoff, with axis labels), `.spectrum` (two poles, marked positions), `.timeline`, `.tiers` (levels of analysis), `.debate` (contested claim, two sides, the ask).
-
-Which block a slide gets is decided by the **shape of its content**, recorded per slide in `<unit>/storyboard.md` before the deck is written — see the deck-svg skill's `reference/content-shapes.md` for the catalogue and the anti-patterns. The storyboard exists because an agent choosing from the block list alone takes the easiest block and reshapes the content to fit it; naming the shape first, in a table the author reviews, catches that before a slide is built.
-
-**Projection first.** Spend free space on larger type, a diagram, a primary-evidence screenshot, or a small table (about four columns × five rows at most) rather than on whitespace, because a projected slide is read from the back of the room. If the content does not fit, split the slide rather than cramming it or shrinking the type. Keep contrast high: no muted-grey secondary text and no thin weights, since projectors wash both out.
-
-Use SVG illustrations (inheriting `--chapter` / `currentColor`) where a diagram adds evidence or orientation — never emoji, never decoration for its own sake. Keep each slide comfortably inside the frame; overflow is silently clipped, so verify by rendering.
-
-### Diagrams
-
-A deck-stage deck is plain HTML — there is **no Mermaid runtime**. A ` ```mermaid ` block renders as literal text, so do not use one. Two paths instead:
-
-1. **Hand-authored inline SVG** — the default for deck art and simple process chains (the starter's `.flowdiag` is an example). Make it theme-aware: strokes/fills use `var(--chapter)` or `currentColor`, never a hard-coded one-off color.
-1. **PlantUML → SVG** — for structured diagrams better kept as maintainable source (sequence, component, state, larger flowcharts). Follow the repo's SVG-first diagram policy in `AGENTS.md`: keep `<unit>/<name>.plantuml`, render with `./fw plantuml2svg <unit>/<name>.plantuml <unit>/<name>.svg`, and commit both. To put it on a slide, **inline the SVG markup** into the `<section>` (so it scales with the 1920×1080 canvas and can inherit theme color), or `<img src="<name>.svg">` if you keep it standalone. Do **not** use the Quarto `![](…)` figure form from `AGENTS.md` — that is for `.qmd` documents, not the HTML deck.
-
-Either way the art is inline/linked SVG, satisfying the SVG-not-emoji hard rule and embedding cleanly in the offline single-file deck.
-
-### Raster art (generated)
-
-When a slide needs bitmap imagery — painterly or photographic hero backgrounds, textures, anything SVG can't express — use supplied art or **Codex image generation**. Generation is the provider exception because Codex is the maintainer's currently stable backend: use its native image tool when available, otherwise the discovered `genimage-img2` Codex wrapper. Verify that path's prerequisites; without a working backend or supplied image, report the asset as pending instead of silently switching providers.
-
-1. Save the asset under `<unit>/` (e.g. `<unit>/hero-art.png`) so the deck stays self-contained; reference it with `<img>` or CSS `background-image`. For a truly single-file deck, inline it as a base64 `data:` URI.
-1. Raster art cannot inherit `--chapter` / `currentColor`, so the theme-aware-art rule moves to the prompt: name the deck's palette and mood in the generation prompt, and regenerate the art if the theme changes.
-1. This path is for imagery only — diagrams, icons, and process art stay inline SVG per the hard rules.
-1. To generate **entire slides** as bitmaps instead of partial art, switch to § Image-deck mode below — a different authoring mode with its own pipeline and rule adjustments.
-
----
-
-## Image-deck mode — full-page generated slides
-
-A second authoring mode for the same deck-stage engine: every slide is **one full-bleed bitmap**, and the HTML shell keeps everything that must stay text — speaker notes, `data-label`, alt text, navigation, print. Follow the shared **`deck-image`** skill for generation or assembly of supplied images.
-
-**When to choose it:** narrative/showcase decks whose copy is **locked** — hero-heavy, atmosphere-driven talks where cinematic production value carries the room. The SVG-native mode stays the default for working decks, data-precision charts, and anything still being edited: changing one bullet here costs a page regeneration, not a one-line edit. Freeze the content first, then enter this mode.
-
-**Pre-condition:** supplied slide images, authored HTML capture, or a working Codex generation path. The host agent remains interchangeable; AI generation uses the Codex backend described above, and the deck engine only needs PNG files.
-
-### Pipeline
-
-1. **Freeze the content.** Draft the spine and the full talk as usual; the fact-checked content doc is the pipeline input.
-1. **Write `<unit>/prompts-and-page-content.md` — the deck's source code.** One entry per page, two blocks each: **Page Content** (every on-slide string verbatim — title, labels, numbers, footer) and **Prompt** (the accepted generation prompt). Open every prompt with the same **shared style preamble** (e.g. "Create a complete 16:9 presentation slide in Traditional Chinese. Polished university seminar style, dark editorial fintech aesthetic, crisp readable typography, no extra text beyond the specified copy.") — that repetition is what makes N pages look like one deck. Quote each on-slide string exactly ("Slide title text, exactly: …"), then describe the visual concept, layout, and palette. Keep this file in sync whenever a page is regenerated; it must always match what shipped.
-1. **Render one page at a time** into `<unit>/generated-slides/` (`01-title.png`, `02-<topic>.png`, …), using the selected renderer's documented interface. Request 16:9 output; `object-fit: cover` fills the stage, so inspect any cropping.
-1. **Proofread gate — mandatory, every page.** Open each PNG with your image-capable reader and check **every string and digit** against its Page Content block. Generated text is probabilistic; a wrong digit in a table is worse than an ugly slide. Correct individual strings with the renderer's edit capability when available, or regenerate the page. Re-proofread after every fix.
-1. **Bake the deck.** Same deck-stage contract — one `<section>` per image, notes index-aligned, engine scripts last:
-
-   ```html
-   <section class="imgslide" data-label="標題">
-     <img src="generated-slides/01-title.png" alt="標題與副標的完整內容摘要…" />
-   </section>
-   ```
-   ```css
-   .imgslide { padding: 0; background: #000; }
-   .imgslide img { width: 100%; height: 100%; object-fit: cover; display: block;
-                   user-select: none; -webkit-user-drag: none; }
-   ```
-
-   Give every `<img>` a **content-bearing `alt`** (the slide's full message — it is the deck's only searchable/accessible text). The speaker notes still carry the talk, exactly as in the default mode. An HTML key-hint overlay on slide 1 (`→ 換頁　P 講者視窗`) is the one common HTML-side addition — hide it under `@media print`.
-
-### Rule adjustments in this mode
-
-1. **SVG-not-emoji** governs only HTML-side elements you overlay (hints, links); inside the generated bitmap the art is free.
-1. **Contrast and typography** live inside the image — enforce them through the prompt preamble ("crisp readable typography") and the proofread gate, not CSS.
-1. **Theme-aware art** moves entirely to the prompt (same logic as § Raster art): name the palette and mood in every prompt; retheming means regenerating.
-1. **Font/tofu** — slide text is pixels; `ENSFont.woff2` only affects HTML-side text (hints, presenter window). The tofu check is replaced by the proofread gate.
-1. **Weight** — ~2 MB/page (≈30 MB for a 14-page deck). Fine in a course repo, too heavy to inline as `data:` URIs — ship the `<unit>/` folder or print to PDF.
-1. Everything else holds unchanged: notes index-alignment, the print path (Print → Save as PDF still emits one page per slide), reduced-motion (mostly N/A — no `.rise` content), and the Beamer fallback when a venue demands it.
-
----
-
-## Hard rules (design quality gate)
-
-Apply these checks to every slide. They are self-contained so verification does not require an external design skill.
-
-1. **SVG icons/illustrations only — never emoji.**
-1. **`prefers-reduced-motion`** — every animation must be disabled under it (the starter has the `@media` block). High severity.
-1. **Transitions 150–300ms**, eased; no janky or gratuitous motion.
-1. **Contrast** — body text ≥ **7:1** and labels, muted and accent text ≥ **4.5:1** against their own background (WCAG 2), still ≥ 4.5:1 / 3:1 with a lit room's reflected light added, and chapter colours tellable apart under colour-blindness (CIEDE2000 ≥ 10), in every theme the deck offers — stricter than WCAG AA because projection washes contrast out. The numbers live only in house-style `deck-theme-rules.js`; `./fw check-contrast` checks the tokens and `#debug` checks the rendered slides.
-1. **Theme-aware art** — SVGs inherit `--chapter` / `currentColor`; never hard-code a one-off accent.
-1. **Visible focus / `cursor:pointer`** for any interactive element (mostly N/A for a deck, but holds if you add links/buttons).
-
----
-
-## Motion
-
-The starter wires the standard deck-stage motion: `.rise` entrance (with `.d1`–`.d4` stagger) that replays when a slide becomes active; cheap looping SVG transforms (`.flow`, `.pulse`, `.aurora`); and an optional count-up for `.stat .n` carrying `data-to="47.2"`. A single `@media (prefers-reduced-motion: reduce)` block disables all of it — keep it.
-
-**Print reveal — required for the PDF path.** Because `.rise` starts at `opacity:0` and only reveals on the active slide, and deck-stage's print CSS can only force the `<section>`s visible (not their `.rise` descendants), a deck **must** also carry an `@media print` block that forces `.rise` visible and freezes loops on every slide — otherwise Print → Save as PDF emits one real slide and blank pages for the rest. The starter includes it; keep it in any deck you author:
-
-```css
-@media print {
-  .rise { opacity:1 !important; transform:none !important; animation:none !important; }
-  .flow,.pulse,.aurora { animation:none !important; }
-}
-```
-
----
-
-## Font
-
-The deck loads `asset/ENSFont.woff2`. The scaffold ships the **full** font (a complete woff2 conversion of `assets/fonts/ENSFont-Regular.ttf`, ~6 MB, ~18k CJK ideographs), so **any Traditional Chinese renders with no tofu and nothing needs regenerating** — write whatever text the talk needs. This is the right default for a template; do not replace it with a content-keyed subset.
-
-**Optional — subset only to shrink a final deliverable.** If you want a smaller self-contained file (e.g. to email the single `.html`), you can subset the font to just the glyphs the deck uses. This is a size optimization, never a requirement, and must be redone whenever the text changes. Per this machine's tooling rule, use **`uv`/`uvx`** — never pip/pipx.
-
-```python
-# collect the glyphs the deck + notes use
-import re, pathlib
-chars = set(map(chr, range(0x20, 0x7f)))                       # ASCII
-chars |= set("，。、；：！？（）「」『』【】—…·×→←≈≠¥％＝　“”‘’《》〈〉•")  # CJK punct
-html = pathlib.Path("<unit>/deck.html").read_text(encoding="utf-8")
-visible = re.sub(r"<style[\s\S]*?</style>|<script(?![^>]*application/json)[\s\S]*?</script>", " ", html)
-chars |= set(visible)                                          # keeps the JSON notes (presenter text)
-pathlib.Path("/tmp/charset.txt").write_text("".join(sorted(chars)), encoding="utf-8")
-```
-```bash
-uvx --with brotli --from fonttools pyftsubset assets/fonts/ENSFont-Regular.ttf \
-  --text-file=/tmp/charset.txt --output-file=<unit>/asset/ENSFont.woff2 \
-  --flavor=woff2 --layout-features='*' --no-hinting --desubroutinize
-```
-The `meta NOT subset … dropped` warning is harmless. If you subset, re-run whenever you add new on-slide or in-note characters — or just keep the full font and skip this entirely.
-
----
-
-## Verification
-
-1. **Serve** (so fonts + presenter thumbnails behave): `python3 -m http.server 8000`, open `http://localhost:8000/deck.html   (serve from the unit directory)`.
-1. **Alignment** — sections must equal notes, none empty:
-   ```js
-   const n = document.querySelectorAll('deck-stage>section').length;
-   const notes = JSON.parse(document.getElementById('speaker-notes').textContent);
-   ({sections:n, notes:notes.length, aligned:n===notes.length,
-     empty:notes.filter(x=>!x||!x.trim()).length})
-   ```
-   (`./fw unit-init` runs the Python equivalent of this when scaffolding a presentation.)
-1. **Render** — open `deck.html#debug` at a 1920×1080 viewport, step through (`deck.goTo(i)`), and read `document.body.dataset.minfont` (`ok`: no text under 34px) and `.overflow` (`none`) — offenders are in `minfontBad` / `overflowBad`. Also look at each slide for tofu and crowding the check cannot see.
-1. **Reduced motion** — confirm the media-query block reveals all `.rise` and stops loops.
-1. **Presenter** — press **P**; confirm notes render and current/next thumbnails update (HTTP only).
-1. **Print** — Print → Save as PDF with Background graphics on; confirm one 1920×1080 page per slide, no overlay, no trailing blank page.
-
----
-
-## Optional design integrations
-
-Use **house-style** tokens by default. If the user's environment supplies a design skill such as `ui-ux-pro-max`, discover its `SKILL.md` through that agent's normal mechanism and follow its current usage instructions. Consume its palette, type scale, and effects as token values only; the engine and quality checks remain this protocol's responsibility.
-
-An external skill belongs in the host's user-level installation location, outside the course's linked skill directories, because both `.agents/skills` and `.claude/skills` point into the framework submodule. Missing design integrations do not prevent authoring or verifying a deck with the bundled assets.
-
----
+- Include rather than copy, because a copied paragraph and its original get edited apart and the talk then rests on whichever copy someone happened to fix.
+- Each included file starts at heading level 1 and becomes a chapter of the rendered report; include does not shift heading levels.
+- Include only files of this unit. A path into another unit would let an edit there silently change this report; a later unit copies the text and records `extends` instead (DESIGN.md § Building on an earlier unit), and the gates skip such a path.
+- An include inside an HTML comment does not render, which is how to leave a file out for now.
+- `./fw check-citations`, `./fw check-zh-variants` and `./fw lint-readability` read the included files, so the report is checked as it renders; `check-zh-variants` also reads the unit's other Markdown (points, storyboard, handouts), because those reach the slides too.
+- Cite `[@key, {page}]` where a claim is made, including inside notes, because only that form resolves to a bib entry a gate can check. A per-source summary whose locators all refer to its own source may keep bare page locators when its opening lines name the key (`- 書目鍵：<key>`); its claims are then verified by source review (`source-kit` § 6), which no gate replaces.
+- Build the PDF with `./fw build <unit> --target draft.qmd`; title, author, both bibliography tiers and the preamble come from the build.
 
 ## Citation Handling
 
-deck-stage runs no Pandoc citation processing. On the deck, use:
+The HTML deck runs no Pandoc citation processing. On the deck, use:
 
 - Short slide citation: `（Author Year）`
 - Speaker-note locator: `[@bibkey, p. 15]`
 - A final reference slide listing the core works
 
-Maintain `<unit>/references.bib` and fetch full text into `<unit>/refs/` so claims can be checked. `./fw check-citations <unit>` validates `.qmd` files — the report `draft.qmd` and the Beamer fallback — not the HTML deck, so cite in the report and copy the short citation and locator down with the sentence instead of adding a citation on the slide that the report lacks. **If exact Chicago-style rendered references are required in the deck, use the Quarto Beamer fallback.**
+Cite in the report and copy the short citation and locator down with the sentence, instead of adding a citation on a slide that the report lacks, because `./fw check-citations` validates the report, not the deck. **If exact rendered references are required in the deck, use the Quarto Beamer fallback.**
 
 ## Quarto Beamer Fallback
 
 Use `<unit>/presentation.qmd` when the HTML deck is a poor fit:
 
 - You need Pandoc citation processing from `<unit>/references.bib`.
-- You need Beamer/LaTeX output for a formal academic venue.
+- You need Beamer/LaTeX output for a formal academic venue, or the `_output/<unit>-presentation.pdf` naming.
 - You are on a machine without a browser to print from.
 
-Build it with `./fw build --target presentation.qmd` → `_output/<unit>-presentation.pdf`. Keep `deck.html` as the primary deck unless there is a concrete reason to switch; if both carry the talk, keep shared claims and titles in sync or mark one stale in `<unit>/PROGRESS.md`.
+Build it with `./fw build --target presentation.qmd`. Keep `deck.html` as the primary deck unless there is a concrete reason to switch; if both carry the talk, keep shared claims and titles in sync or mark one stale in `<unit>/PROGRESS.md`.
+
+## Build and Preview
+
+```bash
+./fw build <unit> --target draft.qmd           # the report (PDF): the Model that points, storyboard and deck draw on
+./fw build <unit>                              # the deck gate; deck.html itself has no build step
+./fw build <unit> --target presentation.qmd    # the Beamer fallback PDF
+```
+
+Opening, presenting and printing the HTML deck: `deck-svg` § Run & verify.
 
 ## Reading-Guide Workflow
 
-The same Model–View–Controller split as § Source Files. The notes and the cross-reading map are Model material that `check-citations` does not read, so the map is not a separate part but the outline of the report.
-
-1. Create per-source notes in `<unit>/notes/<bibkey>.md`.
-1. With three or more sources, sketch a short cross-reading map and use it as the report's structure.
-1. Write `<unit>/draft.qmd` as the written guide: the map's synthesis in prose, every claim cited; it can stay short.
-1. Write the Controller from it — `points.md`, then the storyboard — and render the Views in `<unit>/deck.html` (start from the reading-guide starter), keeping the deck focused on what classmates need to understand and discuss.
+1. Write per-source notes `<unit>/notes/<bibkey>.md` — complete summaries a reader can follow alone; `source-kit` fetches and audits the sources.
+1. With three or more sources, sketch a short cross-reading map; it becomes the report's outline. The theory primer and the comparison are notes too.
+1. Assemble `<unit>/draft.qmd` (§ The report): include the notes in reading order and write the introduction, synthesis and discussion questions around them. Run `./fw check-citations` and `./fw check-zh-variants`.
+1. Plan the talk with `deck-plan`: `points.md`, then the storyboard; the author signs off both.
+1. Render the Views with `deck-svg` from the reading-guide starter (or `deck-image`), keeping the deck focused on what classmates need to understand and discuss.
 1. If the class requires Pandoc-rendered references, mirror the final structure into `presentation.qmd` and export that fallback.
 
 Single- or two-source guides may skip the cross-reading map and emphasize argument structure, author background, key concepts, and discussion questions.
@@ -360,25 +119,22 @@ Single- or two-source guides may skip the cross-reading map and emphasize argume
 ## Thesis Presentation Workflow
 
 1. Identify audience and time limit (the storyboard's 前提).
-1. Write the report `<unit>/draft.qmd` along the narrative spine — problem, gap, research question, method, evidence, finding, contribution — and run `./fw check-citations`.
-1. Write the Controller from it: `points.md`, then the storyboard; the author reviews both.
-1. Render the Views in `<unit>/deck.html` from the storyboard (start from the thesis starter).
+1. Assemble the report `<unit>/draft.qmd` along the narrative spine — problem, gap, research question, method, evidence, finding, contribution — including sections already written as files, and run `./fw check-citations`.
+1. Plan the talk with `deck-plan`: `points.md`, then the storyboard; the author reviews both.
+1. Render the Views with `deck-svg` from the thesis starter.
 1. Use `presentation.qmd` only for a Beamer/Pandoc citation fallback.
 1. Print to PDF from the browser; review for text overflow, clutter, tofu, and missing source support.
 
 ## Quality Checklist
 
+- [ ] `./fw build <unit> --target draft.qmd` renders the report; `./fw check-citations` and `./fw check-zh-variants` pass.
+- [ ] `points.md` and `storyboard.md` are signed off; every slide and its note come from one storyboard row, which names a point in `points.md`, which names a section of the report; no slide carries a fact the report lacks.
+- [ ] Key claims have source support in `<unit>/refs/` (`source-kit`).
 - [ ] `<unit>/deck.html` exists; sections == speaker notes, none empty; every `<section>` has `data-label`.
-- [ ] No tofu (the shipped full font covers everything; only an issue if you chose to subset).
-- [ ] Every animation is disabled under `prefers-reduced-motion`.
-- [ ] No emoji; all icons/art are inline SVG inheriting `--chapter`.
-- [ ] `./fw deck-refresh <unit> --dry-run` reports no stale asset and no missing tag.
+- [ ] `./fw deck-refresh <unit> --dry-run` reports no stale asset and no missing tag, and the engine scripts load in the order `deck-svg` § Run & verify gives.
 - [ ] `./fw check-contrast <unit>` passes; `#debug` reports `minfont=ok`, `overflow=none` and `contrast=ok` on every slide.
-- [ ] Engine scripts load last, in order: `deck-check.js`, `deck-theme-rules.js`, `deck-palette.js`, `deck-theme-controls.js` (before deck-stage, because it rewrites the `#debug` / `#theme=` hash on start), `deck-stage.js`, `presenter-stage.js`, then `deck-font-controls.js`.
-- [ ] An `@media print` block forces `.rise` visible (so every slide prints, not just the active one).
+- [ ] `deck-svg` § Hard rules hold, and its `@media print` block forces `.rise` visible.
 - [ ] Title slide with main title and subtitle; Q&A / closing slide.
-- [ ] Every slide and its note come from one storyboard row, which names a point in `points.md`, which names a cited section of `draft.qmd`; no slide carries a fact the report lacks; `./fw check-citations` passes.
-- [ ] Key claims have source support in `<unit>/refs/`.
 - [ ] (Image-deck mode) `<unit>/prompts-and-page-content.md` matches the shipped PNGs; every page passed the string/digit proofread; every `<img>` carries a content-bearing `alt`.
 - [ ] `<unit>/presentation.qmd` exists as a Beamer fallback.
 - [ ] Prints to a clean one-slide-per-page PDF (Background graphics on).

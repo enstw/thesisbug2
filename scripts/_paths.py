@@ -13,6 +13,7 @@ hard-codes a layout. See docs/DESIGN.md § Course repository layout.
 from __future__ import annotations
 
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -93,10 +94,70 @@ def workflow_paths(unit: Path) -> dict[str, Path]:
             "progress": unit / "PROGRESS.md", "decisions": unit / "DECISIONS.md"}
 
 
+INCLUDE_RE = re.compile(r"\{\{<\s*include\s+(\S+?)\s*>\}\}")
+
+# Files the author writes but that are not prose to check: status files quote
+# tool output and sources verbatim, refs/ keeps transcripts in the source's own
+# script, gpt-review/ keeps a second model's report as received.
+NOT_PROSE_NAMES = {"PROGRESS.md", "DECISIONS.md", "CHANGELOG.md"}
+NOT_PROSE_DIRS = {"refs", "gpt-review"}
+
+
+def included_files(source: Path, unit: Path) -> list[Path]:
+    """Files `source` pulls in with Quarto's include shortcode, recursively.
+
+    A report assembled from notes is checked as it renders, because the facts
+    live in the included notes rather than in the few lines of the .qmd.
+    Includes inside HTML comments do not render and are skipped. So is a path
+    outside the unit: a unit never includes another unit's file (DESIGN.md
+    § Building on an earlier unit), and a gate should not report on it.
+    """
+    found: list[Path] = []
+
+    def walk(path: Path) -> None:
+        text = re.sub(r"<!--.*?-->", "", path.read_text(encoding="utf-8"), flags=re.S)
+        for m in INCLUDE_RE.finditer(text):
+            target = m.group(1)
+            # Quarto resolves a leading / from the project directory (the unit),
+            # anything else from the including file.
+            inc = (unit / target.lstrip("/") if target.startswith("/") else path.parent / target).resolve()
+            if inc in found or not inc.is_file() or not inc.is_relative_to(unit.resolve()):
+                continue
+            found.append(inc)
+            walk(inc)
+
+    walk(source)
+    return found
+
+
 def manuscript_files(unit: Path) -> list[Path]:
-    """The unit's prose sources: chapters/*.qmd plus top-level *.qmd."""
+    """The unit's prose sources: chapters/*.qmd plus top-level *.qmd, each
+    followed by the files it includes."""
     files = sorted((unit / "chapters").glob("*.qmd")) + sorted(unit.glob("*.qmd"))
-    return [f for f in files if not f.name.startswith("_")]
+    out: list[Path] = []
+    for f in files:
+        if f.name.startswith("_"):
+            continue
+        for g in (f.resolve(), *included_files(f, unit)):
+            if g not in out:
+                out.append(g)
+    return out
+
+
+def prose_files(unit: Path) -> list[Path]:
+    """Everything the author writes for the unit: the manuscript with its
+    includes, plus the unit's other Markdown — notes, points, storyboard,
+    handouts — because those feed the report and the slides even when no
+    .qmd includes them."""
+    out = manuscript_files(unit)
+    for md in sorted(unit.rglob("*.md")):
+        parts = md.relative_to(unit).parts
+        if (parts[0] in NOT_PROSE_DIRS or md.name in NOT_PROSE_NAMES
+                or any(p.startswith(("_", ".")) for p in parts)):
+            continue
+        if md.resolve() not in out:
+            out.append(md.resolve())
+    return out
 
 
 def rel(path: Path, root: Path | None = None) -> str:

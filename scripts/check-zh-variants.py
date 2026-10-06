@@ -6,8 +6,8 @@
 # -*- coding: utf-8 -*-
 """check-zh-variants — 簡繁與異體碼位的源頭檢查。
 
-掃描 unit 目錄下的寫作源檔（chapters/*.qmd 與頂層 *.qmd），在「源頭」抓出兩類
-碼位問題，而不是事後從 PDF 文字層倒推：
+掃描 unit 目錄下作者寫的檔案，在「源頭」抓出兩類碼位問題，而不是事後從 PDF
+文字層倒推：
 
   1. 異體／相容碼位（無條件檢查，零依賴）：視覺上與臺灣標準字形難以分辨、
      但碼位不同的字——内(≠內)、爲(≠為)、録(≠錄)、値(≠值)、硏(≠研)、
@@ -18,8 +18,11 @@
      專用字。經 `./fw check-zh-variants` 執行時由 uv 依檔頭宣告自動備妥 opencc；
      直接以 python3 執行而無 opencc 時，略過此層並提示。
 
-範圍：<unit>/chapters/*.qmd 與 <unit>/*.qmd。refs/ 逐字轉錄（保留來源原文）與
-PROGRESS.md（工作日誌得引用原文）不在檢查範圍。引文亦不豁免——本語料庫
+範圍：<unit>/chapters/*.qmd、<unit>/*.qmd 與它們 include 進來的檔案，以及單元裡
+其他的 .md（notes/ 的摘要、points.md、storyboard.md、講義），因為報告由筆記組成、
+投影片由分鏡寫成，簡體字從哪一份進來都會一路傳到成品。不檢查：refs/ 逐字轉錄
+（保留來源原文）、gpt-review/（外部模型報告照原樣保存）、PROGRESS.md、
+DECISIONS.md、CHANGELOG.md（工作紀錄得引用原文）。引文亦不豁免——本語料庫
 的引用體例是「轉字不轉詞」，字級上不應存在簡體字。
 
 Exit code：發現未列白名單的問題碼位時為 1，否則 0。
@@ -29,13 +32,17 @@ import re
 from pathlib import Path as _P
 
 sys.path.insert(0, str(_P(__file__).resolve().parent))
-from _paths import manuscript_files, resolve_unit  # noqa: E402
+from _paths import prose_files, resolve_unit  # noqa: E402
 import unicodedata
 from pathlib import Path
 
 # 臺灣慣用而 s2t 會誤報的字。岳／余／温 常見於人名正字（著錄即作此形），
-# 轉換後反而改錯人名，故列入白名單。
-WHITELIST = set("台群准托游淀秘后里干岳余温")
+# 轉換後反而改錯人名，故列入白名單。占／划／征／峰／床／雇／采／咸／吃 是臺灣
+# 標準字（占領、划算、征服、山峰、床位、雇主、風采、咸豐、吃飯），s2t 卻一律
+# 轉成佔、劃、徵、峯、牀、僱、採、鹹、喫；范 是姓氏與譯名（范斯）；叁 是臺灣
+# 論文的章節編號（壹、貳、叁）。這幾個字在筆記與講稿裡出現得多，不列入就會
+# 淹沒真正的簡體字。
+WHITELIST = set("台群准托游淀秘后里干岳余温占划征峰床雇采咸吃范叁")
 
 # 行內豁免標記：該行刻意示範或討論簡體字形（如 ch4 引用體例補記
 # 「采取强制措施」→「採取強制措施」的轉換範例）時，行尾加此註解
@@ -71,7 +78,7 @@ def load_s2t():
 
 
 def scan(root):
-    files = manuscript_files(Path(root))
+    files = prose_files(Path(root))
     cc = load_s2t()
     problems = []
     for f in files:

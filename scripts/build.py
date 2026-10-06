@@ -220,13 +220,13 @@ def deck_gate(unit: Path, root: Path) -> None:
     if not points.is_file() or "[論點：一句話]" in points.read_text(encoding="utf-8"):
         print(f"note: {rel(points, root)} is missing or still the template — each storyboard row "
               "should name a point condensed from the report (draft.qmd), so no slide carries a "
-              "claim the report lacks (presentation-protocol.md § Source Files)")
+              "claim the report lacks (deck-plan skill)")
 
     storyboard = unit / "storyboard.md"
     if not storyboard.is_file():
         problems.append(f"no {rel(storyboard, root)} — write the storyboard (one row per slide: "
                         "source point, content shape, pattern) and have the author review it "
-                        "before the deck; see deck-svg reference/content-shapes.md")
+                        "before the deck; see the deck-plan skill")
     else:
         rows = [ln for ln in storyboard.read_text(encoding="utf-8").splitlines()
                 if ln.startswith("|") and not ln.startswith("| :---") and not ln.startswith("| #")]
@@ -240,7 +240,7 @@ def deck_gate(unit: Path, root: Path) -> None:
         if tables / n > 0.4 and tables >= 3:
             problems.append(f"{tables} of {n} content slides use table.cmp — a comparison table is for "
                             "3+ items on shared attributes (shape 7); typologies, contrasts and spectra "
-                            "have their own patterns (content-shapes.md)")
+                            "have their own patterns (deck-plan reference/content-shapes.md)")
         fat = [i for i, (_, b) in enumerate(body, 1) if len(re.findall(r"<li\b", b)) > 6]
         if fat:
             problems.append(f"slide(s) {fat} carry more than 6 bullets — move detail to speaker notes "

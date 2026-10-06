@@ -99,6 +99,59 @@ here, adopt per deck with deck-refresh.
 - **Content rules:** edit `reference/content-integrity.md`; it is the single
   source those rules are quoted from.
 
+## The look is a free variable
+
+| Fixed — always honored | Free — varies per deck |
+| :--- | :--- |
+| the engine's contract and hard rules (deck-runtime, deck-svg) | theme: light or dark |
+| the contrast rules in every theme, 1920×1080 frame, one slide per `<section>` | palette and the `--chapter` accents |
+| CJK typography in the tokens: body `line-height:1.78`, headings `1.3`, no italics (`em` is upright colour emphasis, because slanted Hanzi is synthetic and looks wrong) | typography, art style and density, layout |
+
+Every accent on a slide derives from one `--chapter` variable, so swapping
+token *values* retints a whole deck without touching layout or motion CSS.
+When flipping light ↔ dark, recheck accents: saturated colours that pass on
+black often fail on white.
+
+### Taking a look from another design source — tokens only
+
+A palette may come from anywhere: an installed design skill such as
+`ui-ux-pro-max` (discover its `SKILL.md`; it is optional and lives in the
+host's user-level skills, never in the course's linked skill directories,
+which point into the framework submodule), a design application, or a hand-
+picked palette. Take it as `:root` token values only and never let it write
+deck markup or layout CSS, because the engine's layout does two jobs a web-
+page generator overwrites: `.content` fills the 1080 px frame so content sits
+in the optical middle, and type is sized in px on the 1920×1080 canvas, then
+scaled to the viewport. A generator falls back to top-aligned document flow
+and `rem`/`vw` type, which gives top-weighted slides with tiny text.
+
+- Ask it for "a CSS `:root{}` block only — palette, type scale, effects; no
+  HTML, no `.slide`/`.content`/layout CSS".
+- Pin its type scale to the slide canvas (body ~40px, title ~76px), never a
+  ~16px web base, which scales down to unreadable.
+- Paste the variables into `tokens.css` here, run `./fw check-contrast`, and
+  leave the structure alone.
+
+## Font
+
+Decks ship the **full** ENSFont (~18k CJK ideographs), so any Traditional
+Chinese renders without tofu and nothing needs regenerating. Subsetting is an
+optional size optimisation for a final file (e.g. emailing one `.html`), and
+must be redone whenever the text changes. Collect the glyphs the deck and its
+notes use — ASCII, CJK punctuation, and the visible text with `<style>` and
+non-JSON `<script>` removed — into a charset file, then (uv only):
+
+```bash
+uvx --with brotli --from fonttools pyftsubset assets/fonts/ENSFont-Regular.ttf \
+  --text-file=<charset.txt> --output-file=<unit>/asset/ENSFont.woff2 \
+  --flavor=woff2 --layout-features='*' --no-hinting --desubroutinize
+```
+
+Run it from the framework root (the `.ttf` path is the framework's), and the
+same for `ENSFont-Bold.ttf` → `ENSFont-Bold.woff2`. The `meta NOT subset …
+dropped` warning is harmless. `./fw deck-refresh` puts the full font back,
+because the subset is a copy of a framework-owned asset.
+
 ## Verify
 
 - `assets/css/tokens.css` must define two `@font-face { font-family:'ENS Font' … }`

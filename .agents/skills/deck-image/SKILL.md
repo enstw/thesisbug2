@@ -53,7 +53,10 @@ contract when documented, but native tools need not emit those strings.
 **Boundary vs deck-svg:** if the slides should stay *live* HTML — selectable
 text, entrance animations, re-editable components — this is deck-svg's job.
 Use deck-image when slides are genuinely images: AI-generated art, or
-authored compositions you want frozen as images.
+authored compositions you want frozen as images. It suits narrative,
+showcase talks whose copy is **locked**; a working deck, precise charts, or
+anything still being edited stays in deck-svg, because here changing one
+bullet costs a page regeneration rather than a one-line edit.
 
 ## Pre-flight (per renderer actually used)
 
@@ -69,14 +72,23 @@ or change the requested deliverable without the user's agreement.
 
 ## Inputs
 
-Two ways in:
+Three ways in:
 
+1. **A presentation unit's storyboard** — the talk was planned with
+   **deck-plan** and the author signed off `<unit>/storyboard.md`. Each slide
+   spec comes from one row: its 畫面內容 becomes the Page Content, its 版型
+   the prompt's layout line, its 口說重點 and the report passage the row's
+   point names become the notes. Add no copy the row lacks, because the
+   storyboard selects only from the report and every on-slide string must
+   trace back to a cited report sentence; a missing fact goes into the report
+   first. Write the deck into the unit directory.
 1. **Slide specs provided** — the user hands you a per-slide list of on-slide
    copy + image prompts (e.g. a `prompts-and-page-content.md`). Use them
    as-is; skip planning.
-1. **Source content provided** — a doc/outline to turn into slides. Plan it
-   into N slides yourself (Step 2). Keep planning light; the focus is the
-   render + assemble workflow, not authoring.
+1. **Source content provided** outside a course unit — a doc/outline to turn
+   into slides. Plan it into N slides yourself (Step 2). Keep planning light;
+   the focus is the render + assemble workflow, not authoring. Inside a unit,
+   plan with deck-plan instead, so the plan gets the author's review.
 
 Ask the user for the deck's **output directory**, **renderer** (if not
 implied), and **visual style** if not given. One consistent aesthetic line
@@ -98,11 +110,16 @@ Pick a deck directory (default `./<deck-name>/`), and create:
 
 ## Step 2: Plan the slides (skip if specs were provided)
 
+With a storyboard, this step only turns each row into its spec and prompt;
+the choice of slides, their order and copy is already signed off.
+
 For each slide decide: a short `slug`, the **exact on-slide copy** (title,
 numbers, bullets, takeaway), `label` (nav/presenter), `alt`, optional speaker
 `notes`, the **renderer** (default: one renderer for the whole deck), and —
 for the AI renderers — a **self-contained image prompt**. Record all of it to
-`prompts-and-page-content.md` so any slide can be regenerated later.
+`prompts-and-page-content.md` so any slide can be regenerated later, and
+update an entry whenever its slide is regenerated: the file is the deck's
+source code and must always match what shipped.
 
 Prompt template that works well for seminar-style slides with the AI
 renderers (adapt the visual concept per slide; keep the leading aesthetic
@@ -213,6 +230,23 @@ The first slide automatically gets a `→ / P` hint overlay (disable with
 1. Report: deck path, slide count, renderer(s) used, and the controls (→ next,
    P presenter, R reset, browser Print → Save as PDF for a clean
    one-page-per-slide export).
+
+## How the deck rules apply to images
+
+The deck-stage contract and the notes, print and Beamer paths hold unchanged;
+these rules move because the slide is pixels:
+
+1. **SVG-not-emoji** governs only the HTML you overlay (key hints, links);
+   inside the bitmap the art is free.
+1. **Contrast, typography and theme** live inside the image: enforce them
+   through the shared aesthetic line of every prompt and the proofread gate
+   (Step 5), not CSS. Re-theming means regenerating.
+1. **Font and tofu:** slide text is pixels, so ENSFont only affects the HTML
+   side; the proofread gate replaces the tofu check.
+1. **Alt text:** every `<img>` carries the slide's full message, because it is
+   the deck's only searchable and accessible text.
+1. **Weight:** about 2 MB a page — fine in a course repo, too heavy to inline
+   as `data:` URIs; ship the folder or print to PDF.
 
 ## Notes
 

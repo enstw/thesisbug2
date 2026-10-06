@@ -1,7 +1,30 @@
 # deck-svg slide-pattern cheat-sheet
 
-This is the class list. Which class a slide should use is decided by the
-shape of its content — `content-shapes.md` — not by this list; read that first.
+This is the class list. Which class a slide uses is decided by the shape of
+its content, which the storyboard row names (deck-plan
+`reference/content-shapes.md`), not by this list: start from the map below.
+
+## Shape → pattern
+
+| # | Content shape | Pattern (classes) |
+| :--- | :--- | :--- |
+| 1 | One claim | `.claim` (+ one `.lead` line beneath) |
+| 2 | Definition | `.defn` (`.term` + `.example`) |
+| 3 | Theory primer | `.grid.two`/`.three` of `.card` (`.tag` = theory name, `p` = plain-language explanation, `ul.clean` = where it appears) |
+| 4 | Two-axis typology | `.matrix` (`.axis-y`, `table`, `.axis-x`; `td.hi` for the highlighted cell) |
+| 5 | Spectrum | `.spectrum` (`.marks` > `.mark`, `.bar`, `.ends`) |
+| 6 | Two-sided contrast | `.cols.split` of `.colblock`, or `.grid.two` of `.card`; for claims against weaknesses, `.colblock.against` + `.verdict` |
+| 7 | Multi-item comparison | `table.cmp` (`caption`, header row, row-header `th`; `.tight` for six or more rows) |
+| 8 | Process / causal chain | `.flowdiag` (`.flownode` + `.flowarrow`), or inline `svg.art.dg` for branches or a redrawn source figure |
+| 9 | Timeline | `.timeline` of `.tl` (`time`, `b`, `p`) |
+| 10 | Levels / hierarchy | `.tiers` of `.tier` (`h3` + `p`) |
+| 11 | Numbers | `.stats` of `.stat` (`.stats.four` for four); a worked numerical example goes in `.matrix` |
+| 12 | Quotation | `blockquote.pull` + `cite` with page |
+| 13 | Discussion question | `.debate` (`.claim`, `.sides` > `.side`, `.ask`) |
+| 14 | Section break | `.slide` with `.kicker` only; `.hero` for the title, `.finale` for the close |
+
+No pattern for a shape → add a component class to `template/asset/deck.css`
+and run `./fw deck-refresh`, never bend the content into the nearest class.
 
 Every class below is defined in `template/asset/deck.css`. Colours come from
 house-style tokens — drive accents off `var(--chapter)` (set per slide via
@@ -34,7 +57,7 @@ Sized for a classroom projector at 1920×1080: body 40px, tables / labels / capt
 - `ul.clean` (+ `.lead-size`) — dotted bullet list with accent markers.
 - `.flowdiag` > `.flownode` / `.flowarrow` — left-to-right process diagram.
 
-## Content-shape components (see `content-shapes.md` for when)
+## Content-shape components (see § Shape → pattern for when)
 - `.claim` (+ `.hl`) — one statement, 64px; an optional `.lead` beneath.
 - `.defn` > `.term` (`h3` + `small` + `p`) and `.example` (`b` label + `p`) — term, definition, example.
 - `.matrix` > `.axis-y`, `table` (`thead th` column values, `tbody th` row values, `td` cells, `td.hi` highlight, `td.dim`), `.axis-x` — 2×2 / 3×3 typology or payoff matrix.

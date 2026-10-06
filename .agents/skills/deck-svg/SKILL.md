@@ -1,23 +1,25 @@
 ---
 name: deck-svg
 description: >
-  Authors a vector presentation deck of live SVG/HTML slides (selectable text,
-  entrance animations, speaker notes), suited to Traditional Chinese seminar,
-  thesis, and reading-guide talks. Use when the user wants to build, extend, or
-  edit a slide deck / 簡報 / presentation. Scaffolds a self-contained, offline,
-  no-build deck from a fixed component vocabulary on the house-style look and
-  deck-runtime shell; use it instead of hand-rolling reveal.js, Marp, or raw
-  HTML. For slide-as-image decks use deck-image.
+  Renders a talk's signed-off deck-plan storyboard as live SVG/HTML slides
+  (selectable text, entrance animations, speaker notes) for Traditional
+  Chinese seminar, thesis, and reading-guide talks. Use to build, extend, or
+  edit a slide deck / 簡報 once its storyboard exists. Scaffolds a
+  self-contained, offline, no-build deck from a fixed component vocabulary on
+  the house-style look and deck-runtime shell, instead of reveal.js, Marp, or
+  raw HTML. For slide-as-image decks use deck-image.
 ---
 
 # deck-svg — vector, hand-authored decks (engine layer)
 
-The top layer of the deck model. You author the **slides**; the look comes from
-**house-style** and the navigation/print/presenter shell from **deck-runtime**.
-You touch neither of those — you compose `<section class="slide">` elements from
-the component vocabulary.
+The engine layer of the deck model. You author the **slides**; what each one
+says comes from the storyboard written with **deck-plan**, the look from
+**house-style**, and the navigation/print/presenter shell from **deck-runtime**.
+You change none of those here — you compose `<section class="slide">` elements
+from the component vocabulary.
 
 ```
+plan      deck-plan      points.md + storyboard.md                  (what each slide says — signed off first)
 look      house-style    asset/tokens.css + ENSFont{,-Bold}.woff2   (themes — don't edit here)
 runtime   deck-runtime   asset/deck-stage.js + presenter-stage.js  (shell — frozen)
 engine    deck-svg       asset/deck.css + deck-font-controls.js + deck-theme-controls.js + deck-check.js + deck.html  ← you work here
@@ -32,8 +34,7 @@ engine    deck-svg       asset/deck.css + deck-font-controls.js + deck-theme-con
 | `template/asset/deck-font-controls.js` | Deck-wide font size: `+`/`=` and `-` step `--deck-font-scale` by 10% (80–150%), remembered per deck and synced across its windows. | No. |
 | `template/asset/deck-theme-controls.js` | Live colour: `c`/Shift+C cycle the fixed themes in `tokens.css`, `g`/Shift+G generate or step back through seeded palettes; `#theme=<id>` or `#theme=r<seed>` loads one. Remembered per deck and synced across its windows like the font size. Needs house-style's `deck-theme-rules.js` + `deck-palette.js` loaded before it. | No. |
 | `template/asset/deck-check.js` | The `deck.html#debug` self-check (type floor, overflow, rendered contrast, § Run & verify); does nothing without `#debug`. | No. |
-| `reference/content-shapes.md` | Content shape → pattern: which layout fits what kind of material, the storyboard format, and the anti-patterns. Read **first**. | No. |
-| `reference/slide-patterns.md` | The component cheat-sheet (what classes exist). | No. |
+| `reference/slide-patterns.md` | Content shape → pattern (read **first**: the storyboard row names the shape), then the component cheat-sheet. | No. |
 
 ## Scaffolding a new deck
 
@@ -96,42 +97,27 @@ starter loads and your deck lacks, with where each goes; add them by hand. A
 local edit to an `asset/` file is replaced (it shows in `git diff`), so put a
 needed component or theme into the framework's skill instead.
 
-## Storyboard before slides
+## Start from the storyboard
 
-A deck is organized as Model–View–Controller. The Model is the source of
-fact: the report `draft.qmd` (every claim cited) with its notes and sources.
-The Controller is the angle and the flow: `points.md` (~8–12 points, each
-naming its report section) and the storyboard. Each slide with its speaker
-note is a View. Facts enter only the Model, because that is what lets every
-slide sentence trace back to a cited report sentence; a factual error is fixed
-in the Model and re-rendered in the rows and slides that use it, a change of
-order or emphasis goes to the Controller, a layout change stays in the View
-(the presentation protocol's § Source Files has the rules).
+deck-svg renders the **Views** of a talk: each `<section>` and its
+`#speaker-notes` entry is written from one row of the signed-off
+`<unit>/storyboard.md` and the report passage that row's point names. The
+storyboard and `points.md` are the Controller, written with **deck-plan**
+before this skill starts; without a signed-off storyboard, plan first. The
+split exists because choosing what to say while laying out slides is how a
+deck ends up saying things the report does not.
 
-Write `<unit>/storyboard.md` (scaffolded by `unit-init`) before `deck.html`.
-It opens with a bullet list of **前提** — title (main title + subtitle),
-audience, time limit, room and projection (type floor, theme), wording
-conventions — because those set type size, pace and terms for every slide.
-Then one table row per slide with the point it condenses, its **content
-shape** (numbered in `reference/content-shapes.md`), the pattern, the minutes, **畫面內容** (what is
-on the slide), **口說重點** (explanation, citations with locators, transitions,
-anticipated questions — the talk lives in the notes once the slide is sparse,
-so the author reviews it here and it becomes `#speaker-notes` when the deck is
-built — never derive the notes from the slides, which are the sparsest
-layer), and **AI 協助** (what AI drafted or verified, what the author wrote or
-changed), because courses increasingly ask for per-slide AI disclosure and it
-is reliable only when recorded as the slide is planned. The author reviews the
-storyboard; `deck.html` is written only after that sign-off.
-
-The shape column exists because an agent choosing layouts from the class list
-picks whatever is easiest to type — bullets, cards, `table.cmp` — and then
-trims or reshapes the content to fit, so a 3×3 typology becomes a list and the
-examples disappear. **The shape of the content chooses the layout; if no
-pattern fits, add a component to `deck.css`, never bend the content.**
-Putting the choice in a table the author reads makes a bad fit visible before
-the slide exists. `./fw build` checks that the storyboard is there and that the
-deck does not lean on one pattern (`table.cmp` share, bullets per slide); it
-cannot judge fit — that is the review.
+- The row's content shape picks the pattern (`reference/slide-patterns.md`
+  § Shape → pattern). **If no pattern fits, add a component to `deck.css`;
+  never bend the content**, because an agent choosing from the class list
+  takes the easiest pattern and trims the content to fit — a 3×3 typology
+  becomes a list and the examples disappear.
+- Write the note from the row's 口說重點 and the report passage, never from
+  the slide, because the slide is the sparsest View and a note rebuilt from it
+  loses the explanations and the locators.
+- A fact that turns out wrong while building is corrected in the report
+  first, then in the rows and slides that use it; an order or emphasis change
+  goes back to the storyboard (presentation protocol § Source Files).
 
 ## Authoring slides
 
@@ -142,8 +128,9 @@ debate, cards, grids, `table.cmp`, `blockquote.pull`, stats, `ul.clean`,
 flowdiag, inline `svg.art`). Stagger entrance with
 `class="rise d1|d2|d3|d4"`. Keep one idea per slide, graspable in about ten
 seconds, because the audience is listening while it reads; detail goes to the
-speaker notes. Time never justifies cramming or pre-cutting — the presenter
-adjusts pace or skips slides live.
+speaker notes, and a prose-heavy passage becomes a short on-slide statement
+with the full detail in the note. Time never justifies cramming or
+pre-cutting — the presenter adjusts pace or skips slides live.
 
 **Keep look and structure separate (the whole point of the split):**
 - Never hard-code colours in `deck.html`; use `var(--chapter)`, `var(--text)`,
@@ -176,23 +163,86 @@ reads size, not elegance. When content does not fit, split the slide rather
 than cramming it or shrinking the type. Keep contrast high — no muted-grey
 secondary text, no thin weights — since projectors wash out low-contrast text;
 in a lit classroom a light theme usually projects better than a dark one, so
-try `c` in the room before the talk. Colours come only from tokens, so a slide
+before the talk project one dark and one light slide from the back row and
+keep whichever reads (`c` cycles the themes live; house-style lists them). Colours come only from tokens, so a slide
 that hard-codes one stays put when the theme changes.
 
 **Speaker notes:** keep the `#speaker-notes` JSON array in lockstep with slide
-order — one string per `<section>`, same sequence.
+order — one string per `<section>`, same sequence; add or remove a note with
+its slide. Separate note beats with `\n・` for presenter readability.
 
 **Cited content:** follow `../house-style/reference/content-integrity.md`
 (disputed claims stay disputes, speculation is labeled, citations stay attached).
 
-Deeper slide-craft (font subsetting for a smaller deliverable, verification
-discipline, worked examples) is in the project's
-`assets/templates/presentation/presentation-protocol.md` — the upstream prose
-this engine was carved out of; consult it for anything not covered here.
+## Diagrams and art
+
+A deck is plain HTML with **no Mermaid runtime**: a ` ```mermaid ` block shows
+as literal text, so use one of these instead.
+
+1. **Hand-authored inline SVG** — the default for deck art and simple process
+   chains (`.flowdiag`, `svg.art.dg`). Strokes and fills use `var(--chapter)`
+   or `currentColor`, so the art follows the theme.
+1. **PlantUML → SVG** for structured diagrams kept as source (the **diagram**
+   skill): render with `./fw plantuml2svg`, commit both files, and inline the
+   SVG markup into the `<section>` so it scales with the canvas and inherits
+   theme colour, or `<img src="<name>.svg">` it. The Quarto `![](…)` figure
+   form is for `.qmd` documents, not the deck.
+1. **Raster art** (painterly or photographic backgrounds, textures) comes from
+   supplied images or Codex image generation — the provider exception the
+   framework `AGENTS.md` records; report the asset as pending when no backend
+   works instead of switching providers. Save it under `<unit>/` so the deck
+   stays self-contained, and name the deck's palette and mood in the prompt,
+   because a bitmap cannot inherit `--chapter` and must be regenerated when
+   the theme changes. Diagrams and icons stay SVG; whole-slide bitmaps are
+   deck-image's job.
+
+## Hard rules
+
+These hold on every slide, so verification does not depend on an external
+design skill:
+
+1. SVG icons and illustrations only — never emoji, which render differently
+   per system and cannot take the theme colour.
+1. Every animation is disabled under `prefers-reduced-motion` (the starter's
+   `@media` block); transitions run 150–300 ms, eased.
+1. Contrast: body text ≥ 7:1 and labels, muted and accent text ≥ 4.5:1 in
+   every theme the deck offers, stricter than WCAG AA because projection
+   washes contrast out. The numbers live only in house-style
+   `deck-theme-rules.js`; `./fw check-contrast` checks the tokens and `#debug`
+   the rendered slides.
+1. Art is theme-aware (`--chapter` / `currentColor`), never a hard-coded
+   one-off accent.
+1. Any interactive element (a link, a button) has a visible focus state and
+   `cursor:pointer`.
+
+## Motion and print
+
+The starter wires the deck's motion: `.rise` entrance with `.d1`–`.d4`
+stagger, replayed when a slide becomes active; cheap looping SVG transforms
+(`.flow`, `.pulse`, `.aurora`); a count-up on `.stat .n[data-to]`. Keep its
+`@media print` block in every deck you author:
+
+```css
+@media print {
+  .rise { opacity:1 !important; transform:none !important; animation:none !important; }
+  .flow,.pulse,.aurora { animation:none !important; }
+}
+```
+
+`.rise` starts at `opacity:0` and reveals only on the active slide, and
+deck-stage's print CSS can force the `<section>`s visible but not their
+descendants, so without this block Print → Save as PDF emits one real slide
+and blank pages for the rest.
+
+The deck ships the full ENSFont, so any Traditional Chinese renders without
+tofu; subsetting it to shrink a final file is optional (house-style § Font).
 
 ## Run & verify
 
-- **Run:** open `deck.html` directly — no build, no server. Click = next; arrows/
+- **Run:** open `deck.html` directly — no build, no server. To check the
+  presenter's slide thumbnails, serve the unit over HTTP
+  (`python3 -m http.server 8000` in the unit directory), because Chrome blocks
+  them over `file://`; notes and navigation work either way. Click = next; arrows/
   Esc/digits secondary; `F` = fullscreen; `P` = presenter console; `+`/`−` =
   whole-deck font size; `c`/Shift+C = next/previous fixed theme; `g`/Shift+G =
   new seeded palette / previous one (toast 「隨機 #4821」; `#theme=r4821`
@@ -226,9 +276,17 @@ this engine was carved out of; consult it for anything not covered here.
   starts), then `asset/deck-stage.js`, `asset/presenter-stage.js` and
   `asset/deck-font-controls.js`, and that `#speaker-notes` has one entry per
   `<section class="slide">`. Run `node --check` on the seven JS assets and
-  `./fw check-contrast <unit>` on the deck's `tokens.css`.
+  `./fw check-contrast <unit>` on the deck's `tokens.css`. In a browser
+  console, notes alignment is
+  `document.querySelectorAll('deck-stage>section').length` against
+  `JSON.parse(document.getElementById('speaker-notes').textContent).length`,
+  with no empty string among the notes.
+- **Reduced motion:** emulate `prefers-reduced-motion: reduce` and confirm
+  every `.rise` is visible and the loops stop.
 - **Present / PDF:** `P` pops the presenter console → **開啟簡報視窗** for the
   projector window; **列印投影片** (or browser Print → Save as PDF, enable
-  "Background graphics") gives one 1920×1080 slide per page.
+  "Background graphics") gives one 1920×1080 slide per page; check there is
+  no key-hint overlay and no trailing blank page. For the `_output/<unit>.pdf`
+  name or Pandoc-rendered references, use the Beamer fallback instead.
 - **Note:** `file://` doesn't auto-reload — hard-reload (Cmd+Shift+R) before
   concluding a change did or didn't land.

@@ -4,7 +4,7 @@
 
 AI-agent framework for Traditional Chinese academic coursework — one repo per course, shared skills, audited sources.
 
-> **Status: early port.** The architecture in [`docs/DESIGN.md`](docs/DESIGN.md) is settled, 14 shared agent skills are in `.agents/skills/`, and `scripts/` has the `fw` dispatcher, `unit-init`, `build`, and the checking gates, with the Quarto templates in `assets/templates/`. Optional capabilities such as image generation and external review depend on the tools available to the agent. The [roadmap](#roadmap) shows what exists.
+> **Status: early port.** The architecture in [`docs/DESIGN.md`](docs/DESIGN.md) is settled, 15 shared agent skills are in `.agents/skills/`, and `scripts/` has the `fw` dispatcher, `unit-init`, `build`, and the checking gates, with the Quarto templates in `assets/templates/`. Optional capabilities such as image generation and external review depend on the tools available to the agent. The [roadmap](#roadmap) shows what exists.
 
 ## What it is
 

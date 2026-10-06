@@ -36,17 +36,49 @@ they are not duplicated per engine.
 
 A deck the engines produce must satisfy what `deck-stage.js` expects:
 
-- A single `<deck-stage width="1920" height="1080">` wrapping the slides.
-- Each slide is a `<section class="slide" data-label="…">`. `data-label` shows in
-  the presenter console.
+- A single `<deck-stage width="1920" height="1080">` wrapping the slides. Each
+  direct child is one slide (`<section>`); `<script>`, `<style>` and
+  `<template>` children are ignored.
+- Slides are hidden, not unmounted: inactive ones stay in the DOM with
+  `visibility:hidden; opacity:0`, and every slide is forced to
+  `position:absolute; inset:0; overflow:hidden`. Author each as a full-bleed
+  1920×1080 frame, because content past the edge is clipped without a
+  scrollbar.
+- `data-label="…"` on each slide names it in the presenter console and
+  thumbnails (falling back to its first `h1`–`h3`).
 - The active slide gets `data-deck-active` set by the runtime — entrance
   animations key off `.slide[data-deck-active] .rise`.
 - Speaker notes: a `<script type="application/json" id="speaker-notes">` array,
-  one string per slide, in slide order. The presenter console reads it.
+  one string per slide, in slide order. The presenter console reads it; `\n`
+  inside a string is a line break there.
 - Load order at end of `<body>`: `asset/deck-stage.js` then
-  `asset/presenter-stage.js`.
-- The runtime emits `slidechange` with `e.detail.slide` (used e.g. by the
-  number-counter helper).
+  `asset/presenter-stage.js`; an engine's own scripts go around them as its
+  skill specifies.
+- Keep `deck-stage:not(:defined){visibility:hidden}` in the CSS, so the first
+  slide does not flash unstyled before the element upgrades.
+- The runtime emits `slidechange` with `e.detail.index/previousIndex/total/slide/reason`
+  (used e.g. by the number-counter helper).
+
+What the runtime gives for free, so an engine writes none of it: ←/→,
+PgUp/PgDn, Space, Home/End, **R** (reset), number keys, the hover overlay,
+mobile tap zones, `@media print` at one 1920×1080 slide per page, and the
+**P** presenter window. Over `file://` Chrome blocks the presenter's
+cross-frame thumbnails, so serve the deck over HTTP to check them; notes and
+navigation work either way.
+
+Minimal skeleton (an engine's starter adds its look and checks):
+
+```html
+<!DOCTYPE html><html lang="zh-Hant"><head><meta charset="UTF-8">
+<style>deck-stage:not(:defined){visibility:hidden}</style></head><body>
+<deck-stage width="1920" height="1080">
+  <section class="slide" data-label="標題">…</section>
+</deck-stage>
+<script type="application/json" id="speaker-notes">["第一張的備註…"]</script>
+<script src="asset/deck-stage.js"></script>
+<script src="asset/presenter-stage.js"></script>
+</body></html>
+```
 
 CSS variables the runtime/components rely on (defined by house-style tokens):
 `--font`, `--ink*`, `--text/--body/--muted`, `--accent`, `--chapter`, `--ease`.

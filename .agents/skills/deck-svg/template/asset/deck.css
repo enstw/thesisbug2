@@ -143,7 +143,7 @@
   .flowarrow { display:grid; place-items:center; padding: 0 6px; color:var(--chapter); font-size: calc(48px * var(--deck-font-scale, 1)); font-weight:700; }
 
   /* ============================================================
-     CONTENT-SHAPE COMPONENTS — see reference/content-shapes.md
+     CONTENT-SHAPE COMPONENTS — shape → class: reference/slide-patterns.md
      One class per content shape, so the shape of the material picks the
      layout instead of the material being cut to fit bullets or a table.
      ============================================================ */

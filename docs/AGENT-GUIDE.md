@@ -54,7 +54,7 @@ Use your environment's file, shell, browser, and delegation capabilities. Extern
 | Argument flow and coherence | `flow-check` |
 | Citation consistency | `cite-check` |
 | External cross-model review, at milestones | `gpt-review` |
-| Slide decks | `deck-svg` (live HTML) or `deck-image` (one image per slide), on `house-style` and `deck-runtime` |
+| Slide decks | report → `deck-plan` (points, storyboard) → `deck-svg` (live HTML) or `deck-image` (one image per slide), on `house-style` and `deck-runtime`; the workflow is `.framework/assets/templates/presentation/presentation-protocol.md` |
 | Figures, 字數, transcripts | `diagram`, `count-zh`, `yt2sub` |
 
 Lint order for a manuscript: **fix-terms → flow-check → cite-check**, with gpt-review after that at milestones. Accepted findings land through safe-edit.

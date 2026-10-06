@@ -24,9 +24,28 @@ sys.path.insert(0, str(HERE))
 from _deck_catalog import CATALOG, VisualRhythmResolver, get_layout, parse_slot_payload  # noqa: E402
 from _paths import course_root, rel, resolve_talk  # noqa: E402
 
-STAGE_OPEN = re.compile(r"(<deck-stage\b[^>]*>)", re.I)
-NOTES_BLOCK = re.compile(r'(<script\b[^>]*\bid="speaker-notes"[^>]*>.*?</script>)', re.S | re.I)
-STAGE_CLOSE = re.compile(r"(</deck-stage>)", re.I)
+def find_stage_open(html: str) -> tuple[int, int] | None:
+    """Find the real <deck-stage ...> opening tag, ignoring HTML comments."""
+    for m in re.finditer(r"<!--.*?-->|(<deck-stage\b[^>]*>)", html, re.S | re.I):
+        if m.group(1):
+            return m.start(1), m.end(1)
+    return None
+
+
+def find_stage_close(html: str, start_pos: int) -> tuple[int, int] | None:
+    """Find the real </deck-stage> closing tag, ignoring HTML comments."""
+    for m in re.finditer(r"<!--.*?-->|(</deck-stage>)", html[start_pos:], re.S | re.I):
+        if m.group(1):
+            return start_pos + m.start(1), start_pos + m.end(1)
+    return None
+
+
+def find_notes_block(html: str, start_pos: int) -> tuple[int, int] | None:
+    """Find the real #speaker-notes script block, ignoring HTML comments."""
+    for m in re.finditer(r"<!--.*?-->|(<script\b[^>]*\bid=[\"']speaker-notes[\"'][^>]*>.*?</script>)", html[start_pos:], re.S | re.I):
+        if m.group(1):
+            return start_pos + m.start(1), start_pos + m.end(1)
+    return None
 
 
 def extract_seed(storyboard_text: str, default_seed: int = 42) -> int:
@@ -136,15 +155,15 @@ def apply_compilation(talk: Path, compiled_slides: str, dry_run: bool = False) -
 
     original = deck_file.read_text(encoding="utf-8")
 
-    m_stage = STAGE_OPEN.search(original)
-    if not m_stage:
+    stage_pos = find_stage_open(original)
+    if not stage_pos:
         sys.exit(f"no <deck-stage> found in {deck_file}")
 
-    stage_open_end = m_stage.end()
-    m_notes = NOTES_BLOCK.search(original, stage_open_end)
+    stage_open_end = stage_pos[1]
+    notes_pos = find_notes_block(original, stage_open_end)
 
-    if m_notes:
-        notes_start = m_notes.start()
+    if notes_pos:
+        notes_start = notes_pos[0]
         new_html = (
             original[:stage_open_end]
             + "\n\n"
@@ -153,10 +172,10 @@ def apply_compilation(talk: Path, compiled_slides: str, dry_run: bool = False) -
             + original[notes_start:]
         )
     else:
-        m_close = STAGE_CLOSE.search(original, stage_open_end)
-        if not m_close:
+        close_pos = find_stage_close(original, stage_open_end)
+        if not close_pos:
             sys.exit(f"malformed deck.html: no </deck-stage> found in {deck_file}")
-        close_start = m_close.start()
+        close_start = close_pos[0]
         new_html = (
             original[:stage_open_end]
             + "\n\n"

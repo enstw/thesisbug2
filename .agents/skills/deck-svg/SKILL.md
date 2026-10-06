@@ -108,10 +108,14 @@ split exists because choosing what to say while laying out slides is how a
 deck ends up saying things the declared Model does not.
 
 - The row's content shape picks the pattern (`reference/slide-patterns.md`
-  § Shape → pattern). **If no pattern fits, add a component to `deck.css`;
+  § Shape → pattern) or a layout catalog code (`L-*` from `deck-plan`'s
+  `reference/layout-catalog.md`). **If no pattern fits, add a component to `deck.css`;
   never bend the content**, because an agent choosing from the class list
   takes the easiest pattern and trims the content to fit — a 3×3 typology
   becomes a list and the examples disappear.
+- When using layout catalog codes with slot micro-syntax in `storyboard.md`, run
+  `./fw deck-compile <talk>` to compile the slides automatically and deterministically
+  with seeded depth variants. You can still hand-edit or extend `deck.html` afterwards.
 - Write the note's 講法 in `<talk>/speaker-notes.md` from the row's 口說重點
   and the Model passage, never from the slide, because the slide is the
   sparsest View and a note rebuilt from it loses the explanations and the

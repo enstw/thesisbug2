@@ -246,6 +246,14 @@ def deck_gate(unit: Path, talk: Path, root: Path) -> None:
             problems.append(f"storyboard has {len(rows)} rows but the deck has {len(slides)} slides — "
                             "one row per slide, so a slide added without a shape decision shows up here")
 
+        # When the storyboard uses layout catalog codes, the deck must be current:
+        if re.search(r"\bL-[A-Z0-9-]+\b", storyboard.read_text(encoding="utf-8")):
+            env = dict(os.environ, FW_COURSE_ROOT=str(root))
+            r = subprocess.run([sys.executable, str(HERE / "deck-compile.py"), str(talk), "--check"],
+                               env=env, capture_output=True, text=True)
+            if r.returncode:
+                problems.append("deck out of sync: " + (r.stdout + r.stderr).strip())
+
     # Notes assembled from speaker-notes.md and the glossary/Q&A must match the
     # deck, because the presenter reads deck.html on stage: a stale note or a
     # reference to a missing entry is a gap found mid-talk. Only a file written

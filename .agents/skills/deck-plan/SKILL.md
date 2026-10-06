@@ -83,14 +83,17 @@ range → author → arguments → synthesis → concepts → critique → quest
   is the traceability the author reviews: every slide points back to a cited
   Model sentence.
 - **內容形狀** is a number from [`reference/content-shapes.md`](reference/content-shapes.md);
-  read it while writing rows. **版型** is the View's layout for that shape:
-  the deck-svg class from its `reference/slide-patterns.md` § Shape → pattern,
-  or the layout phrase an image deck's prompt will carry. Naming both before
+  read it while writing rows. **版型** is chosen from [`reference/layout-catalog.md`](reference/layout-catalog.md)
+  (e.g. `L-3CARD-VERDICT`, `L-BENTO-FOCUS`, `L-VS-CONFRONT`), which collects the 16
+  standard layouts, or legacy classes from `reference/slide-patterns.md`. Naming both before
   the slide exists makes an unfitting choice visible at review instead of as
   oddly reshaped content on a finished deck.
-- **畫面內容** is what appears on the slide: one idea, graspable in about ten
-  seconds, because the audience reads while listening. A row that needs more
-  becomes two rows.
+- **畫面內容** carries the structured semantic slots for the chosen layout
+  using micro-syntax (key-values, `<br>`, bullet cards `- [tag] head: body`, verdict),
+  as detailed in [`reference/layout-catalog.md`](reference/layout-catalog.md).
+  This allows `./fw deck-compile <talk>` to render the slides automatically.
+  Keep it graspable in about ten seconds, because the audience reads while listening.
+  A row that needs more becomes two rows.
 - **口說重點** is what the talk says — explanation, citations with locators,
   transitions. With sparse slides the notes carry the talk, so the author
   reviews them here; the View writes them out in full as the note's 講法.
@@ -129,9 +132,11 @@ whether a shape fits — that is the author's review.
 
 | View | Skill | Choose it when |
 | :--- | :--- | :--- |
-| Live HTML slides (default) | `deck-svg` | the deck is still being edited, or carries precise figures and tables |
+| Live HTML slides (default) | `deck-svg` (or `./fw deck-compile`) | the deck is still being edited, or compiles deterministically from catalog layouts |
 | One image per slide | `deck-image` | the copy is locked and the talk is a showcase, because each later edit costs a page regeneration |
 | Beamer PDF | root presentation unit's `presentation.qmd` (protocol § Quarto Beamer Fallback) | the venue needs Pandoc-rendered references or LaTeX |
 
-Each View writes a slide and its speaker note from one row and the Model
-passage the row's point names, never the note from the slide.
+When the storyboard uses layout catalog codes, run `./fw deck-compile <talk>`
+to compile `storyboard.md` directly into `deck.html`. Each View writes a slide
+and its speaker note from one row and the Model passage the row's point names,
+never the note from the slide.

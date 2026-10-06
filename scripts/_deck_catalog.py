@@ -375,8 +375,8 @@ def render_bento_focus(slots: dict[str, Any], variant: str, ctx: SlideContext) -
       <div class="bento bento--{variant} mt">
         <div class="card card--tint-elevated bento__hero rise d1">
           <span class="tag">{hero_tag}</span>
-          <h3 style="font-size:calc(52px * var(--deck-font-scale, 1))">{hero_head}</h3>
-          <p class="lead-size" style="line-height:1.6">{hero_body}</p>
+          <h3>{hero_head}</h3>
+          <p class="lead-size">{hero_body}</p>
         </div>
 {''.join(sub_cards_html)}
       </div>

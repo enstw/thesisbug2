@@ -24,28 +24,57 @@ sys.path.insert(0, str(HERE))
 from _deck_catalog import CATALOG, VisualRhythmResolver, get_layout, parse_slot_payload  # noqa: E402
 from _paths import course_root, rel, resolve_talk  # noqa: E402
 
+from html.parser import HTMLParser
+
+
+class DeckStageLocator(HTMLParser):
+    """Locate the deck-stage boundaries and speaker-notes block using standard HTML5 parser.
+
+    Completely avoids regex pitfalls with HTML comments, CDATA, script variables, etc.
+    """
+
+    def __init__(self, raw_html: str):
+        super().__init__()
+        self.raw_html = raw_html
+        self._line_offsets: list[int] = []
+        cur = 0
+        for line in raw_html.splitlines(keepends=True):
+            self._line_offsets.append(cur)
+            cur += len(line)
+        self.stage_open: tuple[int, int] | None = None
+        self.stage_close: int | None = None
+        self.notes_start: int | None = None
+
+    def _get_offset(self, line: int, col: int) -> int:
+        if 1 <= line <= len(self._line_offsets):
+            return self._line_offsets[line - 1] + col
+        return len(self.raw_html)
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]):
+        tag_lower = tag.lower()
+        if tag_lower == "deck-stage" and not self.stage_open:
+            start = self._get_offset(*self.getpos())
+            end = self.raw_html.find(">", start) + 1
+            if end > 0:
+                self.stage_open = (start, end)
+        elif tag_lower == "script" and not self.notes_start:
+            attrs_dict = dict(attrs)
+            if attrs_dict.get("id") == "speaker-notes":
+                self.notes_start = self._get_offset(*self.getpos())
+
+    def handle_endtag(self, tag: str):
+        if tag.lower() == "deck-stage" and not self.stage_close:
+            self.stage_close = self._get_offset(*self.getpos())
+
+
+def locate_stage(html: str) -> DeckStageLocator:
+    loc = DeckStageLocator(html)
+    loc.feed(html)
+    return loc
+
+
 def find_stage_open(html: str) -> tuple[int, int] | None:
-    """Find the real <deck-stage ...> opening tag, ignoring HTML comments."""
-    for m in re.finditer(r"<!--.*?-->|(<deck-stage\b[^>]*>)", html, re.S | re.I):
-        if m.group(1):
-            return m.start(1), m.end(1)
-    return None
-
-
-def find_stage_close(html: str, start_pos: int) -> tuple[int, int] | None:
-    """Find the real </deck-stage> closing tag, ignoring HTML comments."""
-    for m in re.finditer(r"<!--.*?-->|(</deck-stage>)", html[start_pos:], re.S | re.I):
-        if m.group(1):
-            return start_pos + m.start(1), start_pos + m.end(1)
-    return None
-
-
-def find_notes_block(html: str, start_pos: int) -> tuple[int, int] | None:
-    """Find the real #speaker-notes script block, ignoring HTML comments."""
-    for m in re.finditer(r"<!--.*?-->|(<script\b[^>]*\bid=[\"']speaker-notes[\"'][^>]*>.*?</script>)", html[start_pos:], re.S | re.I):
-        if m.group(1):
-            return start_pos + m.start(1), start_pos + m.end(1)
-    return None
+    return locate_stage(html).stage_open
 
 
 def extract_seed(storyboard_text: str, default_seed: int = 42) -> int:
@@ -155,34 +184,30 @@ def apply_compilation(talk: Path, compiled_slides: str, dry_run: bool = False) -
 
     original = deck_file.read_text(encoding="utf-8")
 
-    stage_pos = find_stage_open(original)
-    if not stage_pos:
+    loc = locate_stage(original)
+    if not loc.stage_open:
         sys.exit(f"no <deck-stage> found in {deck_file}")
 
-    stage_open_end = stage_pos[1]
-    notes_pos = find_notes_block(original, stage_open_end)
+    stage_open_end = loc.stage_open[1]
 
-    if notes_pos:
-        notes_start = notes_pos[0]
+    if loc.notes_start and loc.notes_start > stage_open_end:
         new_html = (
             original[:stage_open_end]
             + "\n\n"
             + compiled_slides
             + "\n\n  "
-            + original[notes_start:]
+            + original[loc.notes_start:]
         )
-    else:
-        close_pos = find_stage_close(original, stage_open_end)
-        if not close_pos:
-            sys.exit(f"malformed deck.html: no </deck-stage> found in {deck_file}")
-        close_start = close_pos[0]
+    elif loc.stage_close and loc.stage_close > stage_open_end:
         new_html = (
             original[:stage_open_end]
             + "\n\n"
             + compiled_slides
             + "\n\n"
-            + original[close_start:]
+            + original[loc.stage_close:]
         )
+    else:
+        sys.exit(f"malformed deck.html: no </deck-stage> found in {deck_file}")
 
     if original == new_html:
         return False

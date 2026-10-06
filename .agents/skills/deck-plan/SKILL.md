@@ -4,7 +4,8 @@ description: >
   Plans a talk from its report before any slide exists: points.md picks the
   8–12 points this audience takes away, each tied to a report section, and
   storyboard.md sets the premises and one row per slide (point, content shape,
-  layout, on-slide content, spoken points, AI disclosure). Use when starting,
+  layout, on-slide content, spoken points, backup terms and questions, AI
+  disclosure). Use when starting,
   reordering or re-angling a presentation or 簡報分鏡; deck-svg, deck-image and
   the Beamer fallback render the signed-off storyboard.
 ---
@@ -69,9 +70,9 @@ Then one row per slide, ordered along the variant's spine — thesis: problem �
 gap → question → method → evidence → finding → contribution; reading guide:
 range → author → arguments → synthesis → concepts → critique → questions:
 
-| # | 來源論點 | 內容形狀 | 版型 | 講 | 畫面內容 | 口說重點 | AI 協助 |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| 5 | `points.md` P4 | 4 Two-axis typology | `.matrix` 3×3 | 2 min | axis y = 極數, axis x = 權威密度; highlight the cell the author's case falls in | why the axes, the author's case with page, transition to the critique, expected question on the empty cell | AI drafted the cell labels; author chose the axes and checked them against the source |
+| # | 來源論點 | 內容形狀 | 版型 | 講 | 畫面內容 | 口說重點 | 名詞與提問 | AI 協助 |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| 5 | `points.md` P4 | 4 Two-axis typology | `.matrix` 3×3 | 2 min | axis y = 極數, axis x = 權威密度; highlight the cell the author's case falls in | why the axes, the author's case with page, transition to the critique | 極數、權威密度、Q3 | AI drafted the cell labels; author chose the axes and checked them against the source |
 
 - **來源論點** names the point; the point names the report section. That chain
   is the traceability the author reviews: every slide points back to a cited
@@ -86,8 +87,16 @@ range → author → arguments → synthesis → concepts → critique → quest
   seconds, because the audience reads while listening. A row that needs more
   becomes two rows.
 - **口說重點** is what the talk says — explanation, citations with locators,
-  transitions, anticipated questions. With sparse slides the notes carry the
-  talk, so the author reviews them here; the View writes them out in full.
+  transitions. With sparse slides the notes carry the talk, so the author
+  reviews them here; the View writes them out in full as the note's 講法.
+- **名詞與提問** lists the terms the presenter must be able to explain on this
+  slide (spelled as the headings of `notes/glossary.md`) and the questions
+  this audience is likely to ask (`Q<n>` from `notes/qa.md`), separated by
+  `、`. The presenter may not know every detail behind a slide, and the
+  audience asks about exactly those; which ones to prepare depends on the
+  audience in 前提, so the choice is made here, while the explanations and
+  answers are facts and are written in the Model first (protocol § Speaker
+  notes). `./fw deck-notes` refuses a row that names an entry the Model lacks.
 - **AI 協助** records what AI drafted or verified and what the author wrote or
   changed, because courses increasingly ask for per-slide AI disclosure, and
   noting it while planning is more reliable than reconstructing it later.

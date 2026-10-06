@@ -62,7 +62,8 @@ def presentation_files(variant: str) -> dict[str, Path]:
         "draft.qmd": scaffold / "draft.qmd",                             # Model: the cited argument
         "points.md": scaffold / "points.md",                             # Controller: angle, ~8–12 points
         "storyboard.md": scaffold / "storyboard.md",                     # Controller: flow, point → slide
-        "notes/.gitkeep": scaffold / "notes" / ".gitkeep",
+        "notes/glossary.md": scaffold / "notes" / "glossary.md",         # Model: terms the presenter must know
+        "notes/qa.md": scaffold / "notes" / "qa.md",                     # Model: anticipated questions, answered
     }
 
 

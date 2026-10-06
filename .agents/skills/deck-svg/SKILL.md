@@ -112,9 +112,14 @@ deck ends up saying things the report does not.
   never bend the content**, because an agent choosing from the class list
   takes the easiest pattern and trims the content to fit — a 3×3 typology
   becomes a list and the examples disappear.
-- Write the note from the row's 口說重點 and the report passage, never from
-  the slide, because the slide is the sparsest View and a note rebuilt from it
-  loses the explanations and the locators.
+- Write the note's 講法 in `<unit>/speaker-notes.md` from the row's 口說重點
+  and the report passage, never from the slide, because the slide is the
+  sparsest View and a note rebuilt from it loses the explanations and the
+  locators. `./fw deck-notes <unit> --init` seeds the file;
+  `./fw deck-notes <unit>` adds the glossary and Q&A entries the row names and
+  writes `#speaker-notes` (presentation protocol § Speaker notes). Do not
+  write term explanations or answers into the 講法: they are facts, and they
+  belong in `notes/glossary.md` and `notes/qa.md`, where the gates check them.
 - A fact that turns out wrong while building is corrected in the report
   first, then in the rows and slides that use it; an order or emphasis change
   goes back to the storyboard (presentation protocol § Source Files).
@@ -167,9 +172,13 @@ before the talk project one dark and one light slide from the back row and
 keep whichever reads (`c` cycles the themes live; house-style lists them). Colours come only from tokens, so a slide
 that hard-codes one stays put when the theme changes.
 
-**Speaker notes:** keep the `#speaker-notes` JSON array in lockstep with slide
-order — one string per `<section>`, same sequence; add or remove a note with
-its slide. Separate note beats with `\n・` for presenter readability.
+**Speaker notes:** `#speaker-notes` is generated — edit `speaker-notes.md`
+and rerun `./fw deck-notes`, because the next assembly overwrites a hand edit
+in `deck.html`. Adding, removing or moving a slide means renumbering the
+sections of `speaker-notes.md` and the storyboard rows to match; `deck-notes`
+compares each section's label with the slide's `data-label` and refuses a
+mismatch, since an unnoticed shift attaches every later note to the wrong
+slide.
 
 **Cited content:** follow `../house-style/reference/content-integrity.md`
 (disputed claims stay disputes, speculation is labeled, citations stay attached).

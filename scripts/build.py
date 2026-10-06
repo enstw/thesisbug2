@@ -235,6 +235,15 @@ def deck_gate(unit: Path, root: Path) -> None:
             problems.append(f"storyboard has {len(rows)} rows but the deck has {len(slides)} slides — "
                             "one row per slide, so a slide added without a shape decision shows up here")
 
+    # Notes assembled from speaker-notes.md and the glossary/Q&A must match the
+    # deck, because the presenter reads deck.html on stage: a stale note or a
+    # reference to a missing entry is a gap found mid-talk.
+    if (unit / "speaker-notes.md").is_file():
+        r = subprocess.run([sys.executable, str(HERE / "deck-notes.py"), str(unit), "--check"],
+                           capture_output=True, text=True)
+        if r.returncode:
+            problems.append("speaker notes: " + (r.stdout + r.stderr).strip())
+
     if n:
         tables = sum(1 for _, b in body if 'class="cmp' in b or "table class=\"cmp" in b)
         if tables / n > 0.4 and tables >= 3:

@@ -156,6 +156,8 @@ class DeckCompilerIntegrationTests(unittest.TestCase):
         self.assertIn("data-label=\"半導體戰略\"", new_deck)
         self.assertIn("data-label=\"核心困境\"", new_deck)
         self.assertIn("data-label=\"結語\"", new_deck)
+        self.assertIn('<span class="eyebrow">Theory primer</span>', new_deck)
+        self.assertNotIn('<span class="eyebrow">3</span>', new_deck)
         self.assertIn('<link rel="stylesheet" href="asset/deck.css">', new_deck)
         self.assertIn('<deck-stage width="1920" height="1080">', new_deck)
         self.assertIn('<script type="application/json" id="speaker-notes">', new_deck)

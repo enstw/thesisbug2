@@ -159,12 +159,25 @@ def compile_storyboard(talk: Path) -> tuple[str, list[str]]:
             else:
                 slots["title"] = shape_col or f"投影片 {slide_num}"
 
+        # Resolve eyebrow: prefer explicit slot eyebrow, then label / data_label,
+        # then non-numeric shape name (strip leading numbers like "3 理論入門" -> "理論入門"),
+        # fallback to "研討進度".
+        resolved_eyebrow = (
+            slots.get("eyebrow")
+            or slots.get("label")
+            or slots.get("data_label")
+        )
+        if not resolved_eyebrow and shape_col:
+            resolved_eyebrow = re.sub(r"^\d+\s*", "", shape_col).strip()
+        if not resolved_eyebrow:
+            resolved_eyebrow = "研討進度"
+
         # Resolve context and depth variant
         ctx, chosen_variant = resolver.resolve(
             layout=layout_def,
             slide_num=slide_num,
             total_slides=total - 1 if total > 1 else 1,
-            eyebrow=shape_col.split()[0] if shape_col else "研討進度",
+            eyebrow=resolved_eyebrow,
             title=slots.get("label") or slots.get("data_label") or slots.get("title", ""),
         )
 

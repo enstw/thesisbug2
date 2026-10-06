@@ -84,6 +84,17 @@ class DeckNotesTests(unittest.TestCase):
         self.assertEqual(r.returncode, 1)
         self.assertIn("§ 1 is '別張'", r.stdout)
 
+    def test_build_checks_only_a_notes_file_written_for_deck_notes(self):
+        # A unit's own notes format (from before the command) is left alone ...
+        self.write("speaker-notes.md", "# 講者備註\n\n## 第 0 頁｜封面\n\n**講法**\n")
+        r = self.run_fw("build.py", "talk")
+        self.assertNotIn("speaker notes:", r.stdout + r.stderr)
+        # ... while one created by --init is held to the deck.
+        (self.unit / "speaker-notes.md").unlink()
+        self.run_fw("deck-notes.py", "talk", "--init")
+        r = self.run_fw("build.py", "talk")
+        self.assertIn("speaker notes:", r.stdout + r.stderr)
+
 
 if __name__ == "__main__":
     unittest.main()

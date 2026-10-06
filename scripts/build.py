@@ -237,8 +237,11 @@ def deck_gate(unit: Path, root: Path) -> None:
 
     # Notes assembled from speaker-notes.md and the glossary/Q&A must match the
     # deck, because the presenter reads deck.html on stage: a stale note or a
-    # reference to a missing entry is a gap found mid-talk.
-    if (unit / "speaker-notes.md").is_file():
+    # reference to a missing entry is a gap found mid-talk. Only a file written
+    # for deck-notes (its header names the command) is checked: a unit may keep
+    # its own notes file and sync script from before the command existed.
+    notes_md = unit / "speaker-notes.md"
+    if notes_md.is_file() and "./fw deck-notes" in notes_md.read_text(encoding="utf-8"):
         r = subprocess.run([sys.executable, str(HERE / "deck-notes.py"), str(unit), "--check"],
                            capture_output=True, text=True)
         if r.returncode:

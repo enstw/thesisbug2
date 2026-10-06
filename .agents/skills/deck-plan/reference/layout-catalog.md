@@ -4,6 +4,8 @@
 
 執行 `./fw deck-compile <talk>` 時，編譯腳本會讀取 `storyboard.md` 前提中的 `Seed`（隨機種子），以確定性（Deterministic）演算法自動挑選深度視覺變體（Variants）與色彩節奏，毫秒級編譯出語意結構精準、符合投影機字級規範的 `deck.html`。
 
+> 💡 **互動展示工作台**：可開啟 [`docs/layout-explorer.html`](file:///Users/j/homework/thesisbug2/docs/layout-explorer.html)（或執行 `./fw deck-compile --explorer` 取得連結），在瀏覽器中動態切換 16 種版型、深度變體與 14 種主題，並一鍵複製分鏡語法。
+
 ---
 
 ## 語意槽位微語法（Micro-syntax）

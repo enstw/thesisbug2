@@ -115,7 +115,8 @@ deck ends up saying things the declared Model does not.
   becomes a list and the examples disappear.
 - When using layout catalog codes with slot micro-syntax in `storyboard.md`, run
   `./fw deck-compile <talk>` to compile the slides automatically and deterministically
-  with seeded depth variants. You can still hand-edit or extend `deck.html` afterwards.
+  with seeded depth variants (preview all combinations live with `./fw deck-compile --explorer`).
+  You can still hand-edit or extend `deck.html` afterwards.
 - Write the note's 講法 in `<talk>/speaker-notes.md` from the row's 口說重點
   and the Model passage, never from the slide, because the slide is the
   sparsest View and a note rebuilt from it loses the explanations and the

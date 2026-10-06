@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="zh-Hant" data-deck-theme-default="night">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>thesisbug2 — Layout Explorer (版型互動工作台)</title>
+<link rel="stylesheet" href="../.agents/skills/house-style/assets/css/tokens.css" />
+<link rel="stylesheet" href="../.agents/skills/deck-svg/template/asset/deck.css" />
+<style>
+  :root {
+    --ui-bg: #090c15;
+    --ui-sidebar: #0f1422;
+    --ui-border: rgba(255, 255, 255, 0.12);
+    --ui-text: #e2e8f0;
+    --ui-muted: #94a3b8;
+    --ui-accent: #38bdf8;
+    --ui-panel: #161c2d;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 0;
+    background: var(--ui-bg); color: var(--ui-text);
+    font-family: var(--font, system-ui, sans-serif);
+    display: flex; height: 100vh; overflow: hidden;
+  }
+
+  /* Sidebar */
+  #sidebar {
+    width: 320px; background: var(--ui-sidebar);
+    border-right: 1px solid var(--ui-border);
+    display: flex; flex-direction: column; flex-shrink: 0;
+  }
+  .sidebar-header {
+    padding: 20px 24px; border-bottom: 1px solid var(--ui-border);
+  }
+  .sidebar-header h1 {
+    font-size: 20px; margin: 0 0 4px; color: #fff; display: flex; align-items: center; gap: 8px;
+  }
+  .sidebar-header p {
+    font-size: 13px; margin: 0; color: var(--ui-muted);
+  }
+  .search-box {
+    padding: 12px 18px; border-bottom: 1px solid var(--ui-border);
+  }
+  .search-box input {
+    width: 100%; padding: 8px 12px; border-radius: 8px;
+    background: rgba(255,255,255,0.06); border: 1px solid var(--ui-border);
+    color: #fff; font-size: 13px; outline: none;
+  }
+  .search-box input:focus { border-color: var(--ui-accent); }
+  .layout-list {
+    flex: 1; overflow-y: auto; padding: 12px 0;
+  }
+  .family-group {
+    margin-bottom: 16px;
+  }
+  .family-title {
+    padding: 6px 20px; font-size: 11px; font-weight: 700;
+    letter-spacing: 0.1em; color: var(--ui-muted); text-transform: uppercase;
+  }
+  .layout-item {
+    padding: 10px 20px; display: flex; flex-direction: column; gap: 2px;
+    cursor: pointer; transition: all 0.15s; border-left: 3px solid transparent;
+  }
+  .layout-item:hover { background: rgba(255,255,255,0.04); }
+  .layout-item.active {
+    background: rgba(56, 189, 248, 0.12);
+    border-left-color: var(--ui-accent);
+  }
+  .layout-item .code {
+    font-size: 13px; font-weight: 700; color: #fff; font-family: monospace;
+  }
+  .layout-item .name {
+    font-size: 12px; color: var(--ui-muted);
+  }
+  .layout-item.active .code { color: var(--ui-accent); }
+
+  /* Main Workspace */
+  #main {
+    flex: 1; display: flex; flex-direction: column; overflow: hidden;
+  }
+  .toolbar {
+    padding: 12px 24px; background: var(--ui-sidebar);
+    border-bottom: 1px solid var(--ui-border);
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    flex-wrap: wrap; flex-shrink: 0;
+  }
+  .controls-group {
+    display: flex; align-items: center; gap: 12px;
+  }
+  .label-tag {
+    font-size: 12px; color: var(--ui-muted); font-weight: 600; text-transform: uppercase;
+  }
+  .seg-btn-group {
+    display: inline-flex; background: rgba(0,0,0,0.3); border-radius: 8px; padding: 2px; border: 1px solid var(--ui-border);
+  }
+  .seg-btn {
+    padding: 6px 12px; font-size: 12px; border: none; background: transparent;
+    color: var(--ui-muted); cursor: pointer; border-radius: 6px; transition: all 0.15s;
+  }
+  .seg-btn:hover { color: #fff; }
+  .seg-btn.active {
+    background: var(--ui-accent); color: #000; font-weight: 700;
+  }
+
+  .select-theme {
+    padding: 6px 12px; border-radius: 8px; background: rgba(255,255,255,0.06);
+    border: 1px solid var(--ui-border); color: #fff; font-size: 13px; outline: none; cursor: pointer;
+  }
+  .action-btn {
+    padding: 6px 14px; border-radius: 8px; border: 1px solid var(--ui-border);
+    background: rgba(255,255,255,0.06); color: #fff; font-size: 12px; font-weight: 600;
+    cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.15s;
+  }
+  .action-btn:hover { background: rgba(255,255,255,0.12); }
+  .action-btn.primary { background: var(--ui-accent); color: #000; border-color: var(--ui-accent); }
+  .action-btn.primary:hover { filter: brightness(1.1); }
+
+  /* Stage Container */
+  .stage-wrapper {
+    flex: 1; display: flex; align-items: center; justify-content: center;
+    background: #000; padding: 24px; position: relative; overflow: hidden;
+  }
+  .stage-scaler {
+    width: 1920px; height: 1080px; transform-origin: center center;
+    box-shadow: 0 25px 60px rgba(0,0,0,0.8);
+    position: relative; flex-shrink: 0;
+  }
+  .stage-scaler .slide {
+    width: 100%; height: 100%; position: absolute; inset: 0;
+  }
+
+  /* Bottom Code / Snippet Bar */
+  .code-drawer {
+    height: 180px; background: var(--ui-sidebar);
+    border-top: 1px solid var(--ui-border);
+    display: flex; flex-direction: column; flex-shrink: 0;
+  }
+  .drawer-header {
+    padding: 8px 24px; border-bottom: 1px solid var(--ui-border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .drawer-title {
+    font-size: 12px; font-weight: 700; color: var(--ui-muted); display: flex; align-items: center; gap: 8px;
+  }
+  .drawer-content {
+    flex: 1; overflow: auto; padding: 12px 24px; background: #07090f;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 13px; line-height: 1.5; color: #cbd5e1; white-space: pre-wrap; margin: 0;
+  }
+  .toast {
+    position: fixed; right: 24px; top: 24px; background: #10b981; color: #fff;
+    padding: 10px 18px; border-radius: 8px; font-size: 13px; font-weight: 600;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.3); opacity: 0; transform: translateY(-10px);
+    transition: all 0.2s; pointer-events: none; z-index: 9999;
+  }
+  .toast.show { opacity: 1; transform: none; }
+</style>
+</head>
+<body>
+
+<div id="sidebar">
+  <div class="sidebar-header">
+    <h1>🎨 Layout Explorer</h1>
+    <p>thesisbug2 簡報版型與變體互動工作台</p>
+  </div>
+  <div class="search-box">
+    <input type="text" id="filter-input" placeholder="搜尋版型代碼或名稱..." />
+  </div>
+  <div class="layout-list" id="layout-list">
+    <!-- Populated by JS -->
+  </div>
+</div>
+
+<div id="main">
+  <div class="toolbar">
+    <div class="controls-group">
+      <span class="label-tag">深度變體:</span>
+      <div class="seg-btn-group" id="variant-group">
+        <!-- Populated by JS -->
+      </div>
+
+      <span class="label-tag" style="margin-left: 12px">強調色:</span>
+      <div class="seg-btn-group" id="accent-group">
+        <button class="seg-btn active" data-accent="var(--c1)">C1 琥珀</button>
+        <button class="seg-btn" data-accent="var(--c2)">C2 松石</button>
+        <button class="seg-btn" data-accent="var(--c3)">C3 翡翠</button>
+        <button class="seg-btn" data-accent="var(--c4)">C4 天青</button>
+      </div>
+    </div>
+
+    <div class="controls-group">
+      <span class="label-tag">主題:</span>
+      <select class="select-theme" id="theme-select">
+        <option value="night">夜幕 (Night)</option>
+        <option value="graphite">石墨 (Graphite)</option>
+        <option value="abyss">深海 (Abyss)</option>
+        <option value="forest">森夜 (Forest)</option>
+        <option value="plum">暮紫 (Plum)</option>
+        <option value="chalkboard">黑板 (Chalkboard)</option>
+        <option value="projector-dark">投影高對比·暗</option>
+        <option value="projector-light">投影高對比·亮</option>
+        <option value="paper">紙白 (Paper)</option>
+        <option value="sepia">米黃 (Sepia)</option>
+        <option value="mist">霧藍 (Mist)</option>
+        <option value="stone">石灰 (Stone)</option>
+        <option value="mint">薄荷 (Mint)</option>
+        <option value="rose">杏粉 (Rose)</option>
+      </select>
+
+      <button class="action-btn" id="replay-btn" title="重播錯落進場動畫">
+        ▶ 重播動畫
+      </button>
+      <button class="action-btn primary" id="copy-btn">
+        📋 複製分鏡語法
+      </button>
+    </div>
+  </div>
+
+  <div class="stage-wrapper" id="stage-wrapper">
+    <div class="stage-scaler" id="stage-scaler">
+      <!-- Live Rendered Slide Element -->
+      <div id="slide-container"></div>
+    </div>
+  </div>
+
+  <div class="code-drawer">
+    <div class="drawer-header">
+      <div class="drawer-title">
+        <span>📋 對應的 storyboard.md 表格列語法</span>
+      </div>
+      <button class="action-btn" id="drawer-copy-btn">複製代碼</button>
+    </div>
+    <pre class="drawer-content" id="code-snippet"></pre>
+  </div>
+</div>
+
+<div class="toast" id="toast">已成功複製到剪貼簿！</div>
+
+<script>
+// Catalog Definitions with sample data and HTML generators
+const CATALOG = [
+  // 1. Declarative
+  {
+    id: "L-HERO-TITLE",
+    name: "開場主封面",
+    family: "宣告與定性類",
+    variants: ["default"],
+    render: (v, acc) => `
+      <section class="slide hero" data-deck-active style="--chapter:${acc}">
+        <div class="railtop"></div>
+        <div class="hero__layers" aria-hidden="true"><div class="grid-layer"></div></div>
+        <div class="hero__inner">
+          <h1 class="rise">大國博弈下的半導體戰略</h1>
+          <p class="hero__sub rise d1">全球供應鏈重組與台灣的戰略抉擇</p>
+          <p class="hero__meta rise d2">戰略研究專題研討 · 2026 年秋</p>
+        </div>
+        <div class="hero__hint">切換 <kbd>→</kbd> <kbd>←</kbd></div>
+      </section>`,
+    snippet: `| 0 | — | 14 章節／封面 | L-HERO-TITLE | 0.5 min | title: 大國博弈下的半導體戰略<br>sub: 全球供應鏈重組與台灣的戰略抉擇<br>meta: 戰略研究專題研討 · 2026 年秋 | 開場致詞 | — | — |`
+  },
+  {
+    id: "L-FINALE-SUMMARY",
+    name: "閉幕與核心結論",
+    family: "宣告與定性類",
+    variants: ["default"],
+    render: (v, acc) => `
+      <section class="slide finale" data-deck-active style="--chapter:${acc}">
+        <div class="railtop"></div>
+        <div class="content">
+          <h2 class="rise">結語：在碎片化秩序中尋求主動</h2>
+          <p class="onesentence rise d1">地緣經濟碎片化正以安全之名重構全球生產網絡。</p>
+          <ul class="clean lead-size rise d2 mt">
+            <li>區域化在地生產必然推升全球通膨與邊際運營成本</li>
+            <li>台灣需以核心技術不可替代性維繫戰略主動權</li>
+            <li>歡迎各位師長與同學指教討論 (Q&A)</li>
+          </ul>
+        </div>
+      </section>`,
+    snippet: `| 7 | P7 | 14 結論 | L-FINALE-SUMMARY | 1.5 min | heading: 結語：在碎片化秩序中尋求主動<br>onesentence: 地緣經濟碎片化正以安全之名重構全球生產網絡。<br>points:<br>- 區域化在地生產必然推升全球通膨與邊際運營成本<br>- 台灣需以核心技術不可替代性維繫戰略主動權<br>- 歡迎各位師長與同學指教討論 (Q&A) | 總結全篇並開放提問 | — | — |`
+  },
+
+  // 2. Parallel Expansion
+  {
+    id: "L-3CARD-VERDICT",
+    name: "三子項展開＋底部定論",
+    family: "平行展開與收束類",
+    variants: ["top-rail", "tint-elevated", "side-border"],
+    render: (v, acc) => `
+      <section class="slide" data-deck-active style="--chapter:${acc}">
+        <div class="railtop"></div>
+        <div class="topbar"><span class="eyebrow">理論機制</span><span class="chap"><b>2</b> / 8</span></div>
+        <div class="content">
+          <h2 class="kicker rise">供應鏈在地化的三重摩擦</h2>
+          <p class="lead rise">逆全球化政策遭遇強大結構性阻力</p>
+          <div class="grid three mt">
+            <div class="card card--${v} rise d1">
+              <span class="tag">資本</span>
+              <h3>支出激增</h3>
+              <p>赴美歐建廠資本支出攀升 40-50%，推升邊際成本</p>
+            </div>
+            <div class="card card--${v} rise d2">
+              <span class="tag">生態</span>
+              <h3>聚落斷層</h3>
+              <p>缺乏本土即時化學品供應與封裝測試週邊支援</p>
+            </div>
+            <div class="card card--${v} rise d3">
+              <span class="tag">人才</span>
+              <h3>治理文化</h3>
+              <p>跨國派駐文化差異與當地工會組織治理磨合困難</p>
+            </div>
+          </div>
+          <div class="verdict box rise d4"><em>結論：</em>區域化在地生產雖提升地緣安全，但實質犧牲三十年累積的極限效率</div>
+        </div>
+      </section>`,
+    snippet: `| 2 | P1 | 3 理論展開 | L-3CARD-VERDICT | 3 min | title: 供應鏈在地化的三重摩擦<br>lead: 逆全球化政策遭遇強大結構性阻力<br>cards:<br>- [資本] 支出激增: 赴美歐建廠資本支出攀升 40-50%，推升邊際成本<br>- [生態] 聚落斷層: 缺乏本土即時化學品供應與封裝測試週邊支援<br>- [人才] 治理文化: 跨國派駐文化差異與當地工會組織治理磨合困難<br>verdict: 區域化在地生產雖提升地緣安全，但實質犧牲三十年累積的極限效率 | 口說重點 | 晶圓代工、Q3 | — |`
+  },
+  {
+    id: "L-4CARD-GRID",
+    name: "四象限／四支柱均等網格",
+    family: "平行展開與收束類",
+    variants: ["grid-2x2", "numbered-1-4"],
+    render: (v, acc) => `
+      <section class="slide" data-deck-active style="--chapter:${acc}">
+        <div class="railtop"></div>
+        <div class="topbar"><span class="eyebrow">工具體系</span><span class="chap"><b>3</b> / 8</span></div>
+        <div class="content">
+          <h2 class="kicker rise">經濟脅迫的四大工具箱</h2>
+          <p class="lead rise">非軍事強制手段的多維度展現</p>
+          <div class="grid two mt">
+            <div class="card rise d1">
+              <span class="tag">${v === 'numbered-1-4' ? '01' : '關稅'}</span>
+              <h3>懲罰性關稅</h3>
+              <p>針對戰略性關鍵產業精準加徵關稅，打擊對手出口優勢</p>
+            </div>
+            <div class="card rise d2">
+              <span class="tag">${v === 'numbered-1-4' ? '02' : '封鎖'}</span>
+              <h3>出口管制條例</h3>
+              <p>限制雙用途核心零組件與敏感軟硬體技術銷往特定國家</p>
+            </div>
+            <div class="card rise d3">
+              <span class="tag">${v === 'numbered-1-4' ? '03' : '審查'}</span>
+              <h3>外資安全審查</h3>
+              <p>嚴格過濾敏感領域跨境併購與境外直接投資管道</p>
+            </div>
+            <div class="card rise d4">
+              <span class="tag">${v === 'numbered-1-4' ? '04' : '標準'}</span>
+              <h3>監管合規壁壘</h3>
+              <p>設置嚴格資料在地化法規與資安合規門檻阻絕市場准入</p>
+            </div>
+          </div>
+        </div>
+      </section>`,
+    snippet: `| 3 | P2 | 7 多項對比 | L-4CARD-GRID | 2.5 min | title: 經濟脅迫的四大工具箱<br>lead: 非軍事強制手段的多維度展現<br>cards:<br>- [關稅] 懲罰性關稅: 針對戰略性關鍵產業精準加徵關稅，打擊對手出口優勢<br>- [封鎖] 出口管制條例: 限制雙用途核心零組件與敏感軟硬體技術銷往特定國家<br>- [審查] 外資安全審查: 嚴格過濾敏感領域跨境併購與境外直接投資管道<br>- [標準] 監管合規壁壘: 設置嚴格資料在地化法規與資安合規門檻阻絕市場准入 | 口說重點 | 經濟治國方略、Q1 | — |`
+  },
+  {
+    id: "L-BENTO-FOCUS",
+    name: "便當盒非對稱焦點",
+    family: "平行展開與收束類",
+    variants: ["left-heavy", "top-heavy"],
+    render: (v, acc) => `
+      <section class="slide" data-deck-active style="--chapter:${acc}">
+        <div class="railtop"></div>
+        <div class="topbar"><span class="eyebrow">戰略分析</span><span class="chap"><b>1</b> / 8</span></div>
+        <div class="content">
+          <h2 class="kicker rise">戰略安全思維的主導轉變</h2>
+          <p class="lead rise">自由主義經貿秩序實質轉向新重商主義</p>
+          <div class="bento bento--${v} mt">
+            <div class="card card--tint-elevated bento__hero rise d1">
+              <span class="tag">核心典範轉移</span>
+              <h3 style="font-size:calc(52px * var(--deck-font-scale, 1))">國家安全壓倒比較優勢</h3>
+              <p class="lead-size" style="line-height:1.6">自 2018 年起，主要大國經貿戰略已由追求生產效率全面轉向追求供應鏈去風險、技術主權與戰略自主。</p>
+            </div>
+            <div class="card rise d2">
+              <span class="tag">防護</span>
+              <h3>友岸外包</h3>
+              <p>限縮於信任夥伴之同盟圈生產</p>
+            </div>
+            <div class="card rise d3">
+              <span class="tag">備援</span>
+              <h3>戰略囤儲</h3>
+              <p>關鍵礦物與晶片戰備存量倍增</p>
+            </div>
+          </div>
+          <div class="verdict box rise d4"><em>定論：</em>經貿政策與技術標準已徹底地緣武器化</div>
+        </div>
+      </section>`,
+    snippet: `| 1 | P1 | 3 理論 | L-BENTO-FOCUS | 2.5 min | title: 戰略安全思維的主導轉變<br>lead: 自由主義經貿秩序實質轉向新重商主義<br>hero_card: {tag: "核心典範轉移", head: "國家安全壓倒比較優勢", body: "自 2018 年起，主要大國經貿戰略已由追求生產效率全面轉向追求供應鏈去風險、技術主權與戰略自主。"}<br>sub_cards:<br>- [防護] 友岸外包: 限縮於信任夥伴之同盟圈生產<br>- [備援] 戰略囤儲: 關鍵礦物與晶片戰備存量倍增<br>verdict: 經貿政策與技術標準已徹底地緣武器化 | 口說重點 | 在岸外包、Q1 | — |`
+  },
+  {
+    id: "L-SPLIT-ANCHOR",
+    name: "1:2 概念錨點式",
+    family: "平行展開與收束類",
+    variants: ["quote-style", "card-list"],
+    render: (v, acc) => `
+      <section class="slide" data-deck-active style="--chapter:${acc}">
+        <div class="railtop"></div>
+        <div class="topbar"><span class="eyebrow">結構權力</span><span class="chap"><b>4</b> / 8</span></div>
+        <div class="content">
+          <h2 class="kicker rise">相互依存的武器化結構</h2>
+          <div class="split-anchor mt">
+            <div class="split-anchor__hero rise d1">
+              <blockquote class="pull">
+                誰掌控了網絡的樞紐節點，誰就擁有非對稱的結構性制約權力。
+              </blockquote>
+              <div class="muted mt" style="font-size:32px">出處：Farrell & Newman (2019)</div>
+            </div>
+            <div class="split-anchor__list">
+              <div class="card rise d2">
+                <span class="tag">中樞節點一</span>
+                <h3>全球結算管道 (SWIFT)</h3>
+                <p>壟斷全球跨國資本支付通訊協定</p>
+              </div>
+              <div class="card rise d3">
+                <span class="tag">中樞節點二</span>
+                <h3>先進曝光機 (EUV) 專利</h3>
+                <p>上游核心零組件與專利技術集中度極高</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>`,
+    snippet: `| 4 | P3 | 1 核心命題 | L-SPLIT-ANCHOR | 2 min | title: 相互依存的武器化結構<br>anchor: 誰掌控了網絡的樞紐節點，誰就擁有非對稱的結構性制約權力。<br>cite: Farrell & Newman (2019)<br>items:<br>- [中樞節點一] 全球結算管道 (SWIFT): 壟斷全球跨國資本支付通訊協定<br>- [中樞節點二] 先進曝光機 (EUV) 專利: 上游核心零組件與專利技術集中度極高 | 口說重點 | 相互依存、Q4 | — |`
+  },
+
+  // 3. Relational
+  {
+    id: "L-VS-CONFRONT",
+    name: "兩造交鋒對峙",
+    family: "關係對抗與分類類",
+    variants: ["split-rail", "card-versus"],
+    render: (v, acc) => `
+      <section class="slide" data-deck-active style="--chapter:${acc}">
+        <div class="railtop"></div>
+        <div class="topbar"><span class="eyebrow">戰略辯論</span><span class="chap"><b>3</b> / 8</span></div>
+        <div class="content">
+          <h2 class="kicker rise">避險還是結盟？小型行為者的抉擇</h2>
+          <p class="lead rise" style="color:var(--text);font-weight:700">面對大國體系性壓力，台灣的最優戰略為何？</p>
+          <div class="confront mt">
+            <div class="card confront__side rise d1">
+              <span class="tag">全面對美結盟</span>
+              <ul class="clean lead-size mt">
+                <li>獲取最高階安全保障承諾</li>
+                <li>高階技術標準深度綁定</li>
+              </ul>
+            </div>
+            <div class="confront__vs rise d2">
+              <div class="confront__badge">VS</div>
+            </div>
+            <div class="card confront__side rise d1">
+              <span class="tag" style="color:var(--text)">戰略自主避險</span>
+              <ul class="clean lead-size mt">
+                <li>保留市場多元迴旋彈性空間</li>
+                <li>避免過早承擔第一線衝突風險</li>
+              </ul>
+            </div>
+          </div>
+          <div class="verdict box rise d3"><em>裁決／提問：</em>當安全承諾與經濟利益不可兼得時，政策紅線在哪裡？</div>
+        </div>
+      </section>`,
+    snippet: `| 3 | P3 | 6 雙邊對照 | L-VS-CONFRONT | 3 min | title: 避險還是結盟？小型行為者的抉擇<br>issue: 面對大國體系性壓力，台灣的最優戰略為何？<br>side_a: {camp: "全面對美結盟", points: ["獲取最高階安全保障承諾", "高階技術標準深度綁定"]}<br>side_b: {camp: "戰略自主避險", points: ["保留市場多元迴旋彈性空間", "避免過早承擔第一線衝突風險"]}<br>ask_or_verdict: 當安全承諾與經濟利益不可兼得時，政策紅線在哪裡？ | 口說重點 | 戰略避險、Q5 | — |`
+  },
+  {
+    id: "L-MATRIX-DEEPDIVE",
+    name: "2×2 矩陣＋焦點象限引出",
+    family: "關係對抗與分類類",
+    variants: ["split-note", "floating-callout"],
+    render: (v, acc) => `
+      <section class="slide" data-deck-active style="--chapter:${acc}">
+        <div class="railtop"></div>
+        <div class="topbar"><span class="eyebrow">分類學</span><span class="chap"><b>4</b> / 8</span></div>
+        <div class="content">
+          <h2 class="kicker rise">威懾政策矩陣分類</h2>
+          <div class="matrix-deepdive mt">
+            <div class="matrix">
+              <div class="axis-y">軍事部署烈度</div>
+              <table>
+                <thead>
+                  <tr><th></th><th>戰略模糊</th><th>戰略清晰</th></tr>
+                </thead>
+                <tbody>
+                  <tr><th>縱深防衛</th><td><b>傳統平衡</b><span>維持現狀</span></td><td><b>延伸威懾</b><span>明確條約保證</span></td></tr>
+                  <tr><th>前沿拒止</th><td class="hi"><b>刺蝟防衛</b><span>不對稱戰力</span></td><td><b>全面同盟</b><span>駐軍協防</span></td></tr>
+                </tbody>
+              </table>
+              <div class="axis-x">承諾明確度</div>
+            </div>
+            <div class="card card--tint-elevated matrix-deepdive__note rise d2">
+              <span class="tag">焦點象限特寫 (Q3)</span>
+              <p class="lead-size mt">本研究聚焦第 3 象限：在維持政治彈性的同時，大幅提升不對稱拒止能力的實質威懾效益。</p>
+            </div>
+          </div>
+        </div>
+      </section>`,
+    snippet: `| 4 | P4 | 4 雙軸分類 | L-MATRIX-DEEPDIVE | 3 min | title: 威懾政策矩陣分類<br>axis_x: {name: "承諾明確度", low: "戰略模糊", high: "戰略清晰"}<br>axis_y: {name: "軍事部署烈度", low: "前沿拒止", high: "縱深防衛"}<br>cells:<br>- Q1: 傳統平衡: 維持現狀<br>- Q2: 延伸威懾: 明確條約保證<br>- Q3: 刺蝟防衛: 不對稱戰力<br>- Q4: 全面同盟: 駐軍協防<br>focus_quadrant: 3<br>deepdive_note: 本研究聚焦第 3 象限：在維持政治彈性的同時，大幅提升不對稱拒止能力的實質威懾效益。 | 口說重點 | 不對稱作戰、Q2 | — |`
+  },
+  {
+    id: "L-SPECTRUM-POLES",
+    name: "光譜軸線＋端點案例錨定",
+    family: "關係對抗與分類類",
+    variants: ["gradient-bar", "step-pills"],
+    render: (v, acc) => `
+      <section class="slide" data-deck-active style="--chapter:${acc}">
+        <div class="railtop"></div>
+        <div class="topbar"><span class="eyebrow">政策光譜</span><span class="chap"><b>5</b> / 8</span></div>
+        <div class="content">
+          <h2 class="kicker rise">國家干預程度的政策光譜</h2>
+          <div class="spectrum mt">
+            <div class="marks rise d1">
+              <div class="mark" style="left:20%"><b>早期矽谷模式</b><span>國防研發採購補助</span></div>
+              <div class="mark" style="left:55%"><b>歐盟晶片法案</b><span>在地補貼與法規合規</span></div>
+              <div class="mark" style="left:85%"><b>國家大基金模式</b><span>直接股權注資集中採購</span></div>
+            </div>
+            <div class="bar"></div>
+            <div class="ends"><span>自由放任市場</span><span>國家資本主義</span></div>
+          </div>
+          <div class="verdict box rise d3 mt"><em>定論：</em>現代高科技半導體競爭已無純粹自由市場</div>
+        </div>
+      </section>`,
+    snippet: `| 5 | P5 | 5 光譜連續 | L-SPECTRUM-POLES | 2 min | title: 國家干預程度的政策光譜<br>pole_left: 自由放任市場<br>pole_right: 國家資本主義<br>markers:<br>- 早期矽谷模式 | 20% | 國防研發採購補助<br>- 歐盟晶片法案 | 55% | 在地補貼與法規合規<br>- 國家大基金模式 | 85% | 直接股權注資集中採購<br>verdict: 現代高科技半導體競爭已無純粹自由市場 | 口說重點 | 產業政策、Q3 | — |`
+  },
+
+  // 4. Progression
+  {
+    id: "L-FLOW-3STAGE",
+    name: "三階段機制推演鏈",
+    family: "歷時演進與因果推進類",
+    variants: ["node-arrow", "chevron-step"],
+    render: (v, acc) => `
+      <section class="slide" data-deck-active style="--chapter:${acc}">
+        <div class="railtop"></div>
+        <div class="topbar"><span class="eyebrow">因果機制</span><span class="chap"><b>6</b> / 8</span></div>
+        <div class="content">
+          <h2 class="kicker rise">灰色地帶侵擾的三階段升級機制</h2>
+          <p class="lead rise">在不跨越戰爭門檻下重塑現狀邊界</p>
+          <div class="flowdiag mt">
+            <div class="flownode rise d1"><h3>常態化海空巡航</h3><p>壓縮防空識別區心理界線與預警反應時間</p></div>
+            <div class="flowarrow">→</div>
+            <div class="flownode rise d2"><h3>法律戰管轄宣示</h3><p>發布海警執法規則，挑戰既有執法權力</p></div>
+            <div class="flowarrow">→</div>
+            <div class="flownode rise d3"><h3>隔離性封控演練</h3><p>以演習名義實施局部海空管制實質干擾</p></div>
+          </div>
+          <div class="verdict box rise d4 mt"><em>最終均衡：</em>採取切香腸戰術實質推進戰略包圍</div>
+        </div>
+      </section>`,
+    snippet: `| 6 | P6 | 8 流程機制 | L-FLOW-3STAGE | 3 min | title: 灰色地帶侵擾的三階段升級機制<br>lead: 在不跨越戰爭門檻下重塑現狀邊界<br>stages:<br>- 常態化海空巡航: 壓縮防空識別區心理界線與預警反應時間<br>- 法律戰管轄宣示: 發布海警執法規則，挑戰既有執法權力<br>- 隔離性封控演練: 以演習名義實施局部海空管制實質干擾<br>verdict: 採取切香腸戰術實質推進戰略包圍 | 口說重點 | 灰色地帶、Q6 | — |`
+  },
+  {
+    id: "L-TIMELINE-RAIL",
+    name: "軌道式大事記時間軸",
+    family: "歷時演進與因果推進類",
+    variants: ["top-rail", "alternating"],
+    render: (v, acc) => `
+      <section class="slide" data-deck-active style="--chapter:${acc}">
+        <div class="railtop"></div>
+        <div class="topbar"><span class="eyebrow">歷史演進</span><span class="chap"><b>2</b> / 8</span></div>
+        <div class="content">
+          <h2 class="kicker rise">美中科技競爭的升級軌跡</h2>
+          <div class="timeline mt">
+            <div class="tl rise d1"><time>2018 年</time><b>實體清單祭出</b><p>中興與華為通訊業務受限</p></div>
+            <div class="tl rise d2"><time>2020 年</time><b>外國直接產品規則</b><p>切斷台積電晶片代工管道</p></div>
+            <div class="tl rise d3"><time>2022 年</time><b>1007 出口管制新規</b><p>全面限制高階運算晶片與設備</p></div>
+            <div class="tl rise d4"><time>2024 年</time><b>同盟多邊協調機制</b><p>荷蘭日本同步跟進先進光刻機</p></div>
+          </div>
+          <div class="verdict box rise d4 mt"><em>歷史啟示：</em>管制手段由點狀個別企業懲罰走向體系級全面圍堵</div>
+        </div>
+      </section>`,
+    snippet: `| 2 | P2 | 9 時間軸 | L-TIMELINE-RAIL | 2.5 min | title: 美中科技競爭的升級軌跡<br>events:<br>- 2018 年 | 實體清單祭出: 中興與華為通訊業務受限<br>- 2020 年 | 外國直接產品規則: 切斷台積電晶片代工管道<br>- 2022 年 | 1007 出口管制新規: 全面限制高階運算晶片與設備<br>- 2024 年 | 同盟多邊協調機制: 荷蘭日本同步跟進先進光刻機<br>takeaway: 管制手段由點狀個別企業懲罰走向體系級全面圍堵 | 口說重點 | 出口管制、Q2 | — |`
+  },
+  {
+    id: "L-CASCADE-FUNNEL",
+    name: "漏斗層層收斂",
+    family: "歷時演進與因果推進類",
+    variants: ["stacked-tiers", "concentric-cards"],
+    render: (v, acc) => `
+      <section class="slide" data-deck-active style="--chapter:${acc}">
+        <div class="railtop"></div>
+        <div class="topbar"><span class="eyebrow">分析層次</span><span class="chap"><b>3</b> / 8</span></div>
+        <div class="content">
+          <h2 class="kicker rise">外交政策決策的三層分析架構</h2>
+          <div class="tiers mt">
+            <div class="tier rise d1">
+              <div style="font-weight:700;color:var(--chapter);font-size:36px">體系層 (Systemic)</div>
+              <div><h3 style="font-size:42px;margin:0 0 6px">權力對比結構</h3><p style="margin:0;font-size:36px;color:var(--body)">無政府狀態下的相對獲益競爭與大國博弈</p></div>
+            </div>
+            <div class="tier rise d2">
+              <div style="font-weight:700;color:var(--chapter);font-size:36px">國內層 (Domestic)</div>
+              <div><h3 style="font-size:42px;margin:0 0 6px">制度與利益集團</h3><p style="margin:0;font-size:36px;color:var(--body)">選民偏好、國會立法約束與關鍵產業利益遊說</p></div>
+            </div>
+            <div class="tier rise d3">
+              <div style="font-weight:700;color:var(--chapter);font-size:36px">領導層 (Individual)</div>
+              <div><h3 style="font-size:42px;margin:0 0 6px">決策者認知基模</h3><p style="margin:0;font-size:36px;color:var(--body)">歷史借鑑經驗、危機認知與風險偏好特質</p></div>
+            </div>
+          </div>
+          <div class="verdict box rise d4 mt"><em>核心焦點：</em>本文聚焦國內層政治如何扭曲體系層的結構性壓力傳導</div>
+        </div>
+      </section>`,
+    snippet: `| 3 | P3 | 10 層級架構 | L-CASCADE-FUNNEL | 2.5 min | title: 外交政策決策的三層分析架構<br>levels:<br>- 體系層 (Systemic) | 權力對比結構: 無政府狀態下的相對獲益競爭與大國博弈<br>- 國內層 (Domestic) | 制度與利益集團: 選民偏好、國會立法約束與關鍵產業利益遊說<br>- 領導層 (Individual) | 決策者認知基模: 歷史借鑑經驗、危機認知與風險偏好特質<br>core_focus: 本文聚焦國內層政治如何扭曲體系層的結構性壓力傳導 | 口說重點 | 分析層次、Q1 | — |`
+  },
+
+  // 5. Critique
+  {
+    id: "L-QUOTE-CRITIQUE",
+    name: "文獻原話引述＋三重解構",
+    family: "學術批判、文本與實證類",
+    variants: ["quote-top", "quote-left"],
+    render: (v, acc) => `
+      <section class="slide" data-deck-active style="--chapter:${acc}">
+        <div class="railtop"></div>
+        <div class="topbar"><span class="eyebrow">文獻批判</span><span class="chap"><b>4</b> / 8</span></div>
+        <div class="content">
+          <h2 class="kicker rise">對「攻勢現實主義」命題的批判</h2>
+          <div class="quote-critique mt">
+            <blockquote class="pull rise d1">
+              國際無政府狀態迫使所有大國最大化其相對權力，和平只不過是權力平衡下的暫時休戰。
+              <cite>— Mearsheimer (2001), p. 29</cite>
+            </blockquote>
+            <div class="quote-critique__cards mt">
+              <div class="card rise d2"><span class="tag">前提</span><p class="lead-size mt">單一安全假設：忽略國家同時追求經濟繁榮與制度合法性</p></div>
+              <div class="card rise d3"><span class="tag">實證</span><p class="lead-size mt">歐洲統合反例：無法解釋後冷戰歐洲安全共同體內部的自願去武裝</p></div>
+              <div class="card rise d4"><span class="tag">邏輯</span><p class="lead-size mt">網絡制約忽視：現代技術相互依存構成了深層的制度性制約</p></div>
+            </div>
+          </div>
+        </div>
+      </section>`,
+    snippet: `| 4 | P4 | 12 引言 | L-QUOTE-CRITIQUE | 2.5 min | title: 對「攻勢現實主義」命題的批判<br>quote: 國際無政府狀態迫使所有大國最大化其相對權力，和平只不過是權力平衡下的暫時休戰。<br>cite: Mearsheimer (2001), p. 29<br>critiques:<br>- [前提] 單一安全假設：忽略國家同時追求經濟繁榮與制度合法性<br>- [實證] 歐洲統合反例：無法解釋後冷戰歐洲安全共同體內部的自願去武裝<br>- [邏輯] 網絡制約忽視：現代技術相互依存構成了深層的制度性制約 | 口說重點 | 攻勢現實主義、Q2 | — |`
+  },
+  {
+    id: "L-HYPOTHESIS-TEST",
+    name: "理論假設 vs 實證落差",
+    family: "學術批判、文本與實證類",
+    variants: ["contrast-pillars", "conflict-flow"],
+    render: (v, acc) => `
+      <section class="slide" data-deck-active style="--chapter:${acc}">
+        <div class="railtop"></div>
+        <div class="topbar"><span class="eyebrow">假說檢驗</span><span class="chap"><b>5</b> / 8</span></div>
+        <div class="content">
+          <h2 class="kicker rise">貿易相互依存與衝突機率檢驗</h2>
+          <div class="hypo-test mt">
+            <div class="card rise d1">
+              <span class="tag">古典自由主義假說 (H1)</span>
+              <h3>雙邊貿易依存度越高，武力衝突機率越低</h3>
+              <p class="mt">理論邏輯：戰爭帶來的經貿損失遠高於潛在領土收益</p>
+            </div>
+            <div class="card card--tint-elevated rise d2">
+              <span class="tag" style="color:var(--text)">實證發現：背馳反例</span>
+              <h3>在特定高技術依賴領域，經濟制裁與衝突頻率顯著上升</h3>
+            </div>
+          </div>
+          <div class="verdict box rise d3 mt"><em>理論謎題／意涵：</em>相互依存並未消除衝突，反而提供了非對稱打擊的新弱點槓桿。</div>
+        </div>
+      </section>`,
+    snippet: `| 5 | P5 | 6 假說落差 | L-HYPOTHESIS-TEST | 2.5 min | title: 貿易相互依存與衝突機率檢驗<br>hypothesis: {label: "古典自由主義假說 (H1)", head: "雙邊貿易依存度越高，武力衝突機率越低", logic: "理論邏輯：戰爭帶來的經貿損失遠高於潛在領土收益"}<br>finding: {head: "在特定高技術依賴領域，經濟制裁與衝突頻率顯著上升", status: "背馳反例"}<br>puzzle: 相互依存並未消除衝突，反而提供了非對稱打擊的新弱點槓桿。 | 口說重點 | 商業自由主義、Q5 | — |`
+  },
+  {
+    id: "L-STAT-HERO",
+    name: "單一震撼數據指標",
+    family: "學術批判、文本與實證類",
+    variants: ["stat-left", "stat-center"],
+    render: (v, acc) => `
+      <section class="slide" data-deck-active style="--chapter:${acc}">
+        <div class="railtop"></div>
+        <div class="topbar"><span class="eyebrow">核心數據</span><span class="chap"><b>5</b> / 8</span></div>
+        <div class="content">
+          <h2 class="kicker rise">全球高階製程的集中度風險</h2>
+          <div class="stat-hero mt">
+            <div class="stat-hero__stat rise d1">
+              <div class="stat-hero__num">92%</div>
+              <div class="lead" style="font-weight:700;margin-top:12px">台灣佔全球 10 奈米以下先進製程市佔率</div>
+              <p class="muted mt" style="font-size:32px">數據來源：波士頓諮詢公司 (BCG) 全球半導體供應鏈報告</p>
+            </div>
+            <div class="stat-hero__body">
+              <div class="card rise d2">
+                <h3>戰略不可替代性</h3>
+                <p>全球主要經濟體在技術上高度依賴單一地理節點的安全穩定</p>
+              </div>
+              <div class="card rise d3">
+                <h3>供應鏈脆弱樞紐</h3>
+                <p>任何局部海空封鎖將引發全球電子產業的即時斷鏈危機</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>`,
+    snippet: `| 5 | P5 | 11 數字 | L-STAT-HERO | 2 min | title: 全球高階製程的集中度風險<br>stat_number: 92%<br>stat_label: 台灣佔全球 10 奈米以下先進製程市佔率<br>context: 數據來源：波士頓諮詢公司 (BCG) 全球半導體供應鏈報告<br>implications:<br>- 戰略不可替代性: 全球主要經濟體在技術上高度依賴單一地理節點的安全穩定<br>- 供應鏈脆弱樞紐: 任何局部海空封鎖將引發全球電子產業的即時斷鏈危機 | 口說重點 | 矽盾、Q4 | — |`
+  },
+  {
+    id: "L-DEFN-EXAMPLE",
+    name: "概念界定與典型例證",
+    family: "學術批判、文本與實證類",
+    variants: ["dict-card", "split-cards"],
+    render: (v, acc) => `
+      <section class="slide" data-deck-active style="--chapter:${acc}">
+        <div class="railtop"></div>
+        <div class="topbar"><span class="eyebrow">概念界定</span><span class="chap"><b>2</b> / 8</span></div>
+        <div class="content">
+          <h2 class="kicker rise">概念操作化：經濟治國方略</h2>
+          <div class="defn mt">
+            <div class="term rise d1">
+              <h3>經濟治國方略 (Economic Statecraft)<small>語源：Baldwin (1985)</small></h3>
+              <p>主權行為者運用經濟工具（作為手段）試圖影響其他行為者的營運環境或政策行為（作為目標）的外交行動總和。</p>
+            </div>
+            <div class="rise d2">
+              <div class="example">
+                <b>典型例證</b>
+                <p>凍結特定跨國銀行資產以施加外交政策談判壓力</p>
+              </div>
+              <div class="example mt" style="border-left-color:var(--hair)">
+                <b>邊界／反例</b>
+                <p>純粹基於國內特定產業保護所實施的反傾銷關稅（非外交戰略目標）</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>`,
+    snippet: `| 2 | P2 | 2 定義 | L-DEFN-EXAMPLE | 2 min | title: 概念操作化：經濟治國方略<br>term: 經濟治國方略 (Economic Statecraft)<br>context: 語源：Baldwin (1985)<br>defn: 主權行為者運用經濟工具（作為手段）試圖影響其他行為者的營運環境或政策行為（作為目標）的外交行動總和。<br>pos_example: 凍結特定跨國銀行資產以施加外交政策談判壓力<br>neg_example: 純粹基於國內特定產業保護所實施的反傾銷關稅（非外交戰略目標） | 口說重點 | 概念界定、Q1 | — |`
+  }
+];
+
+// State
+let activeLayout = CATALOG[0];
+let activeVariant = activeLayout.variants[0];
+let activeAccent = "var(--c1)";
+
+// Elements
+const listEl = document.getElementById("layout-list");
+const variantGroupEl = document.getElementById("variant-group");
+const accentGroupEl = document.getElementById("accent-group");
+const slideContainerEl = document.getElementById("slide-container");
+const codeSnippetEl = document.getElementById("code-snippet");
+const stageScalerEl = document.getElementById("stage-scaler");
+const stageWrapperEl = document.getElementById("stage-wrapper");
+const themeSelectEl = document.getElementById("theme-select");
+const toastEl = document.getElementById("toast");
+
+// Responsive 16:9 Scaler
+function resizeStage() {
+  const wrapperRect = stageWrapperEl.getBoundingClientRect();
+  const pad = 32;
+  const availW = wrapperRect.width - pad;
+  const availH = wrapperRect.height - pad;
+  const scale = Math.min(availW / 1920, availH / 1080);
+  stageScalerEl.style.transform = `scale(${scale})`;
+}
+window.addEventListener("resize", resizeStage);
+
+// Render Layout List in Sidebar
+function renderSidebar(items) {
+  listEl.innerHTML = "";
+  const groups = {};
+  items.forEach(item => {
+    if (!groups[item.family]) groups[item.family] = [];
+    groups[item.family].push(item);
+  });
+
+  for (const [family, groupItems] of Object.entries(groups)) {
+    const groupEl = document.createElement("div");
+    groupEl.className = "family-group";
+    groupEl.innerHTML = `<div class="family-title">${family}</div>`;
+
+    groupItems.forEach(item => {
+      const itemEl = document.createElement("div");
+      itemEl.className = `layout-item ${item.id === activeLayout.id ? "active" : ""}`;
+      itemEl.innerHTML = `
+        <span class="code">${item.id}</span>
+        <span class="name">${item.name}</span>
+      `;
+      itemEl.addEventListener("click", () => selectLayout(item));
+      groupEl.appendChild(itemEl);
+    });
+
+    listEl.appendChild(groupEl);
+  }
+}
+
+// Select Layout
+function selectLayout(layout) {
+  activeLayout = layout;
+  activeVariant = layout.variants[0];
+  renderSidebar(CATALOG);
+  updateVariantButtons();
+  updateStage();
+}
+
+// Update Variant Buttons
+function updateVariantButtons() {
+  variantGroupEl.innerHTML = "";
+  activeLayout.variants.forEach(v => {
+    const btn = document.createElement("button");
+    btn.className = `seg-btn ${v === activeVariant ? "active" : ""}`;
+    btn.textContent = v;
+    btn.addEventListener("click", () => {
+      activeVariant = v;
+      updateVariantButtons();
+      updateStage();
+    });
+    variantGroupEl.appendChild(btn);
+  });
+}
+
+// Update Stage & Snippet
+function updateStage() {
+  slideContainerEl.innerHTML = activeLayout.render(activeVariant, activeAccent);
+  codeSnippetEl.textContent = activeLayout.snippet;
+
+  // Re-trigger entrance animation
+  const slide = slideContainerEl.querySelector(".slide");
+  if (slide) {
+    slide.removeAttribute("data-deck-active");
+    void slide.offsetWidth;
+    slide.setAttribute("data-deck-active", "");
+  }
+}
+
+// Replay Animation
+document.getElementById("replay-btn").addEventListener("click", () => {
+  const slide = slideContainerEl.querySelector(".slide");
+  if (slide) {
+    slide.removeAttribute("data-deck-active");
+    void slide.offsetWidth;
+    slide.setAttribute("data-deck-active", "");
+  }
+});
+
+// Accent Buttons
+accentGroupEl.querySelectorAll(".seg-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    accentGroupEl.querySelectorAll(".seg-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    activeAccent = btn.dataset.accent;
+    updateStage();
+  });
+});
+
+// Theme Select
+themeSelectEl.addEventListener("change", (e) => {
+  document.documentElement.setAttribute("data-deck-theme-default", e.target.value);
+});
+
+// Copy to Clipboard
+function copySnippet() {
+  navigator.clipboard.writeText(activeLayout.snippet).then(() => {
+    toastEl.classList.add("show");
+    setTimeout(() => toastEl.classList.remove("show"), 2000);
+  });
+}
+document.getElementById("copy-btn").addEventListener("click", copySnippet);
+document.getElementById("drawer-copy-btn").addEventListener("click", copySnippet);
+
+// Search Filtering
+document.getElementById("filter-input").addEventListener("input", (e) => {
+  const query = e.target.value.toLowerCase().trim();
+  const filtered = CATALOG.filter(item =>
+    item.id.toLowerCase().includes(query) || item.name.toLowerCase().includes(query)
+  );
+  renderSidebar(filtered);
+});
+
+// Init
+renderSidebar(CATALOG);
+updateVariantButtons();
+updateStage();
+resizeStage();
+</script>
+</body>
+</html>

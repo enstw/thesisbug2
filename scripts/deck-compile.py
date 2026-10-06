@@ -178,7 +178,13 @@ def main() -> int:
     parser.add_argument("talk", nargs="?", help="the talk to compile (defaults to current)")
     parser.add_argument("--check", action="store_true", help="exit 1 if deck.html needs recompilation")
     parser.add_argument("--dry-run", action="store_true", help="print compiled output without writing")
+    parser.add_argument("--explorer", action="store_true", help="print file:// URI to open the interactive layout explorer")
     args = parser.parse_args()
+
+    if args.explorer:
+        explorer_path = HERE.parent / "docs" / "layout-explorer.html"
+        print(f"file://{explorer_path.resolve()}")
+        return 0
 
     root = course_root()
     unit, talk = resolve_talk(args.talk)

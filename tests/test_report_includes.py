@@ -1,8 +1,8 @@
-"""A report assembled with Quarto includes is checked as it renders.
+"""A Model assembled with Quarto includes is checked as it renders.
 
-The facts of a talk live in the notes a report includes, so check-citations
-and check-zh-variants have to read those files; check-zh-variants also reads
-the unit's other Markdown, and none of them follow a path out of the unit.
+Facts may live in files a Model includes or in the unit's shared backup
+knowledge. Citation and language gates read those surfaces; the language gate
+also reads the unit's other Markdown, and none follows a path out of the unit.
 """
 
 import importlib.util
@@ -35,13 +35,15 @@ class ReportIncludeTests(unittest.TestCase):
         self.env = dict(os.environ, FW_COURSE_ROOT=str(self.root))
         self.write("references.bib",
                    "@article{inc2020a,\n  author = {A},\n  title = {T},\n  year = {2020},\n}\n"
-                   "@article{dead2020b,\n  author = {B},\n  title = {T},\n  year = {2020},\n}\n")
+                   "@article{dead2020b,\n  author = {B},\n  title = {T},\n  year = {2020},\n}\n"
+                   "@article{backup2020c,\n  author = {C},\n  title = {T},\n  year = {2020},\n}\n")
         self.write("draft.qmd",
                    "# 導言\n\n<!-- 停用：{{< include notes/b.md >}} -->\n\n"
                    "{{< include notes/a.md >}}\n\n{{< include ../02-paper-other/x.md >}}\n")
         self.write("notes/a.md", "# A\n\n內容 [@inc2020a, {3}]。\n\n{{< include /notes/nested.md >}}\n")
         self.write("notes/nested.md", "巢狀。\n\n{{< include a.md >}}\n")
         self.write("notes/b.md", "停用的檔案 [@dead2020b]。\n")
+        self.write("notes/glossary.md", "# 名詞\n\n## 制度\n\n備援知識 [@backup2020c, {9}]。\n")
         (self.root / "units" / "02-paper-other" / "x.md").write_text(f"別的單元{VARIANT}。\n", encoding="utf-8")
 
     def write(self, name, text):
@@ -61,12 +63,14 @@ class ReportIncludeTests(unittest.TestCase):
     def test_check_citations_reads_included_notes(self):
         r = self.run_fw("check-citations.py", "01-presentation-talk")
         self.assertEqual(r.returncode, 0, r.stdout)
-        self.assertIn("1 cited keys", r.stdout)
+        self.assertIn("2 cited keys", r.stdout)
         self.assertIn("UNUSED ENTRIES", r.stdout)
-        self.assertIn("@dead2020b", r.stdout, "a commented-out include is not part of the report")
+        self.assertIn("@dead2020b", r.stdout, "a commented-out include is not part of the Model")
+        self.assertNotIn("@backup2020c\n", r.stdout.split("UNUSED ENTRIES", 1)[1],
+                         "the unit glossary is checked directly without a report include")
 
     def test_check_zh_variants_reads_the_units_prose_but_not_sources_or_logs(self):
-        self.write("notes/standalone.md", f"沒被收進報告的筆記{VARIANT}。\n")
+        self.write("notes/standalone.md", f"沒被收進 Model 的筆記{VARIANT}。\n")
         self.write("storyboard.md", f"| 1 | 分鏡{VARIANT} |\n")
         self.write("refs/source.md", f"轉錄保留原文{VARIANT}。\n")
         self.write("PROGRESS.md", f"紀錄引用原文{VARIANT}。\n")

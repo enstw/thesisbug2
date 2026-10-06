@@ -47,16 +47,29 @@ class DeckScaffoldTests(unittest.TestCase):
 
 
     def test_presentation_scaffolds_the_upstream_chain(self):
-        # Report → points → storyboard → deck: points.md is the layer every
-        # storyboard row names, so unit-init must copy it beside the others.
+        # Declared Model → points → storyboard → deck. A reading guide's Model
+        # is guide.qmd; the source summaries remain stable upstream.
         for variant in ("thesis", "reading-guide"):
             with self.subTest(variant=variant):
                 files = unit_init.presentation_files(variant)
-                for name in ("draft.qmd", "points.md", "storyboard.md"):
+                model = "guide.qmd" if variant == "reading-guide" else "draft.qmd"
+                for name in (model, "points.md", "storyboard.md"):
                     self.assertIn(name, files)
                     self.assertTrue(files[name].is_file(), files[name])
         storyboard = unit_init.presentation_files("thesis")["storyboard.md"].read_text(encoding="utf-8")
         self.assertIn("points.md", storyboard)
+
+    def test_reading_guide_build_renders_guide_instead_of_legacy_draft(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            unit = root / "units/01-presentation-guide"
+            unit.mkdir(parents=True)
+            work = {"type": "presentation", "variant": "reading-guide",
+                    "title": "導讀", "subtitle": "", "author": "作者", "date": ""}
+            build.generate(unit, root, work)
+            yml = (unit / "_quarto.yml").read_text(encoding="utf-8")
+            self.assertIn("    - guide.qmd", yml)
+            self.assertNotIn("    - draft.qmd", yml)
 
     def test_report_includes_the_generated_preamble(self):
         # The template preamble's font path is the {{FW}} token, which only

@@ -7,6 +7,7 @@ module's.
 
 from __future__ import annotations
 
+import json
 import re
 from pathlib import Path
 
@@ -45,9 +46,25 @@ def starter_deck(variant: str) -> Path:
     return SKILLS / "deck-svg" / "template" / "variants" / variant / "deck.html"
 
 
+def talk_files(variant: str) -> dict[str, Path]:
+    """Files owned by one talk: its Controller, View and frozen assets."""
+    scaffold = TEMPLATES / "presentation" / "scaffold"
+    return {
+        "deck.html": starter_deck(variant),
+        **deck_assets(),
+        "points.md": scaffold / "points.md",
+        "storyboard.md": scaffold / "storyboard.md",
+    }
+
+
 def presentation_files(variant: str) -> dict[str, Path]:
-    """A deck is assembled from three skill layers, its Model and Controller
-    (the report; points → storyboard), and the Beamer fallback.
+    """Files for a standalone presentation unit.
+
+    A reading guide gets ``guide.qmd``: a theme-focused Model derived from
+    stable per-source summaries.  A thesis-style presentation keeps
+    ``draft.qmd`` for compatibility with the legacy presentation scaffold. Generic
+    paper/thesis units add a talk with ``talk-init`` instead and declare their
+    existing manuscript as the Model.
 
     Keeping this map in one place is what lets a look or runtime change land
     in one skill and reach every deck scaffolded afterwards — and, through
@@ -55,16 +72,29 @@ def presentation_files(variant: str) -> dict[str, Path]:
     deck_assets() is a starter the author then owns.
     """
     scaffold = TEMPLATES / "presentation" / "scaffold"
+    model = "guide.qmd" if variant == "reading-guide" else "draft.qmd"
     return {
-        "deck.html": starter_deck(variant),
-        **deck_assets(),
+        **talk_files(variant),
         "presentation.qmd": scaffold / "variants" / variant / "presentation.qmd",
-        "draft.qmd": scaffold / "draft.qmd",                             # Model: the cited argument
-        "points.md": scaffold / "points.md",                             # Controller: angle, ~8–12 points
-        "storyboard.md": scaffold / "storyboard.md",                     # Controller: flow, point → slide
-        "notes/glossary.md": scaffold / "notes" / "glossary.md",         # Model: terms the presenter must know
-        "notes/qa.md": scaffold / "notes" / "qa.md",                     # Model: anticipated questions, answered
+        model: scaffold / model,
+        "notes/glossary.md": scaffold / "notes" / "glossary.md",
+        "notes/qa.md": scaffold / "notes" / "qa.md",
     }
+
+
+def deck_problems(talk: Path) -> list[str]:
+    """Structural problems in a freshly scaffolded HTML deck."""
+    html = (talk / "deck.html").read_text(encoding="utf-8")
+    problems = []
+    slides = len(re.findall(r'<section\b[^>]*\bclass="slide\b', html))
+    m = re.search(r'<script type="application/json" id="speaker-notes">(.*?)</script>', html, re.S)
+    notes = json.loads(m.group(1)) if m else []
+    if slides != len(notes) or not all(str(n).strip() for n in notes):
+        problems.append(f"{slides} slides but {len(notes)} speaker notes (or an empty note)")
+    for js in sorted((talk / "asset").glob("*.js")):
+        if f'<script src="asset/{js.name}"></script>' not in html:
+            problems.append(f"deck.html does not load asset/{js.name}")
+    return problems
 
 
 ASSET_TAG = re.compile(r"""<(?:script\b[^>]*\bsrc|link\b[^>]*\bhref)\s*=\s*["'](asset/[^"']+)["'][^>]*>(?:</script>)?""")

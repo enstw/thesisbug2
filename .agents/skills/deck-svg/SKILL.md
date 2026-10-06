@@ -42,7 +42,7 @@ The deck pulls from all three layers into one self-contained folder. `$SKILL_DIR
 is this skill's folder; the other layers are sibling skills.
 
 ```sh
-DST=<unit>                              # the presentation unit's directory, e.g. units/02-presentation-<topic>
+DST=<talk>                              # a presentation unit root or units/NN-*/talks/<occasion>
 mkdir -p "$DST/asset"
 
 # engine: structure + component CSS
@@ -67,7 +67,7 @@ cp "$SKILL_DIR/../deck-runtime/template/asset/presenter-stage.js" "$DST/asset/"
 Resulting deck is portable and offline:
 
 ```
-<unit>/
+<talk>/
   deck.html              # you author this
   asset/
     tokens.css           # house-style (all themes; deck-refresh updates it)
@@ -88,7 +88,7 @@ placeholder slides.
 
 **Updating an existing deck.** The copies in `asset/` are frozen at scaffold
 time so the deck opens offline, which also means a framework update never
-reaches them. `./fw deck-refresh <unit> [--dry-run]` re-copies every file in
+reaches them. `./fw deck-refresh <talk> [--dry-run]` re-copies every file in
 `asset/` above from the current skills (the map `unit-init` uses), lists each
 as new / updated / unchanged, skips one with uncommitted changes, and never
 writes `deck.html`, `storyboard.md` or any other author file. Because
@@ -101,28 +101,29 @@ needed component or theme into the framework's skill instead.
 
 deck-svg renders the **Views** of a talk: each `<section>` and its
 `#speaker-notes` entry is written from one row of the signed-off
-`<unit>/storyboard.md` and the report passage that row's point names. The
+`<talk>/storyboard.md` and the declared Model passage that row's point names. The
 storyboard and `points.md` are the Controller, written with **deck-plan**
 before this skill starts; without a signed-off storyboard, plan first. The
 split exists because choosing what to say while laying out slides is how a
-deck ends up saying things the report does not.
+deck ends up saying things the declared Model does not.
 
 - The row's content shape picks the pattern (`reference/slide-patterns.md`
   § Shape → pattern). **If no pattern fits, add a component to `deck.css`;
   never bend the content**, because an agent choosing from the class list
   takes the easiest pattern and trims the content to fit — a 3×3 typology
   becomes a list and the examples disappear.
-- Write the note's 講法 in `<unit>/speaker-notes.md` from the row's 口說重點
-  and the report passage, never from the slide, because the slide is the
+- Write the note's 講法 in `<talk>/speaker-notes.md` from the row's 口說重點
+  and the Model passage, never from the slide, because the slide is the
   sparsest View and a note rebuilt from it loses the explanations and the
-  locators. `./fw deck-notes <unit> --init` seeds the file;
-  `./fw deck-notes <unit>` adds the glossary and Q&A entries the row names and
+  locators. `./fw deck-notes <talk> --init` seeds the file;
+  `./fw deck-notes <talk>` adds the unit glossary and Q&A entries the row names and
   writes `#speaker-notes` (presentation protocol § Speaker notes). Do not
   write term explanations or answers into the 講法: they are facts, and they
-  belong in `notes/glossary.md` and `notes/qa.md`, where the gates check them.
-- A fact that turns out wrong while building is corrected in the report
-  first, then in the rows and slides that use it; an order or emphasis change
-  goes back to the storyboard (presentation protocol § Source Files).
+  belong in `<unit>/notes/glossary.md` and `<unit>/notes/qa.md`, where the gates check them.
+- A fact that turns out wrong while building is corrected in its owning
+  factual layer (Model or unit backup knowledge), then in the rows and slides
+  that use it; an order or emphasis change goes back to the storyboard
+  (presentation protocol § Source Files).
 
 ## Authoring slides
 
@@ -199,7 +200,7 @@ as literal text, so use one of these instead.
 1. **Raster art** (painterly or photographic backgrounds, textures) comes from
    supplied images or Codex image generation — the provider exception the
    framework `AGENTS.md` records; report the asset as pending when no backend
-   works instead of switching providers. Save it under `<unit>/` so the deck
+   works instead of switching providers. Save it under `<talk>/` so the deck
    stays self-contained, and name the deck's palette and mood in the prompt,
    because a bitmap cannot inherit `--chapter` and must be regenerated when
    the theme changes. Diagrams and icons stay SVG; whole-slide bitmaps are
@@ -276,7 +277,7 @@ tofu; subsetting it to shrink a final file is optional (house-style § Font).
   capture commands.
   Do not assume a home-directory path, because agents install skills differently.
   Without browser access, run the structure check and mark visual QA as pending.
-- **Structure check (no browser):** `./fw deck-refresh <unit> --dry-run`
+- **Structure check (no browser):** `./fw deck-refresh <talk> --dry-run`
   reports stale assets and any tag the current starter loads that the deck
   does not. Otherwise confirm `deck.html` links `asset/tokens.css`
   + `asset/deck.css`, loads `asset/deck-check.js`, `asset/deck-theme-rules.js`,
@@ -285,7 +286,7 @@ tofu; subsetting it to shrink a final file is optional (house-style § Font).
   starts), then `asset/deck-stage.js`, `asset/presenter-stage.js` and
   `asset/deck-font-controls.js`, and that `#speaker-notes` has one entry per
   `<section class="slide">`. Run `node --check` on the seven JS assets and
-  `./fw check-contrast <unit>` on the deck's `tokens.css`. In a browser
+  `./fw check-contrast <talk>` on the deck's `tokens.css`. In a browser
   console, notes alignment is
   `document.querySelectorAll('deck-stage>section').length` against
   `JSON.parse(document.getElementById('speaker-notes').textContent).length`,

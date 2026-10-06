@@ -1,25 +1,24 @@
 #!/usr/bin/env python3
 """Assemble a deck's speaker notes from the three parts of the talk.
 
-    ./fw deck-notes [<unit>]            write #speaker-notes into deck.html
-    ./fw deck-notes [<unit>] --check    exit 1 if deck.html is out of date or a reference is broken
-    ./fw deck-notes [<unit>] --init     create speaker-notes.md, one section per slide
+    ./fw deck-notes [<talk>]            write #speaker-notes into deck.html
+    ./fw deck-notes [<talk>] --check    exit 1 if deck.html is out of date or a reference is broken
+    ./fw deck-notes [<talk>] --init     create speaker-notes.md, one section per slide
 
 A speaker note is the presenter's backup: how to say the slide, and what the
 presenter needs to understand it and to answer questions. Each kind comes
 from the part of the talk that owns it (presentation protocol § Source Files):
 
-  講法  speaker-notes.md, one `## <n>｜<label>` section per slide   — View
-  名詞  notes/glossary.md, one `## <term>` section per term         — Model
-  提問  notes/qa.md, one `## Q<n> <question>` section per question  — Model
+  講法  <talk>/speaker-notes.md, one section per slide              — View
+  名詞  <unit>/notes/glossary.md, one section per term              — backup knowledge
+  提問  <unit>/notes/qa.md, one section per question                — backup knowledge
 
 The storyboard's 名詞與提問 column (Controller) says which terms and questions
-each slide carries. Terms and answers are facts, so they live in the Model,
-which the report includes and the gates check: a presenter reaches for a note
-exactly where they do not know the material, so an error written into the
-note itself would go unnoticed on stage. The note copies only each entry's
+each slide carries. Terms and answers are factual backup shared by every talk
+in the unit, so citation and language gates read them directly; they do not
+need to be appended to a submitted paper. The note copies only each entry's
 first paragraph, short enough to read at a glance; the full entry stays in the
-report, read before the talk.
+unit for preparation before the talk.
 """
 
 from __future__ import annotations
@@ -30,7 +29,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _paths import course_root, included_files, rel, resolve_unit  # noqa: E402
+from _paths import course_root, rel, resolve_talk  # noqa: E402
 
 NOTES_MD, GLOSSARY, QA = "speaker-notes.md", "notes/glossary.md", "notes/qa.md"
 REFS_COLUMN, SPOKEN_COLUMN = "名詞與提問", "口說重點"
@@ -45,10 +44,10 @@ SPEAKER_NOTES_HEADER = """# 講者備註
 
 <!-- View：每張投影片一節，標題「## 編號｜標籤」是它在 deck.html 的順序（從 0 起）與 data-label，./fw deck-notes 會核對兩者，
      因為插入或刪掉一張投影片後，編號沒跟著改，講稿就會接到別張投影片上。
-     這裡只寫「講法」：照順序講什麼、時間、轉場、要停下來問大家的地方，依分鏡的口說重點與報告寫成（下面預先填了口說重點）。
-     名詞解說與預想提問不寫在這裡：它們是事實，寫在 notes/glossary.md 與 notes/qa.md（報告的附錄，會被檢查）；
+     這裡只寫「講法」：照順序講什麼、時間、轉場、要停下來問大家的地方，依分鏡的口說重點與 talk.json 宣告的 Model 寫成（下面預先填了口說重點）。
+     名詞解說與預想提問不寫在這裡：它們是事實，寫在單元共用的 notes/glossary.md 與 notes/qa.md（關卡會直接檢查）；
      分鏡「名詞與提問」欄指定每張帶哪些，./fw deck-notes 把它們的一句話版本接在講法後面，一起寫進 deck.html。
-     改完這份就跑 ./fw deck-notes <unit>；不要直接改 deck.html 的 #speaker-notes，下一次組裝會蓋掉。 -->
+     改完這份就跑 ./fw deck-notes <talk>；不要直接改 deck.html 的 #speaker-notes，下一次組裝會蓋掉。 -->
 """
 
 
@@ -156,14 +155,14 @@ def slide_labels(html: str) -> list[str]:
     return labels
 
 
-def assemble(unit: Path, root: Path) -> tuple[list[str], list[str]]:
-    """(notes, problems) for the unit's deck."""
-    html = (unit / "deck.html").read_text(encoding="utf-8")
+def assemble(unit: Path, talk: Path, root: Path) -> tuple[list[str], list[str]]:
+    """(notes, problems) for one talk's deck."""
+    html = (talk / "deck.html").read_text(encoding="utf-8")
     labels = slide_labels(html)
     problems: list[str] = []
 
     sections = []
-    for heading, body in headed_sections((unit / NOTES_MD).read_text(encoding="utf-8")):
+    for heading, body in headed_sections((talk / NOTES_MD).read_text(encoding="utf-8")):
         m = SLIDE_HEADING.match(heading)
         if m:
             sections.append((int(m.group(1)), m.group(2).strip(), body))
@@ -182,22 +181,17 @@ def assemble(unit: Path, root: Path) -> tuple[list[str], list[str]]:
             problems.append(f"{NOTES_MD} § {n} has no 講法 yet")
 
     glossary, qa = entries(unit / GLOSSARY, False), entries(unit / QA, True)
-    draft = unit / "draft.qmd"
-    in_report = set(included_files(draft, unit)) if draft.is_file() else set()
-    used_files: set[str] = set()
-    refs = table_column(unit / "storyboard.md", REFS_COLUMN)
+    refs = table_column(talk / "storyboard.md", REFS_COLUMN)
     notes = []
     for n, label, body in sections:
         terms, questions = [], []
         for ref in references(refs.get(n, "")):
             if QUESTION_ID.fullmatch(ref):
-                used_files.add(QA)
                 if ref in qa:
                     questions.append(qa[ref])
                 else:
                     problems.append(f"storyboard row {n} names {ref}, which {QA} does not have")
             else:
-                used_files.add(GLOSSARY)
                 if ref in glossary:
                     terms.append((ref, glossary[ref][1]))
                 else:
@@ -212,19 +206,15 @@ def assemble(unit: Path, root: Path) -> tuple[list[str], list[str]]:
     beyond = sorted(k for k, v in refs.items() if k >= len(sections) and references(v))
     if beyond:
         problems.append(f"storyboard rows {beyond} name terms or questions but {NOTES_MD} has no such slide")
-    for name in sorted(used_files):
-        if (unit / name).resolve() not in in_report:
-            problems.append(f"{name} is not included by draft.qmd — include it as an appendix, so the "
-                            "citation and character gates check what the notes repeat")
     return notes, problems
 
 
-def init(unit: Path, root: Path) -> None:
-    target = unit / NOTES_MD
+def init(unit: Path, talk: Path, root: Path) -> None:
+    target = talk / NOTES_MD
     if target.exists():
         sys.exit(f"{rel(target, root)} exists; edit it instead")
-    labels = slide_labels((unit / "deck.html").read_text(encoding="utf-8"))
-    spoken = table_column(unit / "storyboard.md", SPOKEN_COLUMN)
+    labels = slide_labels((talk / "deck.html").read_text(encoding="utf-8"))
+    spoken = table_column(talk / "storyboard.md", SPOKEN_COLUMN)
     out = [SPEAKER_NOTES_HEADER]
     for n, label in enumerate(labels):
         seed = spoken.get(n, "")
@@ -238,20 +228,20 @@ def init(unit: Path, root: Path) -> None:
 def main() -> None:
     args = [a for a in sys.argv[1:] if not a.startswith("-")]
     root = course_root()
-    unit = resolve_unit(args[0] if args else None)
-    if not (unit / "deck.html").is_file():
-        sys.exit(f"no deck at {rel(unit / 'deck.html', root)}")
+    unit, talk = resolve_talk(args[0] if args else None)
+    if not (talk / "deck.html").is_file():
+        sys.exit(f"no deck at {rel(talk / 'deck.html', root)}")
     if "--init" in sys.argv:
-        init(unit, root)
+        init(unit, talk, root)
         return
-    if not (unit / NOTES_MD).is_file():
-        sys.exit(f"no {rel(unit / NOTES_MD, root)} — create it with ./fw deck-notes {unit.name} --init")
+    if not (talk / NOTES_MD).is_file():
+        sys.exit(f"no {rel(talk / NOTES_MD, root)} — create it with ./fw deck-notes {rel(talk, root)} --init")
 
-    notes, problems = assemble(unit, root)
+    notes, problems = assemble(unit, talk, root)
     if problems:
         print("\n".join(f"  {p}" for p in problems))
         sys.exit(f"deck-notes: {len(problems)} problem(s); deck.html not written")
-    html = (unit / "deck.html").read_text(encoding="utf-8")
+    html = (talk / "deck.html").read_text(encoding="utf-8")
     m = BLOCK.search(html)
     if not m:
         sys.exit("deck.html has no <script type=\"application/json\" id=\"speaker-notes\"> block")
@@ -261,12 +251,12 @@ def main() -> None:
         except json.JSONDecodeError:
             current = None
         if current != notes:
-            sys.exit(f"deck.html speaker notes are out of date — run ./fw deck-notes {unit.name}")
+            sys.exit(f"deck.html speaker notes are out of date — run ./fw deck-notes {rel(talk, root)}")
         print(f"OK — {len(notes)} speaker notes match {NOTES_MD}, the storyboard and the glossary/Q&A")
         return
     payload = "\n" + json.dumps(notes, ensure_ascii=False, indent=0) + "\n"
-    (unit / "deck.html").write_text(html[:m.start(2)] + payload + html[m.end(2):], encoding="utf-8")
-    print(f"wrote {len(notes)} speaker notes into {rel(unit / 'deck.html', root)}")
+    (talk / "deck.html").write_text(html[:m.start(2)] + payload + html[m.end(2):], encoding="utf-8")
+    print(f"wrote {len(notes)} speaker notes into {rel(talk / 'deck.html', root)}")
 
 
 if __name__ == "__main__":

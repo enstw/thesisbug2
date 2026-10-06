@@ -19,8 +19,8 @@
      直接以 python3 執行而無 opencc 時，略過此層並提示。
 
 範圍：<unit>/chapters/*.qmd、<unit>/*.qmd 與它們 include 進來的檔案，以及單元裡
-其他的 .md（notes/ 的摘要、points.md、storyboard.md、講義），因為報告由筆記組成、
-投影片由分鏡寫成，簡體字從哪一份進來都會一路傳到成品。不檢查：refs/ 逐字轉錄
+其他的 .md（notes/ 的摘要與備援知識、points.md、storyboard.md、講義），因為 Model 與
+投影片會取用這些內容，簡體字從哪一份進來都會一路傳到成品。不檢查：refs/ 逐字轉錄
 （保留來源原文）、gpt-review/（外部模型報告照原樣保存）、PROGRESS.md、
 DECISIONS.md、CHANGELOG.md（工作紀錄得引用原文）。引文亦不豁免——本語料庫
 的引用體例是「轉字不轉詞」，字級上不應存在簡體字。

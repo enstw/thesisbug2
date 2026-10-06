@@ -1,23 +1,22 @@
 ---
 name: source-kit
 description: >
-  Acquires, stores, and audits the sources behind cited academic work. Use when
-  adding references.bib entries, fetching fulltext into a unit's refs/, a URL
-  returns 403 or a challenge page, mapping claims to sources before a draft, or
-  reviewing whether a source actually supports its claim. Covers think-tank
-  landing pages, CDN blocks, EZproxy/institutional login, and recording
-  identity/support verdicts to audit JSONL files for the quality ratchet.
-  Use for /bib_audit, "audit the bib", "稽核來源".
+  Acquires, stores, summarizes, and audits the sources behind academic work.
+  Use when adding bibliography entries, fetching fulltext, writing a stable
+  per-source summary for later citation triage, mapping claims before a draft,
+  or checking whether a source supports a claim. Covers blocked and
+  authenticated retrieval plus identity/support verdicts for the quality
+  ratchet. Use for /bib_audit, "audit the bib", "稽核來源".
 ---
 
-# source-kit — source acquisition + audit
+# source-kit — source acquisition + stable summary + audit
 
 Owns everything between *"a citation key exists in `<unit>/references.bib`"* and
 *"the claim it supports is verified against local fulltext."* The pipeline:
 
 ```
-acquire → store → audit (before drafting) → [draft] → review (after drafting)
-                        ↘ record verdicts to refs/audit/<key>.jsonl, ratchet the level (§7)
+acquire → store → identity audit → stable summary → [select for a task] → support review
+                    ↘ record verdicts to refs/audit/<key>.jsonl, ratchet the level (§8)
 ```
 
 ## When to use
@@ -25,6 +24,8 @@ acquire → store → audit (before drafting) → [draft] → review (after draf
 - A new entry is added to `<unit>/references.bib` and its fulltext must be saved.
 - A think-tank / CDN URL won't fetch (403, "Just a moment…", challenge page).
 - Building a claim-to-source map before an evidence-heavy draft.
+- Writing or correcting a per-source summary that later agents use to judge
+  relevance and jump back to the original passage.
 - Reviewing whether each cited claim is actually backed by its local source.
 
 **Pairs with**
@@ -163,7 +164,39 @@ For sources with a visible "last updated" timestamp on the page, the bib
 `date =` should be the source's **own update date**, not a Wayback snapshot date
 or your fetch date. Snapshot IDs live in `DOWNLOADS.md` Notes, not in the bib.
 
-## 5. Source audit — BEFORE long drafts
+## 5. Stable per-source summary — source proxy, not task draft
+
+Once the newest identity verdict is `genuine`, write one complete summary at
+`<unit>/notes/<key>.md` (or the unit that is doing the reading when the source
+lives in `library/`). It is a **stable proxy for the work**: later agents read
+it first to judge whether the source is relevant and to find the original
+passage quickly, then verify the passage in `refs/<key>.md` or the PDF before
+citing. The summary is not itself a citable source and never replaces that
+final support check.
+
+A useful summary lets a reader understand the work on its own. Preserve:
+
+- the bibliographic key and exact work/edition summarized;
+- background, research problem, concepts and assumptions;
+- the argument in the author's order, including mechanisms and scope;
+- evidence, examples, methods, limitations and conclusion;
+- page or paragraph locators precise enough to reopen the original.
+
+Write it **source-centred**, not assignment-centred. Do not trim, reorder or
+rewrite it for this week's theme, one presentation's time limit, or a later
+claim; those choices belong in the downstream task Model. When the source has
+not changed, its substantive summary does not change either. Edit it only to
+correct a demonstrated misunderstanding, omission, mistranscription or wrong
+locator (or to identify a genuinely different edition), and re-check every
+downstream passage that used the corrected point. Mechanical formatting may
+change without changing the account of the source.
+
+The summary's claim is fidelity, so review it against the original before
+calling it complete. Record that review where the unit tracks work; do not
+turn the summary into an audit verdict, because `identity` and `support` have
+the narrower meanings in §8.
+
+## 6. Source audit — BEFORE long drafts
 
 For journal, thesis, and evidence-heavy homework or policy analysis, audit
 sources *before* drafting. Do **not** write the full argument first and verify
@@ -188,7 +221,7 @@ afterward.
    adoption** in-text where the citation appears, so a reader can't assume the
    rest came along.
 
-## 6. Source review — AFTER drafting
+## 7. Source review — AFTER drafting
 
 Reviewing references means cross-reading each cited claim against the local
 `<unit>/refs/<key>.md`/`.pdf` — **not** just running `check-citations.py`. The
@@ -203,9 +236,9 @@ script confirms keys resolve; it does not confirm the source supports the claim.
 1. Run **cite-check** (`./fw check-citations <unit>`) **last**, as a
    consistency pass — never as the only review.
 
-## 7. Recording verdicts & the bib-quality ratchet — `/bib_audit`
+## 8. Recording verdicts & the bib-quality ratchet — `/bib_audit`
 
-The audit (§5) and review (§6) produce **judgments**, not just prose. Record each
+The audit (§6) and review (§7) produce **judgments**, not just prose. Record each
 as an append-only line in the per-key log `<unit>/refs/audit/<key>.jsonl` — one file
 per source, never rewritten (a correction is a new line with a later `ts`). This
 is the machine source of truth `./fw check-bib` reads; there is no
@@ -258,7 +291,7 @@ you did; once committed, the file is append-only with no exceptions.
    raise `required_bib_level` in `WORK.json` so the floor ratchets and dirt can't
    re-enter.
 
-## 8. Quality profile — `./fw score-bib`
+## 9. Quality profile — `./fw score-bib`
 
 check-bib answers whether a source *backs* the claim made from it. It cannot
 answer whether that source is the right **kind** of thing to be carrying the

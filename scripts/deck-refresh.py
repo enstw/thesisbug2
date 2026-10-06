@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
-"""Bring a presentation unit's deck assets up to the current framework.
+"""Bring one talk's deck assets up to the current framework.
 
-    ./fw deck-refresh [<unit>] [--dry-run]
+    ./fw deck-refresh [<talk>] [--dry-run]
 
-A deck copies its engine, look and runtime into <unit>/asset/ when it is
+A deck copies its engine, look and runtime into <talk>/asset/ when it is
 scaffolded, so it opens offline; that also means `./fw update` never reaches
 an existing deck. This re-copies exactly the framework-owned files unit-init
-copies (the same map, scripts/_deck.py) and prints each as new, updated or
-unchanged. Author-owned files — deck.html, storyboard.md, points.md,
-draft.qmd, presentation.qmd, notes/, anything else in the unit — are never
-written. An asset with uncommitted changes is skipped, because overwriting
+and talk-init copy (the same map, scripts/_deck.py) and prints each as new,
+updated or unchanged. Author-owned files — deck.html, storyboard.md, points.md,
+speaker-notes.md, anything else in the talk — are never written. An asset
+with uncommitted changes is skipped, because overwriting
 it would lose work git cannot give back.
 
 deck.html is the author's, so it is not edited either: when it lacks a
@@ -21,7 +21,6 @@ nothing until it is loaded), the exact tags to add are printed. Exit status
 from __future__ import annotations
 
 import argparse
-import json
 import shutil
 import subprocess
 import sys
@@ -30,16 +29,16 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 from _deck import deck_assets, missing_tags  # noqa: E402
-from _paths import rel, resolve_unit  # noqa: E402
+from _paths import rel, resolve_talk, talk_config  # noqa: E402
 
 
-def uncommitted(unit: Path, names: list[str]) -> set[str]:
+def uncommitted(talk: Path, names: list[str]) -> set[str]:
     """Asset paths git reports as modified; empty outside a git work tree."""
-    r = subprocess.run(["git", "-C", str(unit), "status", "--porcelain", "--", *names],
+    r = subprocess.run(["git", "-C", str(talk), "status", "--porcelain", "--", *names],
                        capture_output=True, text=True)
     if r.returncode:
         return set()
-    top = subprocess.run(["git", "-C", str(unit), "rev-parse", "--show-prefix"],
+    top = subprocess.run(["git", "-C", str(talk), "rev-parse", "--show-prefix"],
                          capture_output=True, text=True).stdout.strip()
     out = set()
     for line in r.stdout.splitlines():
@@ -50,27 +49,23 @@ def uncommitted(unit: Path, names: list[str]) -> set[str]:
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description="Re-copy the framework-owned deck assets into a presentation unit.")
-    ap.add_argument("unit", nargs="?", help="the presentation unit (path or name); default: the current one")
+    ap = argparse.ArgumentParser(description="Re-copy the framework-owned deck assets into one talk.")
+    ap.add_argument("talk", nargs="?", help="talk directory; default: the current root presentation/talk")
     ap.add_argument("--dry-run", action="store_true", help="show what would change without writing")
     a = ap.parse_args()
 
-    unit = resolve_unit(a.unit)
-    work = json.loads((unit / "WORK.json").read_text(encoding="utf-8"))
-    if work.get("type") != "presentation":
-        sys.exit(f"{rel(unit)} is a {work.get('type', 'unknown')} unit, not a presentation: "
-                 "only a presentation unit carries deck assets")
-    variant = work.get("variant", "thesis")
+    unit, talk = resolve_talk(a.talk)
+    variant = talk_config(unit, talk)["variant"]
     assets = deck_assets()
     missing = [str(src) for src in assets.values() if not src.is_file()]
     if missing:
         sys.exit("framework deck assets missing (incomplete checkout?):\n  " + "\n  ".join(missing))
 
-    dirty = uncommitted(unit, list(assets))
-    print(f"{rel(unit)}: deck assets ({'dry run, nothing written' if a.dry_run else 'refreshed'})")
+    dirty = uncommitted(talk, list(assets))
+    print(f"{rel(talk)}: deck assets ({'dry run, nothing written' if a.dry_run else 'refreshed'})")
     skipped = updated = 0
     for dst, src in assets.items():
-        target = unit / dst
+        target = talk / dst
         if not target.exists():
             state = "new"
         elif target.read_bytes() == src.read_bytes():
@@ -88,7 +83,7 @@ def main() -> int:
         print(f"  {state:<9}  {dst}")
         updated += state == "updated"
 
-    deck = unit / "deck.html"
+    deck = talk / "deck.html"
     tags = missing_tags(deck.read_text(encoding="utf-8"), variant) if deck.is_file() else []
     if tags:
         print(f"\ndeck.html does not load everything the current {variant} starter loads. deck.html is "
@@ -97,7 +92,7 @@ def main() -> int:
         for tag, after in tags:
             print(f"  {tag}" + (f"\n      after {after}" if after else "\n      before the first asset tag"))
     if updated and not a.dry_run:
-        print(f"\nreview with: git diff -- {rel(unit)}/asset   (a committed local edit there was replaced)")
+        print(f"\nreview with: git diff -- {rel(talk)}/asset   (a committed local edit there was replaced)")
     return 1 if tags or skipped else 0
 
 

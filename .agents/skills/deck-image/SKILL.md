@@ -74,16 +74,16 @@ or change the requested deliverable without the user's agreement.
 
 Three ways in:
 
-1. **A presentation unit's storyboard** — the talk was planned with
-   **deck-plan** and the author signed off `<unit>/storyboard.md`. Each slide
+1. **A course talk's storyboard** — the talk was planned with
+   **deck-plan** and the author signed off `<talk>/storyboard.md`. Each slide
    spec comes from one row: its 畫面內容 becomes the Page Content and its 版型
    the prompt's layout line. The notes come from `speaker-notes.md` and the
-   glossary/Q&A the row names: run `./fw deck-notes <unit>` after every
+   unit-level glossary/Q&A the row names: run `./fw deck-notes <talk>` after every
    `build-deck.py` run, because the assembler rewrites `deck.html` with the
    manifest's notes (presentation protocol § Speaker notes). Add no copy the row lacks, because the
-   storyboard selects only from the report and every on-slide string must
-   trace back to a cited report sentence; a missing fact goes into the report
-   first. Write the deck into the unit directory.
+   storyboard selects only from the declared Model and every on-slide string must
+   trace back to a cited Model sentence; a missing fact goes into the Model
+   first. Write the deck into the talk directory.
 1. **Slide specs provided** — the user hands you a per-slide list of on-slide
    copy + image prompts (e.g. a `prompts-and-page-content.md`). Use them
    as-is; skip planning.

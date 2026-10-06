@@ -60,7 +60,7 @@ cp "$HS/themes/deck-theme-rules.js" "$HS/themes/deck-palette.js" <deck>/asset/
 
 The engine links `asset/tokens.css` from its `deck.html` and ships the font
 beside it. The produced deck is **self-contained** (a frozen copy of the look at
-scaffold time); `./fw deck-refresh <unit>` re-pulls the latest look into an
+scaffold time); `./fw deck-refresh <talk>` re-pulls the latest look into an
 existing deck. That is the "central source + frozen instance" model — update
 here, adopt per deck with deck-refresh.
 
@@ -68,7 +68,7 @@ here, adopt per deck with deck-refresh.
 
 - **Theme / palette / type:** edit token *values* in `assets/css/tokens.css`
   only — never the component or motion CSS (that lives in the engines). Existing
-  decks adopt it with `./fw deck-refresh <unit>`. A deck's own `asset/tokens.css`
+  decks adopt it with `./fw deck-refresh <talk>`. A deck's own `asset/tokens.css`
   is a copy that deck-refresh replaces, so a deck picks its starting theme with
   `data-deck-theme-default` in `deck.html` (deck-svg) instead of editing it.
 - **Themes and contrast:** 14 fixed themes, 7 dark (夜幕 default, 石墨, 深海,
@@ -143,7 +143,7 @@ non-JSON `<script>` removed — into a charset file, then (uv only):
 
 ```bash
 uvx --with brotli --from fonttools pyftsubset assets/fonts/ENSFont-Regular.ttf \
-  --text-file=<charset.txt> --output-file=<unit>/asset/ENSFont.woff2 \
+  --text-file=<charset.txt> --output-file=<talk>/asset/ENSFont.woff2 \
   --flavor=woff2 --layout-features='*' --no-hinting --desubroutinize
 ```
 

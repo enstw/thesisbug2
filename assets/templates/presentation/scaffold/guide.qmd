@@ -1,0 +1,48 @@
+---
+format:
+  pdf:
+    pdf-engine: xelatex
+    include-in-header:
+      - _preamble.tex
+    documentclass: article
+    geometry:
+      - margin=2.5cm
+    colorlinks: true
+    linkcolor: black
+    urlcolor: blue
+    citecolor: black
+---
+
+<!-- 導讀聚焦稿：以本週問題為中心，是這場簡報在 talk.json 宣告的 Model。
+     單篇文章摘要留在 notes/<bibkey>.md，忠實代表原文，供 agent 判斷能否引用與定位頁碼；
+     不要因本週角度、簡報長短或聽眾而重寫摘要。聚焦稿從摘要找候選內容，再回原文核實，
+     並以 [@key, {頁碼}] 引用原文。跨篇關係、導讀人的立場與討論題的事實基礎寫在這裡。
+     notes/glossary.md 與 notes/qa.md 是講者共用的備援知識，檢查工具會直接讀取，
+     不必為了檢查而把它們附在繳交文件後面。
+     建置：./fw build <unit> --target guide.qmd。 -->
+
+# 本週問題
+
+[這場導讀要回答的共同問題、範圍與重要性]
+
+# 理論鋪陳
+
+[只放理解本週問題所需的理論，引用原文]
+
+# 與本週問題相關的論證
+
+## [文獻一]
+
+[從穩定摘要選取、回原文核實後寫成的相關論證]
+
+## [文獻二]
+
+[從穩定摘要選取、回原文核實後寫成的相關論證]
+
+# 比較與評析
+
+[作者之間的共同點、分歧、證據限制，以及導讀人的立場]
+
+# 討論題的事實基礎
+
+[每題的爭議主張、兩個可辯護立場與導讀人看法]

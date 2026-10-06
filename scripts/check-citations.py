@@ -27,7 +27,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _paths import course_root, included_files, library, list_units, rel, resolve_unit  # noqa: E402
+from _paths import citation_files, course_root, library, list_units, rel, resolve_unit  # noqa: E402
 
 CITATION_RE = re.compile(r"(?<![\w@])@([a-zA-Z0-9_:.-]+)")
 # Quarto cross-references share the @ syntax but are not citations.
@@ -60,18 +60,9 @@ def parse_bib_keys(bib_path: Path) -> dict[str, dict]:
 
 
 def find_cited_keys(unit: Path) -> dict[str, list[str]]:
-    """All [@key] citations in the unit's .qmd files and the files they
-    include (a report assembled from notes renders their citations too).
-    Returns {key: [files]}."""
+    """All citations in QMD/includes plus the presenter's glossary and Q&A."""
     cited: dict[str, list[str]] = {}
-    sources: list[Path] = []
-    for qmd in sorted(unit.rglob("*.qmd")):
-        if any(part.startswith(("_", ".")) for part in qmd.relative_to(unit).parts):
-            continue
-        for f in (qmd.resolve(), *included_files(qmd, unit)):
-            if f not in sources:
-                sources.append(f)
-    for src in sources:
+    for src in citation_files(unit):
         # Commented-out text is not part of the manuscript (scaffolds keep their
         # citation example in a comment).
         text = re.sub(r"<!--.*?-->", "", src.read_text(encoding="utf-8"), flags=re.S)

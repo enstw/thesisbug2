@@ -30,7 +30,7 @@ HERE = Path(__file__).resolve().parent
 FRAMEWORK = HERE.parent
 sys.path.insert(0, str(HERE))
 from _paths import course_root, list_units, rel  # noqa: E402
-from _deck import presentation_files  # noqa: E402  (one map, shared with deck-refresh)
+from _deck import deck_problems, presentation_files  # noqa: E402
 
 TYPES = ("preparation", "homework", "paper", "journal", "thesis", "presentation")
 CITATION_TYPES = ("preparation", "paper", "journal", "thesis", "presentation")
@@ -44,27 +44,6 @@ def copy_tree(src: Path, dst: Path) -> None:
             target = dst / path.relative_to(src)
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(path, target)
-
-
-def deck_problems(unit: Path) -> list[str]:
-    """What a fresh deck needs before anyone authors it: one speaker note per
-    slide and a <script> tag for every JS asset copied beside it.
-
-    Presentations have no build to prove the scaffold works, so this is the
-    check that catches a starter and the asset map drifting apart (an asset
-    copied but never loaded silently does nothing).
-    """
-    html = (unit / "deck.html").read_text(encoding="utf-8")
-    problems = []
-    slides = len(re.findall(r"<section\b[^>]*\bclass=\"slide\b", html))
-    m = re.search(r'<script type="application/json" id="speaker-notes">(.*?)</script>', html, re.S)
-    notes = json.loads(m.group(1)) if m else []
-    if slides != len(notes) or not all(str(n).strip() for n in notes):
-        problems.append(f"{slides} slides but {len(notes)} speaker notes (or an empty note)")
-    for js in sorted((unit / "asset").glob("*.js")):
-        if f'<script src="asset/{js.name}"></script>' not in html:
-            problems.append(f"deck.html does not load asset/{js.name}")
-    return problems
 
 
 def fill_placeholders(unit: Path, work: dict, fw_rel: str) -> None:
@@ -166,6 +145,10 @@ def main() -> None:
         for dst, src in files.items():
             (unit / dst).parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(src, unit / dst)
+        model = "guide.qmd" if a.variant == "reading-guide" else "draft.qmd"
+        (unit / "talk.json").write_text(
+            json.dumps({"title": a.title, "variant": a.variant, "model": [model]},
+                       ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     else:
         copy_tree(TEMPLATES / a.type / "scaffold", unit)
         if a.type == "paper" and a.citation == "apa-zh":

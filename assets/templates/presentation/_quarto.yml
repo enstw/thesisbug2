@@ -2,8 +2,9 @@ project:
   type: default
   output-dir: _output
   render:
-    # draft.qmd (the report) is listed so it renders inside the project and
-    # receives the title, CSL and both bibliography tiers from this file.
+    # The task-focused Model is listed so it renders inside the project and
+    # receives the title, CSL and both bibliography tiers. ./fw build replaces
+    # draft.qmd with guide.qmd for the reading-guide variant.
     - presentation.qmd
     - draft.qmd
 

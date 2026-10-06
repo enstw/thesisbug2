@@ -84,7 +84,7 @@ class DeckRefreshTests(unittest.TestCase):
         self.scaffold("--type", "homework", "--name", "hw", "--no-build")
         r = self.run_fw("deck-refresh.py", "hw")
         self.assertNotEqual(r.returncode, 0)
-        self.assertIn("not a presentation", r.stderr)
+        self.assertIn("not a talk", r.stderr)
         self.assertFalse(any((self.root / "units").glob("*-hw/asset")))
 
     def test_starters_load_every_asset_tag(self):

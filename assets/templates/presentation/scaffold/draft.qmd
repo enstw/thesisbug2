@@ -13,13 +13,11 @@ format:
     citecolor: black
 ---
 
-<!-- 報告：這場簡報的完整論證，是 points.md、storyboard.md 與 deck.html 的唯一上游（Model）。
-     報告不另外重寫：作業過程中已經寫好的檔案（各篇摘要、理論鋪陳、比較與評析，或論文的各節）用 Quarto 的 include 短代碼
-     依閱讀順序收進來，這裡只寫為報告才需要的段落（導言、轉場、綜合）。用 include 而不是複製，因為複製出來的段落會和原檔各改各的。
-     include 只收本單元的檔案，因為跨單元 include 會讓另一個單元的修改悄悄改掉這份報告；寫法見簡報規範 presentation-protocol.md 的「The report」一節。
-     ./fw check-citations、check-zh-variants、lint-readability 都會讀被收進來的檔案，所以報告是照它渲染出來的樣子被檢查的。
-     主張附 [@key, {頁碼}]；下游（論點、分鏡、投影片）發現錯誤時，回到原檔對照來源改正，再往下傳。
-     課程要求逐段說明 AI 使用時，就以報告的段落為單位記錄。
+<!-- 獨立簡報單元的任務聚焦 Model：talk.json 宣告本檔供 points.md、storyboard.md 與 deck.html 使用。
+     Model 回答這份作業的問題；單篇文章摘要是上游的穩定來源代理，不因簡報角度而重寫，也不在這裡整篇收進來。
+     已寫成獨立檔案的任務段落可用 Quarto include 組裝，避免複製後各自修改；include 只收本單元的檔案，
+     因為跨單元 include 會讓另一個單元的修改悄悄改掉這份作業。./fw check-citations、check-zh-variants、
+     lint-readability 會讀被收進來的檔案。主張附 [@key, {頁碼}]；先由摘要定位，再回原文核實。
      建置：./fw build <unit> --target draft.qmd。標題、作者、兩層書目與 _preamble.tex 都由 ./fw build 產生，這裡不重寫，
      因為寫在這裡會蓋掉 build 的設定（例如只剩單元書目，引用 library/ 的來源就找不到）。 -->
 
@@ -27,12 +25,11 @@ format:
 
 [這場簡報要回答的問題、為何重要、範圍]
 
-<!-- 下面放 include 短代碼，一行一個檔案，依閱讀順序：
-     導讀型：理論鋪陳 → 各篇摘要（notes/<key>.md）→ 比較與評析；三篇以上以交叉閱讀圖的主題結構為骨架。
-     論文型：問題 → 缺口 → 研究問題 → 方法 → 證據 → 發現 → 貢獻，已寫成檔案的節就收進來。
+<!-- 下面可放 include 短代碼，一行一個檔案，依論證順序：
+     問題 → 缺口 → 研究問題 → 方法 → 證據 → 發現 → 貢獻。已寫成檔案的任務段落就收進來。
      還沒寫成檔案的部分直接寫在這裡；寫長了再搬進 notes/ 收回來。 -->
 
-[論證：include 收進來的檔案，與為報告寫的轉場]
+[論證：include 收進來的檔案，與為這份 Model 寫的轉場]
 
 # 評析
 
@@ -41,8 +38,3 @@ format:
 # 討論問題
 
 1. [一個有爭議的主張與兩個可辯護的立場]
-
-<!-- 附錄：講者的備援知識。名詞表與預想提問寫好後，把下面兩行移出註解；./fw deck-notes 從這兩份取條目放進講稿，
-     並要求它們被收進報告，因為講稿重述的事實要和報告一起被檢查。
-     {{< include notes/glossary.md >}}
-     {{< include notes/qa.md >}} -->

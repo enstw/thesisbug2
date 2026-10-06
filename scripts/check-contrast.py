@@ -2,7 +2,7 @@
 """Check every deck theme in a tokens.css against the house-style colour rules.
 
     ./fw check-contrast                      the framework's house-style tokens.css
-    ./fw check-contrast <unit>|<tokens.css>  a deck's own copy (<unit>/asset/tokens.css)
+    ./fw check-contrast <talk>|<tokens.css>  a deck's own copy (<talk>/asset/tokens.css)
     ./fw check-contrast --emit r4821         print seed 4821's generated palette as a
                                              theme block to paste into tokens.css (needs node)
 

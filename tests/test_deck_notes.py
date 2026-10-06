@@ -27,9 +27,8 @@ class DeckNotesTests(unittest.TestCase):
         self.unit = next((self.root / "units").glob("*-talk"))
         html = (self.unit / "deck.html").read_text(encoding="utf-8")
         self.labels = re.findall(r'<section class="slide[^"]*"[^>]*data-label="([^"]*)"', html)
-        self.write("notes/glossary.md", "# 附錄：名詞解說\n\n## 公共財\n\n**一句話**：大家都享受得到 [@k2020, {12}]。\n\n- 要點只留在報告。\n")
-        self.write("notes/qa.md", "# 附錄：預想提問\n\n## Q1 為什麼？\n\n**簡答**：因為 [@k2020, {3-4}]。\n\n完整回答。\n")
-        self.write("draft.qmd", "# 導言\n\n{{< include notes/glossary.md >}}\n\n{{< include notes/qa.md >}}\n")
+        self.write("notes/glossary.md", "# 講者備援：名詞解說\n\n## 公共財\n\n**一句話**：大家都享受得到 [@k2020, {12}]。\n\n- 完整要點留在備援檔。\n")
+        self.write("notes/qa.md", "# 講者備援：預想提問\n\n## Q1 為什麼？\n\n**簡答**：因為 [@k2020, {3-4}]。\n\n完整回答。\n")
         rows = "".join(f"| {i} | — | 1 One claim | `.claim` | 1 min | x | 講第 {i} 張 | {'公共財、Q1' if i == 1 else '—'} | — |\n"
                        for i in range(len(self.labels)))
         self.write("storyboard.md", "| # | 來源論點 | 內容形狀 | 版型 | 講 | 畫面內容 | 口說重點 | 名詞與提問 | AI 協助 |\n"
@@ -60,20 +59,18 @@ class DeckNotesTests(unittest.TestCase):
         self.assertEqual(len(notes), len(self.labels))
         self.assertEqual(notes[1], f"{self.labels[1]}\n【講法】\n・講第 1 張\n【名詞】\n・公共財：大家都享受得到 [@k2020, p. 12]。"
                                    "\n【提問】\n・Q1 為什麼？\n　因為 [@k2020, pp. 3-4]。")
-        self.assertNotIn("要點只留在報告", notes[1], "only the first paragraph goes into the note")
+        self.assertNotIn("完整要點留在備援檔", notes[1], "only the first paragraph goes into the note")
         self.assertEqual(self.run_fw("deck-notes.py", "talk", "--check").returncode, 0)
 
-    def test_refuses_a_term_the_model_lacks_or_a_glossary_outside_the_report(self):
+    def test_refuses_a_term_or_question_the_unit_backup_lacks(self):
         self.run_fw("deck-notes.py", "talk", "--init")
         sb = self.unit / "storyboard.md"
         sb.write_text(sb.read_text(encoding="utf-8").replace("公共財、Q1", "搭便車、Q9"), encoding="utf-8")
-        self.write("draft.qmd", "# 導言\n")
         before = (self.unit / "deck.html").read_bytes()
         r = self.run_fw("deck-notes.py", "talk")
         self.assertEqual(r.returncode, 1)
         self.assertIn("'搭便車', which notes/glossary.md does not have", r.stdout)
         self.assertIn("names Q9", r.stdout)
-        self.assertIn("notes/glossary.md is not included by draft.qmd", r.stdout)
         self.assertEqual((self.unit / "deck.html").read_bytes(), before, "nothing written on a problem")
 
     def test_a_moved_slide_shows_as_a_label_mismatch(self):

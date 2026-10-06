@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Build one unit to PDF.
 
-    ./fw build [<unit>] [--target <file.qmd>] [--no-bib-gate] [--no-progress-gate] [--no-deck-gate]
+    ./fw build [<unit-or-talk>] [--target <file.qmd>] [--no-bib-gate] [--no-progress-gate] [--no-deck-gate]
 
 Reads the unit's WORK.json, takes the matching template from
 assets/templates/<type>/, and writes two generated files into the unit
@@ -15,11 +15,11 @@ assets/templates/<type>/, and writes two generated files into the unit
 then runs `quarto render` in the unit and copies the PDF to
 <course>/_output/<unit-name>.pdf.
 
-Presentations are hand-authored deck.html files printed from a browser, so
-for them this runs the deck gate (storyboard present, no single pattern
-carrying the deck; a note when points.md is still the template) instead of
-rendering — unless --target names a .qmd: the report (draft.qmd) or the
-Beamer fallback (presentation.qmd). --no-deck-gate skips it once.
+HTML talks are hand-authored deck.html files printed from a browser. Passing a
+root presentation unit or a ``talks/<occasion>/`` directory runs the deck gate
+instead of rendering. Passing an ordinary unit still builds its assignment;
+its attached talks are checked individually by naming their directories.
+--no-deck-gate skips the deck gate once.
 """
 
 from __future__ import annotations
@@ -35,7 +35,8 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 FRAMEWORK = HERE.parent
 sys.path.insert(0, str(HERE))
-from _paths import course_root, library, rel, resolve_unit  # noqa: E402
+from _paths import (course_root, find_talk, library, rel, resolve_unit,
+                    talk_config, talk_model_files)  # noqa: E402
 
 PLACEHOLDERS = {
     "[論文標題]": "title", "[論文主標題]": "title", "[簡報標題]": "title", "[簡報主標題]": "title",
@@ -141,6 +142,8 @@ def generate(unit: Path, root: Path, work: dict) -> None:
 
     fw_rel = os.path.relpath(FRAMEWORK, unit)
     yml = template.read_text(encoding="utf-8")
+    if ptype == "presentation" and work.get("variant") == "reading-guide":
+        yml = yml.replace("    - draft.qmd", "    - guide.qmd")
     for placeholder, key in PLACEHOLDERS.items():
         yml = yml.replace(f'"{placeholder}"', f'"{yaml_escape(str(work.get(key, "")))}"')
 
@@ -194,7 +197,7 @@ def progress_gate(unit: Path) -> None:
         sys.exit("\nBuild blocked: see above. Override once with --no-progress-gate.")
 
 
-def deck_gate(unit: Path, root: Path) -> None:
+def deck_gate(unit: Path, talk: Path, root: Path) -> None:
     """Refuse a deck that skipped the storyboard or leans on one pattern.
 
     The storyboard is where the author sees, per slide, which content shape
@@ -204,7 +207,7 @@ def deck_gate(unit: Path, root: Path) -> None:
     table, and slides that are documents in bullet form. The gate cannot
     judge whether a shape fits — that is the storyboard review.
     """
-    deck = unit / "deck.html"
+    deck = talk / "deck.html"
     html = deck.read_text(encoding="utf-8")
     sections = [s for s in re.findall(r"<section\b([^>]*)>(.*?)</section>", html, flags=re.S)
                 if "slide" in s[0]]
@@ -216,13 +219,21 @@ def deck_gate(unit: Path, root: Path) -> None:
 
     # A note, not a block: units created before points.md existed have none,
     # and the layer's value is traceability the author reviews, not a count.
-    points = unit / "points.md"
+    points = talk / "points.md"
+    # Validate explicit declarations even when the deck itself is HTML-only.
+    # A talk whose authoritative Model was renamed or moved must not keep
+    # passing its gate while silently losing traceability. Root presentations
+    # from before talk.json remain supported: some have only deck.html and no
+    # recoverable declaration to validate.
+    if (talk / "talk.json").is_file():
+        talk_model_files(unit, talk)
+    model = ", ".join(talk_config(unit, talk)["model"])
     if not points.is_file() or "[論點：一句話]" in points.read_text(encoding="utf-8"):
         print(f"note: {rel(points, root)} is missing or still the template — each storyboard row "
-              "should name a point condensed from the report (draft.qmd), so no slide carries a "
-              "claim the report lacks (deck-plan skill)")
+              f"should name a point condensed from the declared Model ({model}), so no slide carries a "
+              "claim the Model lacks (deck-plan skill)")
 
-    storyboard = unit / "storyboard.md"
+    storyboard = talk / "storyboard.md"
     if not storyboard.is_file():
         problems.append(f"no {rel(storyboard, root)} — write the storyboard (one row per slide: "
                         "source point, content shape, pattern) and have the author review it "
@@ -240,9 +251,9 @@ def deck_gate(unit: Path, root: Path) -> None:
     # reference to a missing entry is a gap found mid-talk. Only a file written
     # for deck-notes (its header names the command) is checked: a unit may keep
     # its own notes file and sync script from before the command existed.
-    notes_md = unit / "speaker-notes.md"
+    notes_md = talk / "speaker-notes.md"
     if notes_md.is_file() and "./fw deck-notes" in notes_md.read_text(encoding="utf-8"):
-        r = subprocess.run([sys.executable, str(HERE / "deck-notes.py"), str(unit), "--check"],
+        r = subprocess.run([sys.executable, str(HERE / "deck-notes.py"), str(talk), "--check"],
                            capture_output=True, text=True)
         if r.returncode:
             problems.append("speaker notes: " + (r.stdout + r.stderr).strip())
@@ -311,21 +322,33 @@ def main() -> None:
         del argv[i:i + 2]
     positional = [a for a in argv if not a.startswith("--")]
     root = course_root()
-    unit = resolve_unit(positional[0] if positional else None)
+    scope = positional[0] if positional else None
+    talk_scope = find_talk(scope)
+    if talk_scope and not target:
+        unit, talk = talk_scope
+        work = json.loads((unit / "WORK.json").read_text(encoding="utf-8"))
+        progress_gate(unit)
+        deck = talk / "deck.html"
+        if not deck.is_file():
+            sys.exit(f"no deck at {rel(deck, root)} — scaffold one with ./fw talk-init")
+        if "--no-deck-gate" not in argv:
+            deck_gate(unit, talk, root)
+        print(f"The deck is {rel(deck, root)}. It has no build step: open it in a browser "
+              "and Print → Save as PDF (one slide per page).")
+        fallback = talk / "presentation.qmd"
+        if fallback.is_file() and talk == unit:
+            print(f"Beamer fallback: ./fw build {unit.name} --target presentation.qmd")
+        return
+    if talk_scope and target and talk_scope[1] != talk_scope[0]:
+        sys.exit("--target builds a unit QMD; pass the owning unit, not a talks/<occasion> directory")
+
+    unit = resolve_unit(scope)
     work = json.loads((unit / "WORK.json").read_text(encoding="utf-8"))
 
     progress_gate(unit)
 
     if work.get("type") == "presentation" and not (target and target.endswith(".qmd")):
-        deck = unit / "deck.html"
-        if not deck.is_file():
-            sys.exit(f"no deck at {rel(deck, root)} — scaffold one with ./fw unit-init")
-        if "--no-deck-gate" not in argv:
-            deck_gate(unit, root)
-        print(f"The deck is {rel(deck, root)}. It has no build step: open it in a browser "
-              "and Print → Save as PDF (one slide per page).\n"
-              f"Beamer fallback: ./fw build {unit.name} --target presentation.qmd")
-        return
+        sys.exit(f"no deck at {rel(unit / 'deck.html', root)} — scaffold one with ./fw unit-init")
 
     bib_gate(unit, work)
     generate(unit, root, work)

@@ -18,10 +18,10 @@ You are in a course repository that mounts the thesisbug2 framework at `.framewo
 ├── .framework/        # the framework — read it, run it, do not write coursework into it
 ├── library/           # references.bib + refs/ shared by two or more units
 ├── notes/             # lecture notes, transcripts, material that is not cited
-└── units/NN-<type>-<topic>/     # one assignment: WORK.json, PROGRESS.md, the manuscript, references.bib, refs/
+└── units/NN-<type>-<topic>/     # one assignment: WORK.json, PROGRESS.md, manuscript, talks/, references.bib, refs/
 ```
 
-A **unit** is any directory containing `WORK.json`. Skills write unit paths as `<unit>/…` and shared paths as `library/…`.
+A **unit** is any directory containing `WORK.json`. A **talk** is either a presentation unit root or `<unit>/talks/<occasion>/` with `talk.json`. Skills write unit paths as `<unit>/…`, talk paths as `<talk>/…`, and shared paths as `library/…`.
 
 ## Commands
 
@@ -33,7 +33,7 @@ Run everything from the course root through the dispatcher:
 ./fw update                            # pull the framework and commit the new pinned version
 ```
 
-`./fw update` changes the framework, not the copies already inside a unit: an HTML deck carries its engine, look and runtime in `<unit>/asset/` so it opens offline, and `./fw deck-refresh <unit>` brings those up to date without touching the author's files.
+`./fw update` changes the framework, not the copies already inside a talk: an HTML deck carries its engine, look and runtime in `<talk>/asset/` so it opens offline, and `./fw deck-refresh <talk>` brings those up to date without touching the author's files. `./fw talk-init <unit> --name <occasion> --model <file.qmd>` attaches a talk to a paper or thesis without copying its manuscript.
 
 `<unit>` may be a path or a bare unit name. Without it, the unit is the nearest `WORK.json` above your working directory; from the course root `fw` lists the units and stops rather than guessing. A skill may name a command that this framework version does not have yet — `./fw help` is the truth, so say a gate was not run when its command is missing; never report it as passed.
 
@@ -48,13 +48,13 @@ Use your environment's file, shell, browser, and delegation capabilities. Extern
 | Stage | Skill |
 | :--- | :--- |
 | Choosing a topic | `topic-scout` |
-| Finding, fetching, and auditing sources | `source-kit` |
+| Finding, fetching, writing stable per-source summaries, and auditing sources | `source-kit` |
 | Multi-spot edits to manuscript text | `safe-edit` |
 | Terminology (Traditional Chinese, Taiwan usage) | `fix-terms` |
 | Argument flow and coherence | `flow-check` |
 | Citation consistency | `cite-check` |
 | External cross-model review, at milestones | `gpt-review` |
-| Slide decks | report → `deck-plan` (points, storyboard) → `deck-svg` (live HTML) or `deck-image` (one image per slide), on `house-style` and `deck-runtime`; the workflow is `.framework/assets/templates/presentation/presentation-protocol.md` |
+| Slide decks | stable summaries/originals → declared task Model → unit backup knowledge → `deck-plan` (points, storyboard) → `deck-svg` (live HTML) or `deck-image` (one image per slide), on `house-style` and `deck-runtime`; the workflow is `.framework/assets/templates/presentation/presentation-protocol.md` |
 | Figures, 字數, transcripts | `diagram`, `count-zh`, `yt2sub` |
 
 Lint order for a manuscript: **fix-terms → flow-check → cite-check**, with gpt-review after that at milestones. Accepted findings land through safe-edit.
@@ -90,7 +90,7 @@ Each rule has a reason; apply the reason when a case is not listed.
 
 ## Recording AI use
 
-When the course requires disclosing AI use (`COURSE.md` § What is graded), keep a running log in the unit from topic selection on — `<unit>/notes/ai-usage.md`, one line per use: date, tool, purpose, what it produced, what the author decided or changed — because a log reconstructed at hand-in is unreliable. A report's paragraphs and a storyboard's 「AI 協助」 column are the per-paragraph and per-slide layers of the same record. At hand-in, if your environment keeps session transcripts locally, archive this unit's sessions compressed into the unit (for example `<unit>/notes/ai-sessions/`) as evidence, because such transcripts are machine-local and may be deleted automatically. Transcripts can contain personal data such as email addresses and local paths, so they go only into a private course repository.
+When the course requires disclosing AI use (`COURSE.md` § What is graded), keep a running log in the unit from topic selection on — `<unit>/notes/ai-usage.md`, one line per use: date, tool, purpose, what it produced, what the author decided or changed — because a log reconstructed at hand-in is unreliable. A Model's paragraphs and a storyboard's 「AI 協助」 column are the per-paragraph and per-slide layers of the same record. At hand-in, if your environment keeps session transcripts locally, archive this unit's sessions compressed into the unit (for example `<unit>/notes/ai-sessions/`) as evidence, because such transcripts are machine-local and may be deleted automatically. Transcripts can contain personal data such as email addresses and local paths, so they go only into a private course repository.
 
 ## The framework directory
 

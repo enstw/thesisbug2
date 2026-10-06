@@ -1,8 +1,9 @@
 ---
 name: deck-plan
 description: >
-  Plans a talk from its report before any slide exists: points.md picks the
-  8–12 points this audience takes away, each tied to a report section, and
+  Plans a talk from the Model declared in talk.json before any slide exists:
+  points.md picks the 8–12 points this audience takes away, each tied to a
+  Model section, and
   storyboard.md sets the premises and one row per slide (point, content shape,
   layout, on-slide content, spoken points, backup terms and questions, AI
   disclosure). Use when starting,
@@ -15,8 +16,8 @@ description: >
 A talk is organized as Model–View–Controller; the presentation protocol
 (`assets/templates/presentation/presentation-protocol.md` § Source Files)
 holds the rules. This skill is the **Controller**: it decides which parts of
-the report this audience sees, in what order, from what angle. The **Model**
-is the report and the sources under it; the **Views** are the slides, which
+the declared Model this audience sees, in what order, from what angle. The
+**Model** is the task-focused file or files named by `talk.json`; the **Views** are the slides, which
 deck-svg, deck-image or the Beamer fallback render from the storyboard
 written here.
 
@@ -25,31 +26,35 @@ every engine renders the same plan: a deck that switches from live HTML to
 images keeps its storyboard, and an engine that planned slides by itself
 would skip the review this plan exists for.
 
-## Before planning: the report
+## Before planning: the declared Model
 
-The input is the report `<unit>/draft.qmd` as it renders — the notes it
-includes plus the passages written for it (protocol § The report). Plan only
-from it, because neither the points nor the storyboard may add a claim: a
-point the talk needs but the report lacks goes into the report, or the note it
-includes, with its citation first. Run `./fw check-citations <unit>` before
-planning, so every point starts from sentences whose sources resolve.
+Read `<talk>/talk.json`; each `model` path is relative to `<unit>`. A reading
+guide normally declares `guide.qmd`, while a paper or thesis talk declares the
+actual staged deliverable or manuscript. Stable per-source summaries are
+upstream lookup aids, not an alternative Model: use them to locate a passage,
+then verify and cite the original in the Model.
 
-## The angle — `points.md`
+Plan only from the declared Model as it renders, including its local Quarto
+includes, because neither points nor storyboard may add a claim. A point the
+talk needs but the Model lacks goes into the Model first. Run
+`./fw check-citations <unit>` before planning, so every point starts from
+sentences whose sources resolve; the same gate checks the unit glossary/Q&A.
 
-- About 8–12 points, one sentence each, each naming the report section it
-  draws on (`報告 § <heading>`, the heading of an included note counts),
+## The angle — `<talk>/points.md`
+
+- About 8–12 points, one sentence each, each naming the Model file and section it
+  draws on (`<model-file> § <heading>`, an included heading counts),
   because a talk is one selection from the argument and the selection should
   be reviewable on one page.
 - Number them P1, P2, … and never renumber; a point added later takes the next
   free number, because storyboard rows cite the numbers and renumbering would
   silently re-point them.
-- Another angle on the same report — a shorter version, a co-presented week
-  that covers only some readings, a discussion-first order — is a new
-  `points.md` and storyboard, not a new report. Keep a pair that is still
-  wanted under a suffixed name (`points-short.md`); the deck is built from
-  the unsuffixed pair, which `./fw build` checks.
+- Another occasion or angle on the same Model — a shorter version, a
+  co-presented week, a discussion-first order — gets a new talk directory,
+  not a new Model or a suffixed Controller inside one talk. This keeps the
+  delivered occasion, its deck and milestone unambiguous.
 
-## The flow — `storyboard.md`
+## The flow — `<talk>/storyboard.md`
 
 The scaffold (`unit-init`) has the format. It opens with **前提** as bullets —
 never a table, because `./fw build` counts every table row as a slide:
@@ -74,9 +79,9 @@ range → author → arguments → synthesis → concepts → critique → quest
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | 5 | `points.md` P4 | 4 Two-axis typology | `.matrix` 3×3 | 2 min | axis y = 極數, axis x = 權威密度; highlight the cell the author's case falls in | why the axes, the author's case with page, transition to the critique | 極數、權威密度、Q3 | AI drafted the cell labels; author chose the axes and checked them against the source |
 
-- **來源論點** names the point; the point names the report section. That chain
+- **來源論點** names the point; the point names the Model file and section. That chain
   is the traceability the author reviews: every slide points back to a cited
-  report sentence.
+  Model sentence.
 - **內容形狀** is a number from [`reference/content-shapes.md`](reference/content-shapes.md);
   read it while writing rows. **版型** is the View's layout for that shape:
   the deck-svg class from its `reference/slide-patterns.md` § Shape → pattern,
@@ -90,13 +95,13 @@ range → author → arguments → synthesis → concepts → critique → quest
   transitions. With sparse slides the notes carry the talk, so the author
   reviews them here; the View writes them out in full as the note's 講法.
 - **名詞與提問** lists the terms the presenter must be able to explain on this
-  slide (spelled as the headings of `notes/glossary.md`) and the questions
-  this audience is likely to ask (`Q<n>` from `notes/qa.md`), separated by
+  slide (spelled as the headings of `<unit>/notes/glossary.md`) and the questions
+  this audience is likely to ask (`Q<n>` from `<unit>/notes/qa.md`), separated by
   `、`. The presenter may not know every detail behind a slide, and the
   audience asks about exactly those; which ones to prepare depends on the
   audience in 前提, so the choice is made here, while the explanations and
-  answers are facts and are written in the Model first (protocol § Speaker
-  notes). `./fw deck-notes` refuses a row that names an entry the Model lacks.
+  answers are factual backup written once at unit level (protocol § Speaker
+  notes). `./fw deck-notes` refuses a row that names an entry the unit lacks.
 - **AI 協助** records what AI drafted or verified and what the author wrote or
   changed, because courses increasingly ask for per-slide AI disclosure, and
   noting it while planning is more reliable than reconstructing it later.
@@ -107,13 +112,14 @@ get built.
 ## Changing a planned talk
 
 Only changes of order, emphasis, audience or angle are made here, and they
-leave the report untouched. A wrong fact goes back to the report and is then
-re-rendered in every row and slide that uses it; a layout change stays in the
-View (protocol § Source Files, rule 2).
+leave the Model untouched. A wrong fact goes back to its owning factual layer
+(Model or unit backup knowledge) and is then re-rendered in every row and slide
+that uses it; a layout change stays in the View (protocol § Source Files, rule
+2).
 
 ## The gate
 
-`./fw build` on a presentation unit refuses a deck with no `storyboard.md`, a
+`./fw build <talk>` refuses a deck with no `storyboard.md`, a
 row count far from the slide count, or a deck leaning on one pattern
 (comparison tables on most content slides, more than six bullets on a slide),
 and notes a `points.md` that is missing or still the template. It cannot judge
@@ -125,7 +131,7 @@ whether a shape fits — that is the author's review.
 | :--- | :--- | :--- |
 | Live HTML slides (default) | `deck-svg` | the deck is still being edited, or carries precise figures and tables |
 | One image per slide | `deck-image` | the copy is locked and the talk is a showcase, because each later edit costs a page regeneration |
-| Beamer PDF | `presentation.qmd` (protocol § Quarto Beamer Fallback) | the venue needs Pandoc-rendered references or LaTeX |
+| Beamer PDF | root presentation unit's `presentation.qmd` (protocol § Quarto Beamer Fallback) | the venue needs Pandoc-rendered references or LaTeX |
 
-Each View writes a slide and its speaker note from one row and the report
+Each View writes a slide and its speaker note from one row and the Model
 passage the row's point names, never the note from the slide.

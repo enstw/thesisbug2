@@ -89,6 +89,9 @@ and audit logs (`audit/*.jsonl`) stay in git.
   the updated `MANIFEST.tsv` alongside the bib/transcript change.
 - To verify a source against its transcript on a machine without the file:
   `./fw refs-snapshot pull <key>` (sha256-verified on download).
+- `push` never drops a manifest row for an original this machine lacks. To
+  drop a source on purpose, `./fw refs-snapshot forget <path>` (the asset stays
+  in the Release).
 - `./fw refs-snapshot status` shows missing/modified originals. Sources
   are immutable — a `MODIFIED` verdict means something is wrong; investigate,
   never re-push over it silently.

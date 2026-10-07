@@ -11,6 +11,7 @@
 #   ./fw refs-snapshot push            upload new/changed originals, regenerate the manifest
 #   ./fw refs-snapshot pull [pat...]   materialize originals locally (all, or paths matching pat)
 #   ./fw refs-snapshot status          local tree vs manifest
+#   ./fw refs-snapshot forget <path>   drop a manifest row on purpose (the asset stays)
 #
 # Requires: gh (authenticated), shasum. Compatible with macOS bash 3.2.
 set -euo pipefail
@@ -20,6 +21,13 @@ REFS_DIR="$REPO_ROOT"                       # manifest paths are relative to the
 MANIFEST="$REPO_ROOT/library/refs/MANIFEST.tsv"
 
 die() { echo "refs-snapshot: $*" >&2; exit 1; }
+usage() { sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//'; }
+
+# Asking for help must never reach a subcommand: `push --help` used to run a
+# real push, uploading every new original and rewriting the manifest.
+for arg in "$@"; do
+  case "$arg" in -h|--help|help) usage; exit 0;; esac
+done
 
 command -v gh >/dev/null || die "gh CLI not found"
 [ -d "$REPO_ROOT/units" ] || [ -d "$REPO_ROOT/library" ] || die "not a course repo: $REPO_ROOT"
@@ -75,6 +83,7 @@ ensure_release() {
 }
 
 cmd_push() {
+  [ $# -eq 0 ] || die "push takes no arguments (got: $*)"
   local tag old_tag; tag=$(resolve_tag); old_tag=$(manifest_tag)
   check_unique_assets
   ensure_release "$tag"
@@ -101,8 +110,22 @@ cmd_push() {
     rm "$staging/$(encode "$rel")"
     uploaded=$((uploaded+1))
   done
-  # Rows for sources deleted locally are dropped from the manifest; the release
-  # asset is kept (append-only archive — recover via `gh release download`).
+  # Keep rows whose original is not on this machine. Originals are untracked,
+  # so a clone that has not pulled every file is the normal case, and a missing
+  # file says nothing about whether the source was dropped. Rebuilding from the
+  # local tree alone used to delete those rows and orphan their release assets.
+  # A promoted source is not missing (refs promote rewrites its path), and a
+  # source dropped on purpose leaves through `forget`.
+  local kept=0 mrel mrest
+  if [ -f "$MANIFEST" ]; then
+    while IFS=$'\t' read -r mrel mrest; do
+      case "$mrel" in \#*|'') continue;; esac
+      [ -f "$REFS_DIR/$mrel" ] && continue
+      printf '%s\t%s\n' "$mrel" "$mrest" >> "$rows"
+      kept=$((kept+1))
+    done < "$MANIFEST"
+  fi
+  sort -t$'\t' -k1,1 -o "$rows" "$rows"
   {
     echo "# source-originals manifest for the whole course (paths relative to the course root) — bytes live in GitHub Release: $tag"
     echo "# managed by ./fw refs-snapshot; regenerate with: ./fw refs-snapshot push"
@@ -110,11 +133,15 @@ cmd_push() {
     cat "$rows"
   } > "$staging/manifest"
   mkdir -p "$(dirname "$MANIFEST")"; mv "$staging/manifest" "$MANIFEST"
-  echo "pushed: $uploaded uploaded, $skipped unchanged, manifest $(grep -cv '^#' "$MANIFEST") entries"
+  echo "pushed: $uploaded uploaded, $skipped unchanged, $kept kept (not on this machine), manifest $(grep -cv '^#' "$MANIFEST") entries"
   echo "→ commit library/refs/MANIFEST.tsv if it changed"
 }
 
 cmd_pull() {
+  local pat
+  for pat in "$@"; do
+    case "$pat" in -*) die "unknown option for pull: $pat";; esac
+  done
   [ -f "$MANIFEST" ] || die "no manifest at library/refs/MANIFEST.tsv"
   local tmpdir; tmpdir=$(mktemp -d)
   # shellcheck disable=SC2064 — expand now: $tmpdir is function-local
@@ -123,7 +150,7 @@ cmd_pull() {
   while IFS=$'\t' read -r rel want bytes tag; do
     case "$rel" in \#*|'') continue;; esac
     if [ $# -gt 0 ]; then
-      local hit=0 pat
+      local hit=0
       for pat in "$@"; do case "$rel" in *"$pat"*) hit=1;; esac; done
       [ $hit -eq 1 ] || continue
     fi
@@ -147,7 +174,24 @@ cmd_pull() {
   [ $failed -eq 0 ] || exit 1
 }
 
+cmd_forget() {
+  [ $# -gt 0 ] || die "forget needs the manifest path of each source to drop"
+  [ -f "$MANIFEST" ] || die "no manifest at library/refs/MANIFEST.tsv"
+  local rel
+  for rel in "$@"; do
+    awk -F'\t' -v p="$rel" '!/^#/ && $1==p {f=1} END {exit !f}' "$MANIFEST" \
+      || die "not in manifest: $rel"
+  done
+  local tmp list; tmp=$(mktemp); list=$(mktemp)
+  printf '%s\n' "$@" > "$list"
+  awk -F'\t' 'NR == FNR { drop[$0] = 1; next } /^#/ || !($1 in drop)' "$list" "$MANIFEST" > "$tmp"
+  rm -f "$list"; mv "$tmp" "$MANIFEST"
+  for rel in "$@"; do echo "forgot: $rel  (release asset kept)"; done
+  echo "→ commit library/refs/MANIFEST.tsv"
+}
+
 cmd_status() {
+  [ $# -eq 0 ] || die "status takes no arguments (got: $*)"
   [ -f "$MANIFEST" ] || die "no manifest at library/refs/MANIFEST.tsv (run push first)"
   local missing=0 modified=0 ok=0
   while IFS=$'\t' read -r rel want bytes tag; do
@@ -173,5 +217,6 @@ case "${1:-}" in
   push)   shift; cmd_push "$@";;
   pull)   shift; cmd_pull "$@";;
   status) shift; cmd_status "$@";;
-  *) sed -n '2,14p' "$0" | sed 's/^# \{0,1\}//'; exit 2;;
+  forget) shift; cmd_forget "$@";;
+  *) usage; exit 2;;
 esac

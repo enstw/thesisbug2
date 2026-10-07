@@ -247,6 +247,23 @@ def _note_label(slots: dict[str, Any], default: str) -> str:
 def render_hero_title(slots: dict[str, Any], variant: str, ctx: SlideContext) -> str:
     title = esc(slots.get("title") or "未命名簡報")
     dlabel = _dlabel(slots, title)
+    # `title_lines:` (a list) sets where the cover title breaks. Balanced
+    # wrapping evens out line widths but cannot see meaning, so a title whose
+    # natural break is after a comma may still split mid-phrase.
+    # Each listed line is kept whole; if the longest would overflow the 1500px
+    # title box at the 132px default (letter-spacing .04em), the font shrinks
+    # just enough to fit, rather than letting the line wrap mid-phrase again.
+    lines = slots.get("title_lines")
+    title_html, h1_style = title, ""
+    if isinstance(lines, list) and lines:
+        texts = [str(ln.get("head", "") if isinstance(ln, dict) else ln).strip() for ln in lines]
+        # No per-line <span>: the title's colour is a gradient clipped to the
+        # h1's text, and a child element would hide that from deck-check.
+        title_html = "<br>".join(esc(t) for t in texts)
+        widest = max(len(t) for t in texts) or 1
+        fit = int(1500 * 0.97 / (widest * 1.04))
+        size = f" font-size: calc({fit}px * var(--deck-font-scale, 1));" if fit < 132 else ""
+        h1_style = f' style="white-space: nowrap;{size}"'
     sub = esc(slots.get("sub") or slots.get("subtitle") or "")
     meta = esc(slots.get("meta") or slots.get("author") or "")
     sub_html = f'<p class="hero__sub rise d1">{sub}</p>' if sub else ""
@@ -258,7 +275,7 @@ def render_hero_title(slots: dict[str, Any], variant: str, ctx: SlideContext) ->
       <div class="grid-layer"></div>
     </div>
     <div class="hero__inner">
-      <h1 class="rise">{title}</h1>
+      <h1 class="rise"{h1_style}>{title_html}</h1>
       {sub_html}
       {meta_html}
     </div>
@@ -513,6 +530,9 @@ def render_matrix_deepdive(slots: dict[str, Any], variant: str, ctx: SlideContex
     focus = int(fq) if fq.isdigit() and 1 <= int(fq) <= 4 else 0
     note = esc(slots.get("deepdive_note") or "")
     note_tag = esc(slots.get("note_label") or (f"焦點象限特寫 (Q{focus})" if focus else "解讀"))
+    # `matrix_width: wide` gives the matrix most of the row: cell text wraps
+    # every few characters at the default split, burying the typology.
+    wide = " matrix-deepdive--wide" if str(slots.get("matrix_width") or "").strip().lower() == "wide" else ""
 
     # Format 2x2 cells
     cell_map = {1: ("低", "低"), 2: ("低", "高"), 3: ("高", "低"), 4: ("高", "高")}
@@ -542,7 +562,7 @@ def render_matrix_deepdive(slots: dict[str, Any], variant: str, ctx: SlideContex
 {_render_topbar(ctx)}
     <div class="content">
       <h2 class="kicker rise">{title}</h2>
-      <div class="matrix-deepdive mt">
+      <div class="matrix-deepdive{wide} mt">
         {matrix_table}
         <div class="card card--tint-elevated matrix-deepdive__note rise d2">
           <span class="tag">{note_tag}</span>
@@ -667,6 +687,10 @@ def render_cascade_funnel(slots: dict[str, Any], variant: str, ctx: SlideContext
     levels = slots.get("levels") or slots.get("items") or []
     verdict = esc(slots.get("core_focus") or slots.get("verdict") or "")
 
+    # `label_width: narrow` shrinks the 400px level-name column for short names
+    # such as 條約／組織／協議, so the description gets the width.
+    narrow = " tiers--narrow" if str(slots.get("label_width") or "").strip().lower() == "narrow" else ""
+
     tiers = []
     for i, lv in enumerate(levels[:3]):
         lvl_name = esc(lv.get("level_name") or lv.get("tag") or f"層級 {i+1}")
@@ -687,7 +711,7 @@ def render_cascade_funnel(slots: dict[str, Any], variant: str, ctx: SlideContext
 {_render_topbar(ctx)}
     <div class="content">
       <h2 class="kicker rise">{title}</h2>
-      <div class="tiers mt">
+      <div class="tiers{narrow} mt">
 {''.join(tiers)}
       </div>
       {verdict_html}

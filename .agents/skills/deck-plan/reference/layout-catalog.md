@@ -38,6 +38,7 @@
   - `title` *(必填)*：主標題
   - `sub` *(選填)*：副標題（交代個案或範疇）
   - `meta` *(選填)*：導讀人、場合或日期
+  - `title_lines` *(選填)*：清單，逐行指定主標題怎麼斷行（`title` 仍要寫，供頁面標籤使用）。標題已自動平衡各行寬度，但平衡看不懂語意；自然斷點在逗號之後、卻被切在詞中間時才用
 - **畫面內容範例**：
   ```text
   title: 大國競爭下的供應鏈重組策略<br>sub: 台灣半導體生態系的戰略抉擇<br>meta: 國際關係專題研討 · 2026 年秋
@@ -115,8 +116,9 @@
 ### 8. `L-MATRIX-DEEPDIVE`（2×2 矩陣＋焦點象限引出）
 - **使用情境**：雙維度分類法（Typology），並特別將特定象限放大拉出解讀。
 - **深度變體**：`split-note`（左矩陣右解讀）、`floating-callout`（全寬矩陣下浮動條）。
-- **槽位規格**：`title`, `axis_x` `{name, low, high}`, `axis_y` `{name, low, high}`, `cells` *(4 項)*, `focus_quadrant` (1..4，或 `none`), `deepdive_note`, `note_label` *(選填)*
+- **槽位規格**：`title`, `axis_x` `{name, low, high}`, `axis_y` `{name, low, high}`, `cells` *(4 項)*, `focus_quadrant` (1..4，或 `none`), `deepdive_note`, `note_label` *(選填)*, `matrix_width` *(選填，`wide`)*
 - **不預設象限**：類型學若是拿來提問、案例還沒定位，寫 `focus_quadrant: none`，任何一格都不高亮，因為高亮會讓聽眾以為案例已經被放進那一格；右側解讀框的標籤預設是「焦點象限特寫 (Qn)」，沒有焦點時是「解讀」，可用 `note_label` 改寫。
+- **矩陣寬度**：預設矩陣與解讀框約各占一半，格內文字常幾個字就換行；矩陣才是這頁的重點時寫 `matrix_width: wide`，矩陣約占三分之二。
 - **畫面內容範例**：
   ```text
   title: 威懾政策矩陣分類<br>axis_x: {name: "承諾明確度", low: "戰略模糊", high: "戰略清晰"}<br>axis_y: {name: "軍事部署烈度", low: "前沿威懾", high: "縱深防衛"}<br>cells:<br>- Q1: 傳統模糊平衡 (現狀)<br>- Q2: 延伸威懾強化<br>- Q3: 刺蝟防衛島鏈<br>- Q4: 全面安全條約<br>focus_quadrant: 3<br>deepdive_note: 本研究聚焦第 3 象限：在維持政治彈性的同時，大幅提升不對稱拒止能力的有效性。
@@ -156,7 +158,8 @@
 ### 12. `L-CASCADE-FUNNEL`（漏斗層層收斂）
 - **使用情境**：宏觀到微觀、或多層次分析框架（體系層 → 國內層 → 決策層）。
 - **深度變體**：`stacked-tiers`（梯形階層堆疊）、`concentric-cards`（收斂卡片）。
-- **槽位規格**：`title`, `levels` *(3 項)*, `core_focus` *(選填)*
+- **槽位規格**：`title`, `levels` *(3 項)*, `core_focus` *(選填)*, `label_width` *(選填，`narrow`)*
+- **層級名稱欄寬**：左欄預設 400px；層級名稱很短（如「條約／組織／協議」）時寫 `label_width: narrow`（220px），把寬度讓給說明文字。
 - **畫面內容範例**：
   ```text
   title: 外交政策決策的三層分析架構<br>levels:<br>- 體系層 (Systemic): 大國實力對比結構與無政府狀態下的相對獲益競爭<br>- 國內層 (Domestic): 選民偏好、國會立法約束與關鍵產業利益遊說團體<br>- 領導層 (Individual): 決策者歷史經驗、危機認知基模與風險偏好特質<br>core_focus: 本文聚焦國內層政治如何扭曲體系層的結構性壓力傳導

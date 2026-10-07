@@ -201,6 +201,8 @@
     padding: 20px 30px; border: 1px solid var(--hair); border-left: 8px solid var(--chapter); border-radius: 14px; background: var(--ink-2); }
   .tier h3 { font-size: calc(44px * var(--deck-font-scale, 1)); margin: 0; }
   .tier p { margin: 0; font-size: calc(40px * var(--deck-font-scale, 1)); color: var(--body); line-height: 1.45; }
+  /* label_width: narrow — short level names do not need 400px */
+  .tiers--narrow .tier { grid-template-columns: 220px 1fr; }
 
   /* ---------- discussion question (shape 13): claim, two sides, ask ---------- */
   .debate .claim { font-size: calc(52px * var(--deck-font-scale, 1)); margin-bottom: 28px; }
@@ -232,6 +234,9 @@
     -webkit-background-clip: text; background-clip: text; color: transparent;
   }
   .hero__sub { font-size: calc(48px * var(--deck-font-scale, 1)); color: var(--body); margin: 36px auto 0; max-width: 1500px; line-height:1.45; }
+  /* Balance centred headline lines so a wrap never strands one or two
+     characters on a line of their own. */
+  .hero h1, .hero__sub, .finale h2, .onesentence { text-wrap: balance; }
   .hero__meta { margin-top: 48px; color: var(--body); font-size: calc(40px * var(--deck-font-scale, 1)); line-height:1.6; }
   .hero__meta strong { color: var(--text); font-weight:700; }
   /* .hero__hint is presenter chrome (key hints), so it stays below the 34px floor */
@@ -382,6 +387,8 @@
   .confront__badge { width: 64px; height: 64px; border-radius: 50%; background: var(--chapter); color: var(--on-chapter, #07090f); display: grid; place-items: center; font-weight: 800; font-size: calc(26px * var(--deck-font-scale, 1)); }
 
   .matrix-deepdive { display: grid; grid-template-columns: 1.1fr 1fr; gap: 36px; align-items: center; }
+  /* matrix_width: wide — the typology is the point of the slide, the note supports it */
+  .matrix-deepdive--wide { grid-template-columns: 1.8fr 1fr; }
   .matrix-deepdive__note { padding: 32px; }
 
   .quote-critique { display: flex; flex-direction: column; gap: 20px; }

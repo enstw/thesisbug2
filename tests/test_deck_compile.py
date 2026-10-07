@@ -141,6 +141,25 @@ class OverridableLabelTests(unittest.TestCase):
         self.assertIn("甲是一種說明，乙是另一種說明", html)
         self.assertIn("only head", html)
 
+    def test_matrix_width_wide(self):
+        base = "title: t<br>cells:<br>- a: 1<br>- b: 2<br>- c: 3<br>- d: 4<br>deepdive_note: n"
+        self.assertIn("matrix-deepdive--wide", self.render("L-MATRIX-DEEPDIVE", base + "<br>matrix_width: wide"))
+        self.assertNotIn("matrix-deepdive--wide", self.render("L-MATRIX-DEEPDIVE", base))
+
+    def test_cascade_label_width_narrow(self):
+        base = "title: t<br>levels:<br>- [甲] h: b<br>- [乙] h: b<br>- [丙] h: b"
+        self.assertIn("tiers--narrow", self.render("L-CASCADE-FUNNEL", base + "<br>label_width: narrow"))
+        self.assertNotIn("tiers--narrow", self.render("L-CASCADE-FUNNEL", base))
+
+    def test_hero_title_lines(self):
+        html = self.render("L-HERO-TITLE", "title: 甲乙，丙丁？<br>title_lines:<br>- 甲乙，<br>- 丙丁？")
+        self.assertIn("甲乙，<br>丙丁？", html)
+        self.assertIn("white-space: nowrap", html.split("<h1")[1].split(">")[0])
+        self.assertNotIn("font-size", html.split("<h1")[1].split(">")[0])
+        long = self.render("L-HERO-TITLE", "title: x<br>title_lines:<br>- 一二三四五六七八九十十一十二")
+        self.assertIn("font-size: calc(", long.split("<h1")[1].split(">")[0])
+        self.assertIn('data-label="甲乙，丙丁？"', html)
+
     def test_finale_points_align_left(self):
         html = self.render("L-FINALE-SUMMARY", "heading: h<br>points:<br>- a<br>points_align: left")
         self.assertIn('style="text-align:left"', html)

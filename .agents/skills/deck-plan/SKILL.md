@@ -108,6 +108,9 @@ range → author → arguments → synthesis → concepts → critique → quest
   audience in 前提, so the choice is made here, while the explanations and
   answers are factual backup written once at unit level (protocol § Speaker
   notes). `./fw deck-notes` refuses a row that names an entry the unit lacks.
+  List every term and abbreviation on the slide or in its 口說重點 that this
+  audience may not know: the command checks that listed entries exist, not
+  that the list is complete, so coverage is checked here at sign-off.
 - **AI 協助** records what AI drafted or verified and what the author wrote or
   changed, because courses increasingly ask for per-slide AI disclosure, and
   noting it while planning is more reliable than reconstructing it later.

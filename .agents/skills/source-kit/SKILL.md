@@ -185,6 +185,24 @@ A useful summary lets a reader understand the work on its own. Preserve:
 - evidence, examples, methods, limitations and conclusion;
 - page or paragraph locators precise enough to reopen the original.
 
+Follow [`reference/summary-template.md`](reference/summary-template.md). Two of
+its sections come first because they serve a reader who is learning to write
+research as well as one triaging sources:
+
+- **論文骨架** (paper skeleton) breaks the work into the parts of a research
+  article — question, interlocutor and gap, claims and stated hypotheses,
+  argument steps in the author's order, evidence and method, conclusion and
+  contribution, self-declared scope and limits — then adds the summarizer's
+  observations on how the piece is written, labelled as such.
+- **作者與學術位置** (author and field position) records the author's affiliation
+  as printed in the work, the earlier work the author self-cites, and the
+  author's school and contribution. A biography from outside the work needs
+  its own cited source; the summarizer's characterization of the contribution
+  is labelled, because a later agent may otherwise cite it as the author's.
+
+Spell out each abbreviation at its first use in the file as 全名（縮寫）; each
+file is read on its own.
+
 Write it **source-centred**, not assignment-centred. Do not trim, reorder or
 rewrite it for this week's theme, one presentation's time limit, or a later
 claim; those choices belong in the downstream task Model. When the source has

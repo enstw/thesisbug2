@@ -120,6 +120,45 @@ copying. They stay within the unit, because a cross-unit include lets later
 work silently change an already-graded assignment. `check-citations`,
 `check-zh-variants` and `lint-readability` follow local includes.
 
+## What a reading guide covers
+
+A reading guide teaches a new reader how each work is built, who wrote it and
+where it sits, and what its words mean, then puts the works to use. Each part
+is written once, in the layer that owns it, so the slides and notes only
+select and say it:
+
+| Content | Written in | Reaches the talk as |
+| :--- | :--- | :--- |
+| Paper skeleton: question, gap, claims and hypotheses, argument steps, evidence, limits, how the piece is written | the stable summary's 論文骨架 (`source-kit` template) | the argument slides, selected through the Model |
+| Author and field position: affiliation, related earlier work, school and contribution | the summary's 作者與學術位置, restated with citations in the Model's `### 作者與學術位置` under each reading | a spoken introduction at the start of that reading's part; no extra slide needed |
+| Technical terms and abbreviations | `<unit>/notes/glossary.md` | the storyboard's 名詞與提問 column; `./fw deck-notes` adds each one-line version to the note |
+| Critique and discussion questions | the Model's comparison and discussion sections | the critique and discussion slides |
+| Recent events that test the readings (optional) | the Model's `# 近年局勢檢驗`, sources in the unit tier | one timeline slide; a new question gets its own slide |
+
+**Author introductions.** Take the affiliation from the work itself (its first
+page or author note) and the field position from cited literature, including
+the course's other readings when they discuss the author. A line that
+characterizes the contribution in the presenter's words is marked as the
+presenter's, on the page and aloud.
+
+**Terms and abbreviations.** Every technical term or abbreviation that appears
+on a slide, or in the spoken notes, and that this audience may not know gets a
+glossary entry and is listed in that slide's 名詞與提問. `deck-notes` checks
+that a listed entry exists; it cannot tell a term was left off the list, so
+check coverage slide by slide when signing off the storyboard. Name an
+abbreviation's entry 全名（縮寫）, and spell the abbreviation out at its first
+use in the Model and on its first slide.
+
+**Recent-events test (optional).** Current events can test a reading in front
+of the class. Map each event to the discussion question it tests, and say on
+the slide that the mapping is the presenter's link, which points to what is
+worth checking and neither confirms nor refutes the theory. New sources land in
+the unit tier with an identity audit (`source-kit` §0, §8). A disputed fact is
+written as the claim of the party that makes it, a figure carries its date,
+and a status that may change before the talk carries its source date. Do not
+reword discussion questions already distributed to the class; add a new one
+under the next number and mark it as added.
+
 Run `./fw check-citations <unit>` and `./fw check-zh-variants <unit>` before
 planning. A good source summary speeds relevance judgment and locator lookup,
 but citation support is still verified against the original (`source-kit`).
@@ -183,15 +222,18 @@ Opening, presenting and printing the HTML deck: `deck-svg` § Run & verify.
 1. Write `<unit>/guide.qmd` around the week's problem, selecting from the
    summaries and verifying/citing the original passages. This is the declared
    Model; summaries are not included wholesale or rewritten for the talk.
+   Open each reading's section with `### 作者與學術位置` (§ What a reading
+   guide covers).
 1. Expand unit-level glossary and Q&A from knowledge the Model requires,
-   checking their factual content directly against sources.
+   checking their factual content directly against sources. Cover every term
+   and abbreviation the slides and notes will use.
 1. Plan the talk with `deck-plan`: `<talk>/points.md`, then the storyboard;
    the author signs off both.
 1. Render the Views with `deck-svg` (or `deck-image`), write delivery notes,
    assemble them with `./fw deck-notes <talk>`, then run the deck checks.
 1. If the class requires Pandoc-rendered references, mirror the final structure into `presentation.qmd` and export that fallback.
 
-Single- or two-source guides may skip the cross-reading map and emphasize argument structure, author background, key concepts, and discussion questions.
+Single- or two-source guides may skip the cross-reading map; the paper skeleton, author introduction, terms and discussion questions still apply.
 
 ## Thesis Presentation Workflow
 
@@ -206,7 +248,8 @@ Single- or two-source guides may skip the cross-reading map and emphasize argume
 
 ## Quality Checklist
 
-- [ ] Stable summaries identify their source/edition, preserve argument and evidence with locators, and were reviewed against the original.
+- [ ] Stable summaries identify their source/edition, open with 論文骨架 and 作者與學術位置, preserve argument and evidence with locators, and were reviewed against the original.
+- [ ] (Reading guide) Each reading's author is introduced from cited sources; every term and abbreviation on a slide or in a note has a glossary entry listed in that slide's 名詞與提問.
 - [ ] `talk.json` names the actual task-focused Model; no per-talk copy of the assignment manuscript exists.
 - [ ] `./fw check-citations <unit>` and `./fw check-zh-variants <unit>` pass, including glossary and Q&A.
 - [ ] `<talk>/points.md` and `storyboard.md` are signed off; every slide and note trace to the declared Model and add no factual claim.

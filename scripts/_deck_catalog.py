@@ -221,6 +221,29 @@ def _dlabel(slots: dict[str, Any], default: str) -> str:
     return esc(slots.get("label") or slots.get("data_label") or default)
 
 
+NO_LABEL = {"none", "無", "-", "—"}
+
+
+def _note_label(slots: dict[str, Any], default: str) -> str:
+    """Bold prefix of a layout's closing box (verdict, takeaway, puzzle...).
+
+    Each layout keeps a default word for what that box usually holds, but the
+    same box can carry a mechanism, a case observation or a discussion
+    procedure, and a fixed word like 定論 then mislabels the content. So a
+    slide may set `verdict_label: <word>` to rename the prefix, or
+    `verdict_label: none` to drop it.
+    """
+    raw = slots.get("verdict_label")
+    if raw is None:
+        return f"<em>{default}：</em>"
+    if isinstance(raw, list):          # `verdict_label:` with no value
+        return ""
+    text = str(raw).strip()
+    if not text or text.lower() in NO_LABEL:
+        return ""
+    return f"<em>{esc(text)}：</em>"
+
+
 def render_hero_title(slots: dict[str, Any], variant: str, ctx: SlideContext) -> str:
     title = esc(slots.get("title") or "未命名簡報")
     dlabel = _dlabel(slots, title)
@@ -252,7 +275,10 @@ def render_finale_summary(slots: dict[str, Any], variant: str, ctx: SlideContext
     pts_html = ""
     if pts:
         li_items = "".join(f"<li>{esc(p.get('head', p) if isinstance(p, dict) else p)}</li>" for p in pts)
-        pts_html = f'<ul class="clean lead-size rise d2 mt">{li_items}</ul>'
+        # Long points wrap; centred wrapped lines are hard to follow, so a slide
+        # may set `points_align: left` while the heading stays centred.
+        align = ' style="text-align:left"' if str(slots.get("points_align") or "").strip().lower() == "left" else ""
+        pts_html = f'<ul class="clean lead-size rise d2 mt"{align}>{li_items}</ul>'
 
     return f"""  <section class="slide finale" data-label="{dlabel}">
     <div class="railtop"></div>
@@ -287,7 +313,8 @@ def render_3card_verdict(slots: dict[str, Any], variant: str, ctx: SlideContext)
             <p>{body}</p>
           </div>""")
 
-    verdict_html = f'<div class="verdict box rise d4"><em>結論：</em>{verdict}</div>' if verdict else ""
+    note_label = _note_label(slots, "結論")
+    verdict_html = f'<div class="verdict box rise d4">{note_label}{verdict}</div>' if verdict else ""
 
     return f"""  <section class="slide" style="--chapter:{ctx.accent}" data-label="{dlabel}">
 {_render_topbar(ctx)}
@@ -325,7 +352,8 @@ def render_4card_grid(slots: dict[str, Any], variant: str, ctx: SlideContext) ->
           <p>{body}</p>
         </div>""")
 
-    verdict_html = f'<div class="verdict box rise d4"><em>定論：</em>{verdict}</div>' if verdict else ""
+    note_label = _note_label(slots, "定論")
+    verdict_html = f'<div class="verdict box rise d4">{note_label}{verdict}</div>' if verdict else ""
 
     return f"""  <section class="slide" style="--chapter:{ctx.accent}" data-label="{dlabel}">
 {_render_topbar(ctx)}
@@ -365,7 +393,8 @@ def render_bento_focus(slots: dict[str, Any], variant: str, ctx: SlideContext) -
             <p>{sbody}</p>
           </div>""")
 
-    verdict_html = f'<div class="verdict box rise d4"><em>定論：</em>{verdict}</div>' if verdict else ""
+    note_label = _note_label(slots, "定論")
+    verdict_html = f'<div class="verdict box rise d4">{note_label}{verdict}</div>' if verdict else ""
 
     return f"""  <section class="slide" style="--chapter:{ctx.accent}" data-label="{dlabel}">
 {_render_topbar(ctx)}
@@ -442,7 +471,8 @@ def render_vs_confront(slots: dict[str, Any], variant: str, ctx: SlideContext) -
     pts_b_html = "".join(f"<li>{esc(p)}</li>" for p in pts_b)
 
     issue_html = f'<p class="lead rise" style="color:var(--text);font-weight:700">{issue}</p>' if issue else ""
-    verdict_html = f'<div class="verdict box rise d3"><em>裁決／提問：</em>{verdict}</div>' if verdict else ""
+    note_label = _note_label(slots, "裁決／提問")
+    verdict_html = f'<div class="verdict box rise d3">{note_label}{verdict}</div>' if verdict else ""
 
     return f"""  <section class="slide" style="--chapter:{ctx.accent}" data-label="{dlabel}">
 {_render_topbar(ctx)}
@@ -477,8 +507,12 @@ def render_matrix_deepdive(slots: dict[str, Any], variant: str, ctx: SlideContex
     axis_x = slots.get("axis_x") or {"name": "X 軸", "low": "低", "high": "高"}
     axis_y = slots.get("axis_y") or {"name": "Y 軸", "low": "低", "high": "高"}
     cells = slots.get("cells") or []
-    focus = int(slots.get("focus_quadrant") or 1)
+    # `focus_quadrant: none` (or 0) highlights no cell: a typology offered as a
+    # question should not visually pre-assign a case to a quadrant.
+    fq = str(slots.get("focus_quadrant") if slots.get("focus_quadrant") is not None else 1).strip().lower()
+    focus = int(fq) if fq.isdigit() and 1 <= int(fq) <= 4 else 0
     note = esc(slots.get("deepdive_note") or "")
+    note_tag = esc(slots.get("note_label") or (f"焦點象限特寫 (Q{focus})" if focus else "解讀"))
 
     # Format 2x2 cells
     cell_map = {1: ("低", "低"), 2: ("低", "高"), 3: ("高", "低"), 4: ("高", "高")}
@@ -511,7 +545,7 @@ def render_matrix_deepdive(slots: dict[str, Any], variant: str, ctx: SlideContex
       <div class="matrix-deepdive mt">
         {matrix_table}
         <div class="card card--tint-elevated matrix-deepdive__note rise d2">
-          <span class="tag">焦點象限特寫 (Q{focus})</span>
+          <span class="tag">{note_tag}</span>
           <p class="lead-size mt">{note}</p>
         </div>
       </div>
@@ -537,7 +571,8 @@ def render_spectrum_poles(slots: dict[str, Any], variant: str, ctx: SlideContext
           <span>{desc}</span>
         </div>""")
 
-    verdict_html = f'<div class="verdict box rise d3 mt"><em>定論：</em>{verdict}</div>' if verdict else ""
+    note_label = _note_label(slots, "定論")
+    verdict_html = f'<div class="verdict box rise d3 mt">{note_label}{verdict}</div>' if verdict else ""
 
     return f"""  <section class="slide" style="--chapter:{ctx.accent}" data-label="{dlabel}">
 {_render_topbar(ctx)}
@@ -578,7 +613,8 @@ def render_flow_3stage(slots: dict[str, Any], variant: str, ctx: SlideContext) -
         if i < 2 and i < len(stages) - 1:
             flow_nodes.append('        <div class="flowarrow">→</div>')
 
-    verdict_html = f'<div class="verdict box rise d4 mt"><em>最終均衡：</em>{verdict}</div>' if verdict else ""
+    note_label = _note_label(slots, "最終均衡")
+    verdict_html = f'<div class="verdict box rise d4 mt">{note_label}{verdict}</div>' if verdict else ""
 
     return f"""  <section class="slide" style="--chapter:{ctx.accent}" data-label="{dlabel}">
 {_render_topbar(ctx)}
@@ -610,7 +646,8 @@ def render_timeline_rail(slots: dict[str, Any], variant: str, ctx: SlideContext)
           <p>{body}</p>
         </div>""")
 
-    takeaway_html = f'<div class="verdict box rise d4 mt"><em>歷史啟示：</em>{takeaway}</div>' if takeaway else ""
+    note_label = _note_label(slots, "歷史啟示")
+    takeaway_html = f'<div class="verdict box rise d4 mt">{note_label}{takeaway}</div>' if takeaway else ""
 
     return f"""  <section class="slide" style="--chapter:{ctx.accent}" data-label="{dlabel}">
 {_render_topbar(ctx)}
@@ -643,7 +680,8 @@ def render_cascade_funnel(slots: dict[str, Any], variant: str, ctx: SlideContext
           </div>
         </div>""")
 
-    verdict_html = f'<div class="verdict box rise d4 mt"><em>核心焦點：</em>{verdict}</div>' if verdict else ""
+    note_label = _note_label(slots, "核心焦點")
+    verdict_html = f'<div class="verdict box rise d4 mt">{note_label}{verdict}</div>' if verdict else ""
 
     return f"""  <section class="slide" style="--chapter:{ctx.accent}" data-label="{dlabel}">
 {_render_topbar(ctx)}
@@ -667,10 +705,14 @@ def render_quote_critique(slots: dict[str, Any], variant: str, ctx: SlideContext
     cards_html = []
     for i, c in enumerate(critiques[:3]):
         tag = esc(c.get("tag") or f"批判 {i+1}")
-        pt = esc(c.get("point") or c.get("head") or "")
+        head = esc(c.get("head") or c.get("point") or "")
+        body = esc(c.get("body") or "")
+        # `- [tag] head: body` used to drop the body silently; show both.
+        text_html = (f'<h3 class="mt">{head}</h3>\n            <p>{body}</p>' if body
+                     else f'<p class="lead-size mt">{head}</p>')
         cards_html.append(f"""          <div class="card rise d{i+2}">
             <span class="tag">{tag}</span>
-            <p class="lead-size mt">{pt}</p>
+            {text_html}
           </div>""")
 
     return f"""  <section class="slide" style="--chapter:{ctx.accent}" data-label="{dlabel}">
@@ -696,6 +738,7 @@ def render_hypothesis_test(slots: dict[str, Any], variant: str, ctx: SlideContex
     hypo = slots.get("hypothesis") or {}
     finding = slots.get("finding") or {}
     puzzle = esc(slots.get("theoretical_puzzle") or slots.get("puzzle") or "")
+    puzzle_label = _note_label(slots, "理論謎題／意涵")
 
     h_lbl = esc(hypo.get("label") or "理論預期 (H1)")
     h_text = esc(hypo.get("theory_expectation") or hypo.get("head") or "")
@@ -703,6 +746,7 @@ def render_hypothesis_test(slots: dict[str, Any], variant: str, ctx: SlideContex
 
     f_ev = esc(finding.get("empirical_evidence") or finding.get("head") or "")
     f_stat = esc(finding.get("status") or "實證落差")
+    f_lbl = esc(finding.get("label") or "實證發現")
 
     return f"""  <section class="slide" style="--chapter:{ctx.accent}" data-label="{dlabel}">
 {_render_topbar(ctx)}
@@ -715,11 +759,11 @@ def render_hypothesis_test(slots: dict[str, Any], variant: str, ctx: SlideContex
           <p class="mt">{h_logic}</p>
         </div>
         <div class="card card--tint-elevated rise d2">
-          <span class="tag" style="color:var(--text)">實證發現：{f_stat}</span>
+          <span class="tag" style="color:var(--text)">{f_lbl}：{f_stat}</span>
           <h3>{f_ev}</h3>
         </div>
       </div>
-      <div class="verdict box rise d3 mt"><em>理論謎題／意涵：</em>{puzzle}</div>
+      <div class="verdict box rise d3 mt">{puzzle_label}{puzzle}</div>
     </div>
   </section>"""
 

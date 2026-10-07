@@ -95,6 +95,58 @@ class VisualRhythmResolverTests(unittest.TestCase):
             self.assertEqual(defn.id, lid)
 
 
+class OverridableLabelTests(unittest.TestCase):
+    """Fixed box labels (定論, 焦點象限特寫, 實證發現) can be renamed or dropped per slide."""
+
+    CTX = SlideContext(slide_num=1, total_slides=1, accent="var(--c1)", eyebrow="e", data_label="d", variant="")
+
+    def render(self, layout, text, variant=None):
+        defn = get_layout(layout)
+        return defn.render_func(parse_slot_payload(text), variant or defn.allowed_variants[0], self.CTX)
+
+    def test_default_verdict_label_is_kept(self):
+        html = self.render("L-FLOW-3STAGE", "title: t<br>stages:<br>- a: x<br>- b: y<br>- c: z<br>verdict: v")
+        self.assertIn("<em>最終均衡：</em>v", html)
+
+    def test_verdict_label_renames_prefix(self):
+        html = self.render("L-FLOW-3STAGE", "title: t<br>stages:<br>- a: x<br>- b: y<br>- c: z<br>verdict: v<br>verdict_label: 機制意涵")
+        self.assertIn("<em>機制意涵：</em>v", html)
+        self.assertNotIn("最終均衡", html)
+
+    def test_verdict_label_none_drops_prefix(self):
+        html = self.render("L-BENTO-FOCUS", "title: t<br>cards:<br>- [a] h: b<br>- [b] h: b<br>- [c] h: b<br>verdict: v<br>verdict_label: none")
+        self.assertNotIn("<em>", html.split('class="verdict')[1])
+
+    def test_matrix_focus_none_and_note_label(self):
+        html = self.render(
+            "L-MATRIX-DEEPDIVE",
+            "title: t<br>cells:<br>- a: 1<br>- b: 2<br>- c: 3<br>- d: 4<br>focus_quadrant: none<br>note_label: 解讀說明<br>deepdive_note: n",
+        )
+        self.assertNotIn(' hi"', html)
+        self.assertIn("解讀說明", html)
+        self.assertNotIn("焦點象限特寫", html)
+
+    def test_matrix_default_focus_still_highlights(self):
+        html = self.render("L-MATRIX-DEEPDIVE", "title: t<br>cells:<br>- a: 1<br>- b: 2<br>- c: 3<br>- d: 4<br>deepdive_note: n")
+        self.assertIn(' hi"', html)
+        self.assertIn("焦點象限特寫 (Q1)", html)
+
+    def test_hypothesis_finding_label(self):
+        html = self.render("L-HYPOTHESIS-TEST", 'title: t<br>finding: {label: "待解釋現象", status: "s", empirical_evidence: "e"}<br>theoretical_puzzle: p')
+        self.assertIn("待解釋現象：s", html)
+        self.assertNotIn("實證發現", html)
+
+    def test_quote_critique_keeps_card_body(self):
+        html = self.render("L-QUOTE-CRITIQUE", "title: t<br>quote: q<br>cite: c<br>critiques:<br>- [名詞] 甲 vs 乙: 甲是一種說明，乙是另一種說明<br>- [b] only head<br>- [c] x")
+        self.assertIn("甲是一種說明，乙是另一種說明", html)
+        self.assertIn("only head", html)
+
+    def test_finale_points_align_left(self):
+        html = self.render("L-FINALE-SUMMARY", "heading: h<br>points:<br>- a<br>points_align: left")
+        self.assertIn('style="text-align:left"', html)
+        self.assertNotIn("text-align", self.render("L-FINALE-SUMMARY", "heading: h<br>points:<br>- a"))
+
+
 class DeckCompilerIntegrationTests(unittest.TestCase):
     def setUp(self):
         self.tmp = Path(tempfile.mkdtemp(prefix="thesisbug2-test-compile-"))

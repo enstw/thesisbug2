@@ -19,6 +19,15 @@
   - 純文字清單：`- 要點文字`
 - 內嵌字典支援 JSON 或簡寫：`side_a: {camp: "現實主義", points: ["要點 1", "要點 2"]}`。
 
+### 通用選填槽位：收束框的標籤
+
+有收束框的版型（`verdict`、`ask_or_verdict`、`takeaway`、`core_focus`、`theoretical_puzzle`）都會在框前加一個粗體標籤，各版型預設不同：「結論」「定論」「裁決／提問」「最終均衡」「歷史啟示」「核心焦點」「理論謎題／意涵」。同一個框實際可能放機制意涵、案例觀察或討論流程，固定的「定論」就會替內容下錯判斷，所以每頁可以改：
+
+- `verdict_label: 機制意涵`：把標籤換成這個詞。
+- `verdict_label: none`：不加標籤。
+
+不寫就沿用版型預設。
+
 ---
 
 ## 一、 宣告與定性類（Declarative & Thesis）
@@ -40,6 +49,7 @@
   - `heading` *(必填)*：大標題（如「結語與討論」）
   - `onesentence` *(選填)*：一句話核心總結
   - `points` *(選填)*：條列核心收穫或提問
+  - `points_align` *(選填)*：寫 `left` 讓條列靠左（大標仍置中），因為較長的條列換行後置中排列不好讀
 - **畫面內容範例**：
   ```text
   heading: 結論：韌性與效率的權衡<br>onesentence: 地緣經濟碎片化正以安全之名重構全球生產網絡。<br>points:<br>- 區域化生產必然推升資本與營運邊際成本<br>- 台灣需以技術無可替代性維繫戰略矽盾
@@ -105,7 +115,8 @@
 ### 8. `L-MATRIX-DEEPDIVE`（2×2 矩陣＋焦點象限引出）
 - **使用情境**：雙維度分類法（Typology），並特別將特定象限放大拉出解讀。
 - **深度變體**：`split-note`（左矩陣右解讀）、`floating-callout`（全寬矩陣下浮動條）。
-- **槽位規格**：`title`, `axis_x` `{name, low, high}`, `axis_y` `{name, low, high}`, `cells` *(4 項)*, `focus_quadrant` (1..4), `deepdive_note`
+- **槽位規格**：`title`, `axis_x` `{name, low, high}`, `axis_y` `{name, low, high}`, `cells` *(4 項)*, `focus_quadrant` (1..4，或 `none`), `deepdive_note`, `note_label` *(選填)*
+- **不預設象限**：類型學若是拿來提問、案例還沒定位，寫 `focus_quadrant: none`，任何一格都不高亮，因為高亮會讓聽眾以為案例已經被放進那一格；右側解讀框的標籤預設是「焦點象限特寫 (Qn)」，沒有焦點時是「解讀」，可用 `note_label` 改寫。
 - **畫面內容範例**：
   ```text
   title: 威懾政策矩陣分類<br>axis_x: {name: "承諾明確度", low: "戰略模糊", high: "戰略清晰"}<br>axis_y: {name: "軍事部署烈度", low: "前沿威懾", high: "縱深防衛"}<br>cells:<br>- Q1: 傳統模糊平衡 (現狀)<br>- Q2: 延伸威懾強化<br>- Q3: 刺蝟防衛島鏈<br>- Q4: 全面安全條約<br>focus_quadrant: 3<br>deepdive_note: 本研究聚焦第 3 象限：在維持政治彈性的同時，大幅提升不對稱拒止能力的有效性。
@@ -158,7 +169,7 @@
 ### 13. `L-QUOTE-CRITIQUE`（文獻原話引述＋三重解構）
 - **使用情境**：展示原作者經典引文（附頁碼），並從三個面向批判其漏洞。
 - **深度變體**：`quote-top`（上引文下三卡）、`quote-left`（左引文右三條）。
-- **槽位規格**：`title`, `quote` *(必填)*, `citation` *(必填)*, `critiques` *(必填，3 項)*
+- **槽位規格**：`title`, `quote` *(必填)*, `citation` *(必填)*, `critiques` *(必填，3 項；`- [tag] 要點` 或 `- [tag] 標題: 說明`，後者標題與說明都上畫面)*
 - **畫面內容範例**：
   ```text
   title: 對「攻勢現實主義」核心假說的批判<br>quote: 無政府狀態迫使所有大國最大化其相對權力，因為這是確保自身生存的唯一安全途徑。<br>citation: Mearsheimer (2001), p. 29<br>critiques:<br>- [前提] 單一偏好假設: 忽略國家除生存外可能追求的經濟繁榮與制度合法性<br>- [實證] 歐洲統合反例: 無法解釋後冷戰歐洲安全共同體內部的自願去武裝化<br>- [邏輯] 螺旋困境忽視: 最大化權力的行動往往加速引發周邊制衡聯盟
@@ -168,6 +179,7 @@
 - **使用情境**：理論預期 vs 實證發現的衝突對比（理論謎題）。
 - **深度變體**：`contrast-pillars`（對照立柱）、`conflict-flow`（實證矛盾箭頭）。
 - **槽位規格**：`title`, `hypothesis`, `finding`, `theoretical_puzzle`
+- **發現的標籤**：`finding` 的標籤預設是「實證發現」；原文若只是提出待解釋的現象、沒有做實證，寫 `finding: {label: "待解釋現象", ...}`，和 `hypothesis` 的 `label` 用法相同。
 - **畫面內容範例**：
   ```text
   title: 貿易相互依存與衝突機率檢驗<br>hypothesis: {label: "古典自由主義假說", head: "雙邊貿易依存度越高，武力衝突機率越低", logic: "戰爭帶來的經貿損失高於潛在領土收益"}<br>finding: {head: "在特定高技術依賴領域，經濟制裁與衝突頻率顯著上升", status: "實證結果與假說背馳"}<br>theoretical_puzzle: 相互依存並未消除衝突，反而提供了非對稱打擊的新弱點槓桿。

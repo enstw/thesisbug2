@@ -119,7 +119,10 @@ def parse_slot_payload(raw_text: str) -> dict[str, Any]:
             part1 = (m.group(2) or "").strip() if m else line[1:].strip()
             part2 = (m.group(3) or "").strip() if m else ""
 
-            item: dict[str, Any] = {}
+            # `text` keeps the bullet whole, separators included, for slots that
+            # take literal lines (`title_lines`, `sub_lines`): a title line such
+            # as 「霸權之後：」 would otherwise lose its colon to the head/body split.
+            item: dict[str, Any] = {"text": line[1:].strip()}
             if tag:
                 item["tag"] = tag
             if part2:
@@ -244,6 +247,19 @@ def _note_label(slots: dict[str, Any], default: str) -> str:
     return f"<em>{esc(text)}：</em>"
 
 
+def _slot_lines(raw: Any) -> list[str]:
+    """Text of each item in a `*_lines:` list slot, or [] when it is not a list."""
+    if not isinstance(raw, list):
+        return []
+    return [str((ln.get("text") or ln.get("head", "")) if isinstance(ln, dict) else ln).strip() for ln in raw]
+
+
+def _est_em(text: str) -> float:
+    """Rough rendered width in em: a CJK or full-width character is about 1em,
+    Latin letters, digits and ASCII punctuation about half that."""
+    return sum(1.0 if ord(c) > 0x2E7F else 0.55 for c in text)
+
+
 def render_hero_title(slots: dict[str, Any], variant: str, ctx: SlideContext) -> str:
     title = esc(slots.get("title") or "未命名簡報")
     dlabel = _dlabel(slots, title)
@@ -253,10 +269,9 @@ def render_hero_title(slots: dict[str, Any], variant: str, ctx: SlideContext) ->
     # Each listed line is kept whole; if the longest would overflow the 1500px
     # title box at the 132px default (letter-spacing .04em), the font shrinks
     # just enough to fit, rather than letting the line wrap mid-phrase again.
-    lines = slots.get("title_lines")
+    texts = [t for t in _slot_lines(slots.get("title_lines")) if t]
     title_html, h1_style = title, ""
-    if isinstance(lines, list) and lines:
-        texts = [str(ln.get("head", "") if isinstance(ln, dict) else ln).strip() for ln in lines]
+    if texts:
         # No per-line <span>: the title's colour is a gradient clipped to the
         # h1's text, and a child element would hide that from deck-check.
         title_html = "<br>".join(esc(t) for t in texts)
@@ -265,8 +280,19 @@ def render_hero_title(slots: dict[str, Any], variant: str, ctx: SlideContext) ->
         size = f" font-size: calc({fit}px * var(--deck-font-scale, 1));" if fit < 132 else ""
         h1_style = f' style="white-space: nowrap;{size}"'
     sub = esc(slots.get("sub") or slots.get("subtitle") or "")
+    # `sub_lines:` does for the subtitle what `title_lines` does for the title:
+    # a subtitle that joins a question to a source line otherwise wraps inside
+    # an author-year citation. Lines stay whole; the 48px default shrinks to
+    # fit the 1500px box, never below the deck's 34px text floor.
+    sub_texts = [t for t in _slot_lines(slots.get("sub_lines")) if t]
+    sub_style = ""
+    if sub_texts:
+        sub = "<br>".join(esc(t) for t in sub_texts)
+        fit = int(1500 * 0.97 / (max(_est_em(t) for t in sub_texts) or 1))
+        size = f" font-size: calc({max(fit, 34)}px * var(--deck-font-scale, 1));" if fit < 48 else ""
+        sub_style = f' style="white-space: nowrap;{size}"'
     meta = esc(slots.get("meta") or slots.get("author") or "")
-    sub_html = f'<p class="hero__sub rise d1">{sub}</p>' if sub else ""
+    sub_html = f'<p class="hero__sub rise d1"{sub_style}>{sub}</p>' if sub else ""
     meta_html = f'<p class="hero__meta rise d2">{meta}</p>' if meta else ""
 
     return f"""  <section class="slide hero" data-label="{dlabel}">

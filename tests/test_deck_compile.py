@@ -159,6 +159,21 @@ class OverridableLabelTests(unittest.TestCase):
         long = self.render("L-HERO-TITLE", "title: x<br>title_lines:<br>- 一二三四五六七八九十十一十二")
         self.assertIn("font-size: calc(", long.split("<h1")[1].split(">")[0])
         self.assertIn('data-label="甲乙，丙丁？"', html)
+        colon = self.render("L-HERO-TITLE", "title: 甲乙：丙丁<br>title_lines:<br>- 甲乙：<br>- 丙丁")
+        self.assertIn("甲乙：<br>丙丁", colon)
+
+    def test_hero_sub_lines(self):
+        html = self.render("L-HERO-TITLE", "title: t<br>sub: 問題——來源<br>sub_lines:<br>- 問題？<br>- Author（2020）來源")
+        p = html.split('<p class="hero__sub')[1]
+        self.assertIn("問題？<br>Author（2020）來源", p)
+        self.assertIn("white-space: nowrap", p.split(">")[0])
+        self.assertNotIn("font-size", p.split(">")[0])
+        long = self.render("L-HERO-TITLE", "title: t<br>sub_lines:<br>- " + "長" * 40)
+        self.assertIn("font-size: calc(36px", long.split('<p class="hero__sub')[1].split(">")[0])
+        floor = self.render("L-HERO-TITLE", "title: t<br>sub_lines:<br>- " + "長" * 80)
+        self.assertIn("font-size: calc(34px", floor.split('<p class="hero__sub')[1].split(">")[0])
+        plain = self.render("L-HERO-TITLE", "title: t<br>sub: 一行")
+        self.assertIn('<p class="hero__sub rise d1">一行</p>', plain)
 
     def test_finale_points_align_left(self):
         html = self.render("L-FINALE-SUMMARY", "heading: h<br>points:<br>- a<br>points_align: left")

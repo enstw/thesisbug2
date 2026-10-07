@@ -298,9 +298,11 @@ tofu; subsetting it to shrink a final file is optional (house-style § Font).
   with no empty string among the notes.
 - **Reduced motion:** emulate `prefers-reduced-motion: reduce` and confirm
   every `.rise` is visible and the loops stop.
-- **Present / PDF:** `P` pops the presenter console → **開啟簡報視窗** for the
-  projector window; **列印投影片** (or browser Print → Save as PDF, enable
-  "Background graphics") gives one 1920×1080 slide per page; check there is
+- **Present / PDF:** with the projector as an extended screen, `P` puts the
+  deck fullscreen on the projector and the presenter console on the laptop
+  screen (Chromium-based browsers; allow the one-time window-management
+  prompt, then press `P` again if the console did not open). Browser Print →
+  Save as PDF (enable "Background graphics") gives one 1920×1080 slide per page; check there is
   no key-hint overlay and no trailing blank page. For the `_output/<unit>.pdf`
   name or Pandoc-rendered references, use the Beamer fallback instead.
 - **Note:** `file://` doesn't auto-reload — hard-reload (Cmd+Shift+R) before

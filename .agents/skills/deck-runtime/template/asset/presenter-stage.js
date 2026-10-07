@@ -1,6 +1,7 @@
-/* deck-stage-presenter v6 — press P to spawn a child window with speaker
+/* deck-stage-presenter v7 — press P to spawn a child window with speaker
    notes + two iframe-based thumbnails (current + next), built on the
-   deck-stage v2 _snthumb URL contract.
+   deck-stage v2 _snthumb URL contract. On an extended desktop, P first
+   sends the deck fullscreen to the projector (placeOnScreens).
 
    Each thumbnail is an <iframe> loading the deck with `?_snthumb=1#<N>`:
      - `?_snthumb=...` is detected by deck-stage v2 (line ~566) and sets
@@ -185,9 +186,38 @@ window.addEventListener('keydown',(e)=>{if(e.key==='Escape'){window.close();retu
 <\/script></body></html>`;
   }
 
-  function openPresenter() {
+  /* Two screens: the deck goes fullscreen on the external screen (the
+     projector) and the console opens on the built-in one, so nothing is
+     dragged across by hand. Uses the Window Management API (Chromium only;
+     the browser asks once for permission). Returns the console's screen, or
+     null for one screen, mirroring, another browser, or a refusal, which
+     leaves the plain popup. A desktop without a built-in screen keeps the
+     console on the screen the deck was on. */
+  async function placeOnScreens() {
+    if (!window.getScreenDetails || !window.screen.isExtended) return null;
+    try {
+      const d = await window.getScreenDetails();
+      const consoleScreen = d.screens.find((s) => s.isInternal) || d.currentScreen;
+      const projector = d.screens.find((s) => s !== consoleScreen);
+      if (!projector) return null;
+      // A missed fullscreen (e.g. the permission prompt outlasted the key
+      // press) still leaves the console filling its own screen.
+      await document.documentElement.requestFullscreen({ screen: projector })
+        .catch((e) => console.warn('[presenter] projector fullscreen failed:', e));
+      return consoleScreen;
+    } catch (e) {
+      console.warn('[presenter] two-screen placement skipped:', e);
+      return null;
+    }
+  }
+
+  async function openPresenter() {
     if (p && !p.closed) { p.focus(); return; }
-    p = window.open('', 'deck-presenter', 'width=960,height=1000');
+    const c = await placeOnScreens();
+    const features = c
+      ? `left=${c.availLeft},top=${c.availTop},width=${c.availWidth},height=${c.availHeight}`
+      : 'width=960,height=1000';
+    p = window.open('', 'deck-presenter', features);
     if (!p) { alert('Presenter window blocked — please allow popups for this page and press P again.'); return; }
     p.document.open();
     p.document.write(presenterDoc(document.URL));

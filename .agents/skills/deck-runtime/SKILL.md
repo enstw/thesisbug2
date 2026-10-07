@@ -27,7 +27,7 @@ engine    deck-svg, deck-image   author slides onto the shell
 | File | Role | Edit it? |
 |---|---|---|
 | `deck-stage.js` | The `<deck-stage>` custom element: slide flight/nav, keyboard (→/Esc/digits/F), `slidechange` event, print CSS (`@page 1920×1080`, one slide per page), `#debug` self-check. | **No — frozen.** Treat as a dependency. |
-| `presenter-stage.js` | Dual-screen presenter console (P key): current/next preview and speaker notes in a popup that drives the deck window over `postMessage`. With an extended desktop it puts the deck fullscreen on the external screen and the console on the built-in one (see below). Forwards `+`/`=`/`-` as `{deckFontDirection: ±1}` so the presenter can resize the deck's text, and `c`/`g` (Shift = reverse) as `{deckThemeKey}` so the theme can change from the console; an engine without a handler ignores the message. | **No.** |
+| `presenter-stage.js` | Dual-screen presenter console (P key): current/next preview and speaker notes in a popup that drives the deck window over `postMessage`; **O** (or the 全部投影片 button) opens a grid of every slide, so a far slide is one click away (arrows + Enter also pick one, Esc returns to the notes). With an extended desktop it puts the deck fullscreen on the external screen and the console on the built-in one (see below). Forwards `+`/`=`/`-` as `{deckFontDirection: ±1}` so the presenter can resize the deck's text, and `c`/`g` (Shift = reverse) as `{deckThemeKey}` so the theme can change from the console; an engine without a handler ignores the message. | **No.** |
 
 This is the only home for these two files. deck-svg and deck-image copy them in;
 they are not duplicated per engine.
@@ -63,15 +63,21 @@ What the runtime gives for free, so an engine writes none of it: ←/→,
 PgUp/PgDn, Space, Home/End, **R** (reset), number keys, the hover overlay,
 mobile tap zones, `@media print` at one 1920×1080 slide per page, and the
 **P** presenter window. When the desktop spans two screens and the browser
-is Chromium-based, **P** also places the windows: the deck goes fullscreen on
-the external screen (the projector) and the console opens on the built-in one
-as an ordinary window sized to fill it, not fullscreen, so the presenter can
-still switch to other apps there. It uses the Window Management API, which
-asks once for permission. With one screen, mirroring, Safari or Firefox, or a refused permission, P opens the
+is Chromium-based, **P** also places the windows, one per press: the first P
+sends the deck fullscreen to the external screen (the projector), the second
+opens the console on the built-in one as an ordinary window sized to fill it,
+not fullscreen, so the presenter can still switch to other apps there. A key
+press can either go fullscreen or open a window, not both, which a real
+two-screen test confirmed in both orders. It uses the Window Management API;
+the very first P on a machine only asks for its permission. On macOS,
+"Displays have separate Spaces" (System Settings → Desktop & Dock) must be
+on, or the fullscreen deck's Space blanks the laptop screen too. With one screen, mirroring, Safari or Firefox, or a refused permission, P opens the
 plain popup as before; a desktop without a built-in screen keeps the console
-on the screen the deck was on. Over `file://` Chrome blocks the presenter's
-cross-frame thumbnails, so serve the deck over HTTP to check them; notes and
-navigation work either way.
+on the screen the deck was on. Thumbnails and the slide grid render over
+`file://` too: each is a copy of the deck loaded at its slide. Chrome only
+blocks the console from scripting those copies there, so a thumbnail that
+changes slide reloads instead of switching in place. Decks are presented
+from `file://`, so runtime features must work there (see docs/DESIGN.md).
 
 Minimal skeleton (an engine's starter adds its look and checks):
 

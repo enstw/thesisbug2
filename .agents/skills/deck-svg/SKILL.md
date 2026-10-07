@@ -254,15 +254,14 @@ tofu; subsetting it to shrink a final file is optional (house-style § Font).
 
 ## Run & verify
 
-- **Run:** open `deck.html` directly — no build, no server. To check the
-  presenter's slide thumbnails, serve the unit over HTTP
-  (`python3 -m http.server 8000` in the unit directory), because Chrome blocks
-  them over `file://`; notes and navigation work either way. Click = next; arrows/
+- **Run:** open `deck.html` directly — no build, no server; everything,
+  presenter thumbnails included, works over `file://`. Click = next; arrows/
   Esc/digits secondary; `F` = fullscreen; `P` = presenter console; `+`/`−` =
   whole-deck font size; `c`/Shift+C = next/previous fixed theme; `g`/Shift+G =
   new seeded palette / previous one (toast 「隨機 #4821」; `#theme=r4821`
   reloads it). All of these also work from the presenter console; Cmd/Ctrl +/−
-  stays browser zoom. Print uses the active theme.
+  stays browser zoom. In the console, `O` opens a grid of every slide to jump
+  to a far one. Print uses the active theme.
 - **Self-check:** open `deck.html#debug` and step through every slide.
   `asset/deck-check.js` checks each slide once its entrance animation ends and
   sets `document.body.dataset` `minfont` (`ok` = all visible text on the
@@ -298,10 +297,13 @@ tofu; subsetting it to shrink a final file is optional (house-style § Font).
   with no empty string among the notes.
 - **Reduced motion:** emulate `prefers-reduced-motion: reduce` and confirm
   every `.rise` is visible and the loops stop.
-- **Present / PDF:** with the projector as an extended screen, `P` puts the
-  deck fullscreen on the projector and the presenter console on the laptop
-  screen (Chromium-based browsers; allow the one-time window-management
-  prompt, then press `P` again if the console did not open). Browser Print →
+- **Present / PDF:** with the projector as an extended screen, press `P`
+  twice: the first puts the deck fullscreen on the projector, the second opens
+  the presenter console on the laptop screen (Chromium-based browsers; the
+  very first `P` on a machine only asks for the window-management
+  permission). On macOS turn on "Displays have separate Spaces" (System
+  Settings → Desktop & Dock), or the laptop screen goes blank while the deck
+  is fullscreen. Browser Print →
   Save as PDF (enable "Background graphics") gives one 1920×1080 slide per page; check there is
   no key-hint overlay and no trailing blank page. For the `_output/<unit>.pdf`
   name or Pandoc-rendered references, use the Beamer fallback instead.

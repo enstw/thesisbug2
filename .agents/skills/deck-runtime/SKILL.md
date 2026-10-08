@@ -63,15 +63,18 @@ What the runtime gives for free, so an engine writes none of it: ←/→,
 PgUp/PgDn, Space, Home/End, **R** (reset), number keys, the hover overlay,
 mobile tap zones, `@media print` at one 1920×1080 slide per page, and the
 **P** presenter window. When the desktop spans two screens and the browser
-is Chromium-based, **P** also places the windows, one per press: the first P
-sends the deck fullscreen to the external screen (the projector), the second
-opens the console on the built-in one as an ordinary window sized to fill it,
-not fullscreen, so the presenter can still switch to other apps there. A key
-press can either go fullscreen or open a window, not both, which a real
-two-screen test confirmed in both orders. It uses the Window Management API;
-the very first P on a machine only asks for its permission. On macOS,
-"Displays have separate Spaces" (System Settings → Desktop & Dock) must be
-on, or the fullscreen deck's Space blanks the laptop screen too. With one screen, mirroring, Safari or Firefox, or a refused permission, P opens the
+is Chromium-based, **P** tries to place the windows, one per press: the first P
+opens the console filling the built-in screen (an ordinary window, not
+fullscreen, so the presenter can still switch apps there), the second P,
+pressed on the deck, asks for fullscreen on the external screen (the
+projector). If the console took focus, its P brings the deck forward and the
+deck asks for P once more. The window-management permission is asked once per
+page load. **This placement does not reach the projector in Brave from
+`file://`** (live test 2026-10-08): the browser keeps both windows on the
+laptop, so the presenter drags the deck window to the projector and presses
+**F** there; docs/DESIGN.md records the findings and the planned extension.
+On macOS, "Displays have separate Spaces" (System Settings → Desktop & Dock)
+must be on, or a fullscreen deck's Space blanks the laptop screen too. With one screen, mirroring, Safari or Firefox, or a refused permission, P opens the
 plain popup as before; a desktop without a built-in screen keeps the console
 on the screen the deck was on. Thumbnails and the slide grid render over
 `file://` too: each is a copy of the deck loaded at its slide. Chrome only

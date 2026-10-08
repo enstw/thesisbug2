@@ -1,8 +1,9 @@
 /* deck-stage-presenter v8 — press P to spawn a child window with speaker
    notes + two iframe-based thumbnails (current + next) and a grid of all
    slides (O) to jump to a far one, built on the
-   deck-stage v2 _snthumb URL contract. On an extended desktop, P also
-   sends the deck fullscreen to the projector.
+   deck-stage v2 _snthumb URL contract. On an extended desktop, P opens the
+   console on the laptop and the next P sends the deck fullscreen to the
+   projector.
 
    Each thumbnail is an <iframe> loading the deck with `?_snthumb=1#<N>`:
      - `?_snthumb=...` is detected by deck-stage v2 (line ~566) and sets
@@ -16,6 +17,7 @@
    file:// frame access (notably Chrome's null-origin file:// policy). */
 (() => {
   let p = null, notes = [], labels = [];
+  let projector = null; // the screen the next P sends the deck to, once the console sits on the laptop
   const stage = () => document.querySelector('deck-stage');
 
   function labelForSlide(s) {
@@ -57,6 +59,7 @@ h1{font-family:var(--serif);font-size:22px;font-weight:600;margin:0;color:var(--
 .note{font-family:var(--serif);font-size:17px;line-height:1.6;color:var(--ink-2);white-space:pre-wrap;flex:1;overflow-y:auto;min-height:0;}
 .empty-note{color:var(--ink-3);font-style:italic;font-size:15px;}
 .footer{border-top:1px solid var(--rule);padding-top:10px;font-family:var(--mono);font-size:11px;color:var(--ink-3);line-height:1.6;letter-spacing:0.02em;}
+.place{padding:10px 14px;border:1px solid var(--accent);border-radius:4px;background:var(--paper-2);font-size:15px;color:var(--ink);}
 .kbd{display:inline-block;padding:1px 6px;background:var(--paper-2);border:1px solid var(--rule);border-radius:3px;font-size:10px;color:var(--ink-2);margin:0 2px;}
 .hr{display:flex;align-items:baseline;gap:14px;}
 .gridbtn{font-family:var(--mono);font-size:11px;letter-spacing:0.04em;padding:3px 8px;border:1px solid var(--rule);border-radius:3px;background:var(--paper);color:var(--ink-2);cursor:pointer;}
@@ -77,6 +80,7 @@ h1{font-family:var(--serif);font-size:22px;font-weight:600;margin:0;color:var(--
 .tile .lbl{font-size:13px;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 </style></head><body>
 <div class="thumbs" id="thumbs"></div>
+<div class="place" id="place" hidden>下一步：按 <span class="kbd">P</span>，投影片會全螢幕到投影幕。若投影片先跳到前面，再按一次 <span class="kbd">P</span>。</div>
 <header><span class="label">Speaker Notes</span><span class="hr"><button class="gridbtn" id="gridBtn" type="button">全部投影片 O</button><span class="pn"><span id="cur">—</span> / <span id="tot">?</span></span></span></header>
 <h1 id="title">—</h1>
 <div class="note" id="note"><span class="empty-note">（無備註）</span></div>
@@ -250,6 +254,7 @@ window.addEventListener('message',(e)=>{
     render(d.current||0);
   }
   else if(typeof d.slideIndexChanged==='number'){render(d.slideIndexChanged);}
+  if(typeof d.placeHint==='boolean'){document.getElementById('place').hidden=!d.placeHint;}
 });
 function render(i){
   if(i<0||i>=lL.length)return;
@@ -261,41 +266,47 @@ function render(i){
   if(n&&String(n).trim()){el.textContent=n;}else{el.innerHTML='<span class="empty-note">（這張無備註）</span>';}
   renderThumbs(i);
 }
-window.addEventListener('keydown',(e)=>{if(e.metaKey||e.ctrlKey||e.altKey)return;if(gridOpen()){gridKey(e.key);e.preventDefault();return;}if(e.key==='o'||e.key==='O'){openGrid();e.preventDefault();return;}if(e.key==='Escape'){window.close();return;}const k=e.key;const direction=(k==='+'||k==='=')?1:k==='-'?-1:0;if(direction){if(window.opener&&!window.opener.closed){window.opener.postMessage({deckFontDirection:direction},'*');}e.preventDefault();return;}if(!e.ctrlKey&&!e.metaKey&&!e.altKey&&/^[cg]$/i.test(k)){if(window.opener&&!window.opener.closed){window.opener.postMessage({deckThemeKey:e.shiftKey?k.toUpperCase():k.toLowerCase()},'*');}e.preventDefault();return;}if(['ArrowLeft','ArrowRight','PageDown','PageUp',' ','r','R','Home','End'].includes(k)){if(window.opener&&!window.opener.closed){window.opener.postMessage({presenterKey:k},'*');}e.preventDefault();}});
+window.addEventListener('keydown',(e)=>{if(e.metaKey||e.ctrlKey||e.altKey)return;if(gridOpen()){gridKey(e.key);e.preventDefault();return;}if(e.key==='o'||e.key==='O'){openGrid();e.preventDefault();return;}if(e.key==='Escape'){window.close();return;}const k=e.key;if(k==='p'||k==='P'){if(!document.getElementById('place').hidden&&window.opener&&!window.opener.closed){window.opener.focus();window.opener.postMessage({presenterPlace:true},'*');}e.preventDefault();return;}const direction=(k==='+'||k==='=')?1:k==='-'?-1:0;if(direction){if(window.opener&&!window.opener.closed){window.opener.postMessage({deckFontDirection:direction},'*');}e.preventDefault();return;}if(!e.ctrlKey&&!e.metaKey&&!e.altKey&&/^[cg]$/i.test(k)){if(window.opener&&!window.opener.closed){window.opener.postMessage({deckThemeKey:e.shiftKey?k.toUpperCase():k.toLowerCase()},'*');}e.preventDefault();return;}if(['ArrowLeft','ArrowRight','PageDown','PageUp',' ','r','R','Home','End'].includes(k)){if(window.opener&&!window.opener.closed){window.opener.postMessage({presenterKey:k},'*');}e.preventDefault();}});
 <\/script></body></html>`;
   }
 
   /* Two screens: the deck goes fullscreen on the external screen (the
      projector) and the console opens on the built-in one, so nothing is
-     dragged across by hand. Uses the Window Management API (Chromium only;
-     the browser asks once for permission). A desktop without a built-in
+     dragged across by hand. Uses the Window Management API (Chromium only).
+     A desktop without a built-in
      screen keeps the console on the screen the deck was on.
 
      One key press grants one activation, and requestFullscreen and
      window.open each spend it: on a real two-screen Mac (Chrome, EPSON
      projector, permission granted) either order left the second step
      refused. So two screens take two presses, each doing one thing: the
-     first sends the deck to the projector, the second opens the console on
-     the laptop. Focus stays on the deck after the first, so the second P
-     lands there. The very first P on a machine only asks for the permission,
-     since the prompt outlasts the key press anyway. */
+     first opens the console on the laptop, the second, with the console
+     open, sends the deck to the projector. A live test on 2026-10-08 showed
+     Brave refuses or misplaces that second step (see docs/DESIGN.md), so
+     this is a stopgap until window placement moves to an extension. The
+     second press must land on the deck, since a key press in the console
+     cannot make the deck fullscreen (Chrome refuses it, checked headless).
+     If the console took focus, its P brings the deck forward and the deck
+     asks for P once more.
+
+     Chrome never stores the permission for a file:// page: the query says
+     "prompt" and every getScreenDetails() call asks again. So the deck asks
+     once per page load and keeps the live ScreenDetails it gets. If Allow is
+     clicked while the key press still counts as user activation, that same
+     press goes on to open the console; otherwise the next P does. */
+  let details = null, asked = false;
+
   async function screens() {
     if (!window.getScreenDetails || !window.screen.isExtended) return null;
-    try {
-      const d = await window.getScreenDetails();
-      const consoleScreen = d.screens.find((s) => s.isInternal) || d.currentScreen;
-      const projector = d.screens.find((s) => s !== consoleScreen);
-      return projector ? { consoleScreen, projector } : null;
-    } catch (e) {
-      console.warn('[presenter] two-screen placement skipped:', e);
-      return null;
+    if (!details && !asked) {
+      asked = true;
+      try { details = await window.getScreenDetails(); }
+      catch (e) { console.warn('[presenter] two-screen placement skipped:', e); }
     }
-  }
-
-  async function placementState() {
-    if (!window.getScreenDetails || !window.screen.isExtended) return null;
-    try { return (await navigator.permissions.query({ name: 'window-management' })).state; }
-    catch (e) { return null; }
+    if (!details) return null;
+    const consoleScreen = details.screens.find((s) => s.isInternal) || details.currentScreen;
+    const projector = details.screens.find((s) => s !== consoleScreen);
+    return projector ? { consoleScreen, projector } : null;
   }
 
   function fullscreenOn(projector) {
@@ -313,26 +324,31 @@ window.addEventListener('keydown',(e)=>{if(e.metaKey||e.ctrlKey||e.altKey)return
     setTimeout(() => n.remove(), 4000);
   }
 
+  const placeHint = () => !!projector && !document.fullscreenElement;
+
   async function openPresenter() {
-    const state = await placementState();
-    if (state === 'prompt') {
-      // First P on this machine: only ask. A refusal falls through to the
-      // plain console (the next P opens it if this press has run out).
-      if (await screens()) { notice('已允許。再按一次 P，投影片會全螢幕到投影幕。'); return; }
-    }
-    const place = state === 'granted' ? await screens() : null;
-    const open = p && !p.closed;
-    if (place && !document.fullscreenElement && await fullscreenOn(place.projector)) {
-      if (!open) notice('再按一次 P，講者視窗會開在筆電螢幕。');
+    if (p && !p.closed) {
+      if (placeHint()) {
+        if (!await fullscreenOn(projector)) notice('投影片沒能全螢幕到投影幕，請再按一次 P。');
+        return;
+      }
+      p.focus();
       return;
     }
-    if (open) { p.focus(); return; }
+    const place = await screens();
+    if (navigator.userActivation && !navigator.userActivation.isActive) {
+      // The permission prompt outlasted this press; the next P opens the console.
+      notice(place ? '已允許。再按一次 P，講者視窗會開在筆電螢幕。' : '再按一次 P，開講者視窗。');
+      return;
+    }
+    projector = place && place.projector;
     const c = place && place.consoleScreen;
     const features = c
       ? `left=${c.availLeft},top=${c.availTop},width=${c.availWidth},height=${c.availHeight}`
       : 'width=960,height=1000';
     p = window.open('', 'deck-presenter', features);
     if (!p) {
+      projector = null;
       if (document.fullscreenElement) notice('講者視窗被擋：請允許此頁的彈出式視窗，再按一次 P。');
       else alert('Presenter window blocked — please allow popups for this page and press P again.');
       return;
@@ -342,8 +358,10 @@ window.addEventListener('keydown',(e)=>{if(e.metaKey||e.ctrlKey||e.altKey)return
     p.document.close();
     setTimeout(() => {
       const s = stage();
-      if (p && !p.closed) p.postMessage({ init: true, notes, labels, current: s ? s.index : 0 }, '*');
+      if (p && !p.closed) p.postMessage({ init: true, notes, labels, current: s ? s.index : 0, placeHint: placeHint() }, '*');
     }, 80);
+    // Keep the next P on the deck if the browser lets it; the console's P covers it if not.
+    if (projector) window.focus();
   }
 
   function init() {
@@ -356,10 +374,16 @@ window.addEventListener('keydown',(e)=>{if(e.metaKey||e.ctrlKey||e.altKey)return
     }
   }
 
+  // The console's banner tracks whether the deck still has to go to the projector.
+  document.addEventListener('fullscreenchange', () => {
+    if (p && !p.closed) p.postMessage({ placeHint: placeHint() }, '*');
+  });
+
   window.addEventListener('message', (e) => {
     if (!e.data) return;
     const s = stage();
     if (!s) return;
+    if (e.data.presenterPlace) { if (placeHint()) notice('再按一次 P，投影片會全螢幕到投影幕。'); return; }
     if (typeof e.data.presenterGoto === 'number') { s.goTo(e.data.presenterGoto); return; }
     if (e.data.deckFontDirection === 1 || e.data.deckFontDirection === -1) return;
     if (!e.data.presenterKey) return;

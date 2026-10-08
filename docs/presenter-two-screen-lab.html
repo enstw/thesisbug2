@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8">
+<title>Presenter Lab</title>
+<style>
+  :root { --bg:#f6f4ef; --ink:#1d1f24; --dim:#6b6f78; --rule:#d6d2c8; --ok:#1d7a3a; --bad:#b3261e; --acc:#8a3b12; }
+  html,body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.5 system-ui,"Noto Sans TC",sans-serif; }
+  body { padding:16px; box-sizing:border-box; min-height:100vh; display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:16px; }
+  @media (max-width:800px) { body { grid-template-columns:1fr; } }
+  h1 { font-size:20px; margin:0 0 4px; }
+  p.hint { color:var(--dim); margin:0 0 12px; font-size:13px; }
+  .btns { display:flex; flex-direction:column; gap:6px; }
+  button { text-align:left; padding:8px 10px; border:1px solid var(--rule); background:#fff; border-radius:6px; font:inherit; cursor:pointer; }
+  button:hover { border-color:var(--acc); }
+  button b { display:inline-block; min-width:1.6em; color:var(--acc); font-family:ui-monospace,monospace; }
+  button small { display:block; color:var(--dim); font-size:12px; margin-left:1.9em; }
+  #status { font-family:ui-monospace,monospace; font-size:12px; background:#fff; border:1px solid var(--rule); border-radius:6px; padding:8px 10px; margin-bottom:8px; white-space:pre-wrap; }
+  #log { font-family:ui-monospace,monospace; font-size:12px; background:#fff; border:1px solid var(--rule); border-radius:6px; padding:8px 10px; height:60vh; overflow:auto; white-space:pre-wrap; margin:0; }
+  .ok { color:var(--ok); } .bad { color:var(--bad); }
+  :fullscreen body, body:fullscreen { background:#111; color:#eee; }
+</style></head>
+<body>
+<section>
+  <h1>Presenter Lab：雙螢幕測試</h1>
+  <p class="hint">接上投影機、設成「延伸桌面」（不要鏡像）。每個按鈕＝一次按鍵，只試一種做法。全螢幕時看不到按鈕，直接按數字鍵。每試完一項按 <b>0</b> 重置。用鍵盤按，不要點按鈕（點按鈕會改變焦點）。<b>紀錄裡的 ✓ 不代表畫面真的到了投影幕</b>：瀏覽器會回報全螢幕成功，視窗卻留在筆電上；請親眼看投影幕，或用 macOS 的視窗位置確認（見 docs/DESIGN.md 的講者視窗段落）。</p>
+  <div class="btns" id="btns"></div>
+</section>
+<section>
+  <div id="status">—</div>
+  <pre id="log"></pre>
+</section>
+<script>
+const logEl = document.getElementById('log');
+const statusEl = document.getElementById('status');
+let pop = null, deck = null, details = null, projector = null;
+
+function log(msg, cls) {
+  const line = document.createElement('div');
+  if (cls) line.className = cls;
+  line.textContent = new Date().toLocaleTimeString() + '  ' + msg;
+  logEl.appendChild(line);
+  logEl.scrollTop = logEl.scrollHeight;
+}
+function act() {
+  const u = navigator.userActivation;
+  return u ? `activation: active=${u.isActive}` : 'activation: (unknown)';
+}
+async function perm() {
+  try { return (await navigator.permissions.query({ name: 'window-management' })).state; }
+  catch (e) { return 'unsupported (' + e.message + ')'; }
+}
+async function refresh() {
+  statusEl.textContent =
+    `瀏覽器：${navigator.userAgent.match(/(Chrome|Edg|Brave|Firefox|Safari)\/[\d.]+/g)?.join(' ') || navigator.userAgent}\n` +
+    `延伸桌面 screen.isExtended：${window.screen.isExtended}\n` +
+    `getScreenDetails 存在：${!!window.getScreenDetails}\n` +
+    `視窗管理權限：${await perm()}\n` +
+    `全螢幕中：${!!document.fullscreenElement}\n` +
+    `講者視窗：${pop && !pop.closed ? '開著' : '無'}\n` +
+    `安全來源 isSecureContext：${window.isSecureContext}（${location.protocol}）`;
+}
+setInterval(refresh, 1000);
+
+async function getDetails() {
+  details = await window.getScreenDetails();
+  const ss = details.screens.map((s, i) => `#${i} ${s.label || '(無名)'} ${s.width}x${s.height} @${s.left},${s.top} internal=${s.isInternal} primary=${s.isPrimary}`);
+  log('螢幕：\n  ' + ss.join('\n  '));
+  const laptop = details.screens.find((s) => s.isInternal) || details.currentScreen;
+  const projector = details.screens.find((s) => s !== laptop);
+  log(`筆電螢幕＝${laptop.label || '?'}；投影幕＝${projector ? projector.label || '?' : '（找不到第二個螢幕）'}`);
+  return { laptop, projector };
+}
+function knownScreens() {
+  if (!details) return null;
+  const laptop = details.screens.find((s) => s.isInternal) || details.currentScreen;
+  return { laptop, projector: details.screens.find((s) => s !== laptop) };
+}
+function openPopup(features) {
+  log(`window.open(${features || '無參數'})  [${act()}]`);
+  pop = window.open('', 'lab-presenter', features || 'width=960,height=700');
+  if (!pop) { log('✗ 講者視窗被擋（回傳 null）', 'bad'); return false; }
+  pop.document.open();
+  pop.document.write('<!doctype html><meta charset="utf-8"><title>講者視窗（測試）</title><body style="font:20px system-ui;padding:24px;background:#fffbe8"><h2>講者視窗（測試）</h2><p id=w></p><p id=f></p><script>setInterval(()=>{w.textContent=`位置 ${screenX},${screenY}　大小 ${outerWidth}x${outerHeight}`;f.textContent=`這個視窗有焦點：${document.hasFocus()}`},500);addEventListener(\'keydown\',(e)=>{if(!opener||opener.closed)return;opener.popKey(e.key);if(e.key===\'d\'||e.key===\'D\'){try{opener.postMessage(\'fsProjector\',{targetOrigin:\'/\',delegate:\'fullscreen\'})}catch(x){opener.log(\'✗ 委派失敗：\'+x.message,\'bad\')}}})<\/script>');
+  pop.document.close();
+  log('✓ 講者視窗已開', 'ok');
+  return true;
+}
+// A key that lands on the speaker window instead of this page; 7/P there does what the console's P does.
+window.popKey = (k) => {
+  log(`按鍵「${k}」落在講者視窗（不是這頁）`, 'bad');
+  if ((k === '7' || k === 'p' || k === 'P') && projector && !document.fullscreenElement) {
+    window.focus();
+    log('已把這頁叫到前面（同講者視窗的 P）：再按一次 7');
+  }
+};
+// d：講者視窗把「全螢幕權」交回這頁，這頁全螢幕到投影幕
+window.addEventListener('message', (e) => {
+  if (e.data !== 'fsProjector') return;
+  const s = knownScreens();
+  log('收到講者視窗的委派');
+  if (s && s.projector) fullscreen(s.projector);
+});
+// 「主頁當講者」：投影片是新開的視窗。它自己記錄按鍵、焦點、全螢幕結果，回報到這頁的紀錄。
+window.deckLog = (msg, cls) => log('［投影片視窗］' + msg, cls);
+function openDeck(features) {
+  log(`window.open(投影片視窗, ${features})  [${act()}]`);
+  deck = window.open('', 'lab-deck', features);
+  if (!deck) { log('✗ 投影片視窗被擋（回傳 null）', 'bad'); return false; }
+  deck.document.open();
+  deck.document.write(`<!doctype html><meta charset="utf-8"><title>投影片視窗（測試）</title>
+<body style="margin:0;font:40px system-ui;background:#1d2a44;color:#fff;display:flex;flex-direction:column;justify-content:center;align-items:center;height:100vh;gap:20px">
+<div>投影片視窗（測試）</div><div style="font-size:24px">按 F 或 P：這個視窗全螢幕（在它自己所在的螢幕）</div><div id=w style="font-size:20px"></div>
+<script>
+const say=(m,c)=>{ if(opener&&!opener.closed) opener.deckLog(m,c); };
+setInterval(()=>{w.textContent=\`位置 \${screenX},\${screenY}　大小 \${outerWidth}x\${outerHeight}　有焦點：\${document.hasFocus()}　全螢幕：\${!!document.fullscreenElement}\`},500);
+setTimeout(()=>say('開好了，有焦點：'+document.hasFocus()+'（true＝下一次按鍵會落在投影片視窗）', document.hasFocus()?'ok':'bad'),600);
+addEventListener('keydown',(e)=>{
+  say('收到按鍵「'+e.key+'」');
+  if(e.key==='f'||e.key==='F'||e.key==='p'||e.key==='P'){
+    document.documentElement.requestFullscreen().then(()=>say('✓ 全螢幕成功','ok'),(x)=>say('✗ 全螢幕失敗：'+x.message,'bad'));
+  }
+});
+addEventListener('message',(e)=>{
+  if(e.data==='fs') document.documentElement.requestFullscreen().then(()=>say('✓（委派）全螢幕成功','ok'),(x)=>say('✗（委派）全螢幕失敗：'+x.message,'bad'));
+});
+<\/script>`);
+  deck.document.close();
+  log('✓ 投影片視窗已開', 'ok');
+  return true;
+}
+async function screensOnce() {
+  let s = knownScreens();
+  if (!s && window.getScreenDetails && screen.isExtended) {
+    try { s = await getDetails(); } catch (e) { log('✗ ' + e.message, 'bad'); }
+    if (!act().endsWith('true')) { log(`權限對話框用掉了這次按鍵 [${act()}]：再按一次同一個鍵。`); return null; }
+  }
+  if (!s || !s.projector) { log('找不到投影幕', 'bad'); return null; }
+  return s;
+}
+async function fullscreen(screen) {
+  log(`requestFullscreen(${screen ? '螢幕：' + (screen.label || '?') : '目前螢幕'})  [${act()}]`);
+  try {
+    await document.documentElement.requestFullscreen(screen ? { screen } : undefined);
+    log('✓ 全螢幕成功', 'ok');
+    return true;
+  } catch (e) { log('✗ 全螢幕失敗：' + e.message, 'bad'); return false; }
+}
+function rect(s) { return `left=${s.availLeft},top=${s.availTop},width=${s.availWidth},height=${s.availHeight}`; }
+
+const tests = [
+  ['1', '只開講者視窗（一般 popup）', '最基本：popup 本身會不會被擋', async () => { openPopup(); }],
+  ['2', '要求視窗管理權限、列出螢幕', '會跳權限對話框；按允許。之後其他測試才能分螢幕', async () => {
+    try { await getDetails(); } catch (e) { log('✗ getScreenDetails 失敗：' + e.message, 'bad'); }
+  }],
+  ['3', '只把這頁全螢幕到投影幕', '測 requestFullscreen({screen}) 能不能把畫面送到投影機', async () => {
+    const s = knownScreens() || await getDetails().catch((e) => (log('✗ ' + e.message, 'bad'), null));
+    if (s && s.projector) await fullscreen(s.projector);
+  }],
+  ['4', '只開講者視窗，直接開在筆電螢幕', 'window.open 帶筆電螢幕座標（需先做 2）', async () => {
+    const s = knownScreens();
+    if (!s) { log('先按 2 取得螢幕資訊', 'bad'); return; }
+    openPopup(rect(s.laptop));
+  }],
+  ['5', '先全螢幕到投影幕，再開講者視窗（同一次按鍵）', 'v7 原本的順序；你剛遇到的被擋就在這裡', async () => {
+    const s = knownScreens();
+    if (!s || !s.projector) { log('先按 2 取得螢幕資訊', 'bad'); return; }
+    await fullscreen(s.projector);
+    openPopup(rect(s.laptop));
+  }],
+  ['6', '先開講者視窗，再全螢幕到投影幕（同一次按鍵）', '反過來的順序', async () => {
+    const s = knownScreens();
+    if (!s || !s.projector) { log('先按 2 取得螢幕資訊', 'bad'); return; }
+    openPopup(rect(s.laptop));
+    await fullscreen(s.projector);
+  }],
+  ['7', '和現在的 P 一樣：第一次開講者視窗，第二次全螢幕', '請用鍵盤按 7，不要點按鈕（點按鈕會把焦點帶回這頁，測不出第二次按鍵落在哪）', async () => {
+    if (pop && !pop.closed) {
+      if (projector && !document.fullscreenElement) { await fullscreen(projector); return; }
+      pop.focus();
+      log('講者視窗已開、這頁已全螢幕：只把焦點交給講者視窗');
+      return;
+    }
+    // file:// 的權限 Chrome 不記：每頁只問一次，之後沿用拿到的螢幕資訊
+    let s = knownScreens();
+    if (!s && window.getScreenDetails && screen.isExtended) {
+      try { s = await getDetails(); } catch (e) { log('✗ ' + e.message, 'bad'); }
+      if (!act().endsWith('true')) { log(`權限對話框用掉了這次按鍵 [${act()}]：再按一次 7，講者視窗會開在筆電螢幕。`); return; }
+    }
+    projector = s && s.projector || null;
+    if (!openPopup(s ? rect(s.laptop) : '')) { projector = null; return; }
+    if (projector) {
+      log(`window.focus()  [${act()}]`);
+      window.focus();
+      setTimeout(() => log(`焦點：這頁 hasFocus=${document.hasFocus()}（true＝下一次按 7 會落在這頁、直接全螢幕；false＝會落在講者視窗，要多按一次）`, document.hasFocus() ? 'ok' : 'bad'), 600);
+    }
+  }],
+  ['8', '開一般 popup，再用 moveTo/resizeTo 移到筆電螢幕', '不靠 open 參數，開完再搬', async () => {
+    const s = knownScreens();
+    if (!s) { log('先按 2 取得螢幕資訊', 'bad'); return; }
+    if (!openPopup()) return;
+    try { pop.moveTo(s.laptop.availLeft, s.laptop.availTop); pop.resizeTo(s.laptop.availWidth, s.laptop.availHeight); log('moveTo/resizeTo 已呼叫（看講者視窗顯示的位置）'); }
+    catch (e) { log('✗ moveTo 失敗：' + e.message, 'bad'); }
+  }],
+  ['9', '講者視窗已開時，再把這頁全螢幕到投影幕', 'v8 的第二次 P：先做 1、4 或 8，再按 9', async () => {
+    const s = knownScreens();
+    if (!s || !s.projector) { log('先按 2 取得螢幕資訊', 'bad'); return; }
+    if (!pop || pop.closed) log('（注意：講者視窗目前沒開）');
+    await fullscreen(s.projector);
+  }],
+  ['a', '主頁當講者：把投影片視窗開在投影幕，下一個鍵在那邊全螢幕', '用鍵盤按 a；投影片視窗出現後直接按 F（不要點任何地方），看按鍵有沒有落在投影片視窗', async () => {
+    const s = await screensOnce(); if (!s) return;
+    openDeck(rect(s.projector));
+  }],
+  ['b', '主頁當講者：一次按鍵開出「全螢幕視窗」到投影幕', 'window.open 加 fullscreen 參數（Chrome 的 fullscreen popup；不確定這版 Chrome 有沒有）', async () => {
+    const s = await screensOnce(); if (!s) return;
+    if (!openDeck(rect(s.projector) + ',popup,fullscreen')) return;
+    setTimeout(() => { try { log(`投影片視窗全螢幕：${!!deck.document.fullscreenElement}　大小 ${deck.outerWidth}x${deck.outerHeight}`, deck.document.fullscreenElement ? 'ok' : 'bad'); } catch (e) { log('讀不到投影片視窗：' + e.message, 'bad'); } }, 1200);
+  }],
+  ['c', '投影片視窗已開時，從這頁按鍵把「全螢幕權」交給它', 'postMessage 的 delegate: \'fullscreen\'（先做 a，再回到這頁按 c）', async () => {
+    if (!deck || deck.closed) { log('先按 a 開投影片視窗', 'bad'); return; }
+    log(`postMessage(delegate: fullscreen)  [${act()}]`);
+    try { deck.postMessage('fs', { targetOrigin: '/', delegate: 'fullscreen' }); }
+    catch (e) { log('✗ 委派失敗：' + e.message, 'bad'); }
+  }],
+  ['d', '（說明）在講者視窗按 D：把全螢幕權交回這頁，這頁全螢幕到投影幕', '現在的版面不用翻轉：先按 2、4 開講者視窗，然後在講者視窗按 D。這顆按鈕本身不做事', async () => {
+    log('請在講者視窗裡按 D（先按 2、4 開講者視窗）');
+  }],
+  ['0', '重置：結束全螢幕、關講者視窗', '每項測試之間按一次', async () => {
+    if (document.fullscreenElement) await document.exitFullscreen().catch(() => {});
+    if (pop && !pop.closed) pop.close();
+    if (deck && !deck.closed) deck.close();
+    pop = null; deck = null;
+    projector = null;
+    log('— 已重置 —');
+  }],
+];
+
+const btns = document.getElementById('btns');
+for (const [key, label, sub, run] of tests) {
+  const b = document.createElement('button');
+  b.innerHTML = `<b>${key}</b>${label}<small>${sub}</small>`;
+  b.addEventListener('click', () => { log(`▶ ${key}. ${label}`); run(); });
+  btns.appendChild(b);
+}
+window.addEventListener('keydown', (e) => {
+  const t = tests.find(([k]) => k === e.key);
+  if (!t) return;
+  e.preventDefault();
+  log(`▶ ${t[0]}. ${t[1]}（鍵盤）`);
+  t[3]();
+});
+refresh();
+log('準備好了。測「主頁當講者」：按 0 → a → F（看按鍵落在哪、能否全螢幕）→ 0 → b → 0 → a → 回這頁按 c → 0。不翻轉的做法：0 → 2 → 4 → 在講者視窗按 D → 0。舊的 P 流程：0 → 7 → 7 → 0。');
+</script>
+</body></html>

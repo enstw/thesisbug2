@@ -7,8 +7,9 @@ _output/
 **/.quarto/
 *_files/
 
-# Raw source originals are kept in a GitHub Release, not in git
-# (see .framework/docs/bib-lifecycle.md); transcripts and audit logs are committed.
+# Raw source originals are kept in a GitHub Release (./fw refs-snapshot), not in git
+# (see .framework/docs/DESIGN.md § Sources); transcripts (refs/*.md, *.tc.md) and
+# audit logs are committed, which is why course repos stay private.
 **/refs/archive/
 **/refs/*.pdf
 **/refs/*.epub

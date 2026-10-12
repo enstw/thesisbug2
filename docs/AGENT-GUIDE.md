@@ -63,7 +63,7 @@ Lint order for a manuscript: **fix-terms → flow-check → cite-check**, with g
 
 A source's files exist in exactly one place: the unit that fetched it (`<unit>/refs/`, `<unit>/references.bib`) or, once a second unit wants it, `library/`. Look in `library/` and the other units before fetching anything; keys are unique across the course. `source-kit` has the full procedure, including the append-only audit logs (`refs/audit/<key>.jsonl`) and why a `support` verdict carries the unit's name while an `identity` verdict does not. The state machine is in `.framework/docs/bib-lifecycle.md`.
 
-Raw originals (`*.pdf`, `*.epub`, `*.html`) are never committed. Transcripts and audit logs are.
+Raw originals (`*.pdf`, `*.epub`, `*.html`) are never committed; `./fw refs-snapshot` keeps them in the course repo's GitHub Release. Transcripts (`refs/<key>.md`, plus the `<key>.tc.md` Traditional reading copy that the PDF converter writes for a Simplified source) and audit logs are committed, because quotes and page locators are checked against the transcript, and its hand corrections (page markers, misread characters) exist nowhere else. They are full text of copyrighted works, so the course repo stays private; making it public means purging them from the whole git history, not just deleting the files.
 
 ## Status files are not a log
 

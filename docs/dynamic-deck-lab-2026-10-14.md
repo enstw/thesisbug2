@@ -163,3 +163,23 @@ function seek(t){
 單一事實來源不變：`storyboard.md` → 產生 `scenes.json`（只含版型代碼與段落參照）→ 少數通用場景元件讀 JSON 畫面；文字不寫死在 TSX 或 TS 檔。時間軸仍由口白稿與音檔算出，對齊後再寫入各框架的時間結構。
 
 參考：[Remotion 授權與價格](https://www.remotion.dev/docs/pricing)、[Remotion LICENSE.md](https://github.com/remotion-dev/remotion/blob/main/LICENSE.md)、[Motion Canvas 3.8.0 發布說明](https://motioncanvas.io/blog/version-3.8.0)、[Motion Canvas 3.15.0](https://motioncanvas.io/blog/version-3.15.0/)、[Rendering video](https://motioncanvas.io/docs/rendering/video)、[Time events](https://motioncanvas.io/docs/time-events)、[Revideo FFmpeg exporter](https://docs.re.video/api/core/exporter/FFmpegExporterClient)、[三者比較](https://www.pkgpulse.com/guides/remotion-vs-motion-canvas-vs-revideo-programmatic-video-2026)。
+
+## 轉向：現場鍵控版（2026-10-14 下午）
+
+維護者看過上面的評比後改了方向：先不做 TTS 與影片輸出，場景改成**教室投影機上的現場報告**，講者按一次「下一步」鍵就播下一個動作；工具只用免費或有免費方案的；而且**不受既有 deck-runtime 約束**，先做一個獨立的原型看 looks and feel，合適了才考慮與 `deck-stage` 整合。原型放在同一門課的 02 單元 `tools/motion/live.html`（私有 repo），雙擊即開（`file://`），字型與色票直接連結該單元的 `asset/tokens.css`，所以 14 套主題用 C 鍵就能切，投影機淺色主題也在內。
+
+引擎與上面的 `seek(t)` 同一套效果，只把時間軸換成**拍（beat）**：每個元素標在第幾拍出現，`→` 播下一拍，拍播完再按就進下一景；`←` 瞬間退一拍，或回到上一景的全展開狀態。七個場景把 PoC 契約裡的強項都放進展示：
+
+1. 封面：事件句逐字打出，標題彈入。
+1. 研判：主句加三張要點卡逐拍出現。
+1. 章節卡轉場（全暗出章名）進入「一、指控內容」。
+1. 上半年時間軸：線畫出、節點逐拍彈入。
+1. 推進轉場加跨景延續：上半年的三個節點縮成小點滑進 9 月時間軸的左側邊欄（同 `data-id` 的元素量出位置差再內插，FLIP）。
+1. 鏡頭推入 9/10 節點，接到轉送流程圖：主線畫出、方塊彈入、封包沿線流動，講到「回應送回來」才多出回程。
+1. 流程圖裡的小字「5,380」長成下一景的大數字，其餘三個數字遞增；結尾景把封面標題與研判三張卡從它們原來的位置滑回來（跨景延續不限相鄰景：來源在更早的景時暫時排版那一景量位置）。
+
+四種轉場（fade／push／zoom／chapter）由上一景宣告，文字不重疊：前景先在前半段淡出、後景在後半段淡入。鏡頭隨拍數緩推 4%。`prefers-reduced-motion` 下全部瞬間完成。
+
+若作者接受這個 look and feel，整合的方向是：把「拍」做成靜態 deck 的漸進增強（投影片元素標 `data-beat`、`data-fx`，由一支新的 engine 腳本在 `deck-stage` 的 `→` 之前攔截，拍未播完就不換頁；講者視窗顯示第幾拍），縮圖、列印與 `#debug` 檢查一律全展開；轉場與跨景延續則需要 `deck-stage` 多一個換頁前的可取消事件。這些都還沒做。
+
+**完結（2026-10-14 晚）**：維護者看過原型後裁定，要留下的是引擎帶來的特色而不是版面，於是這整套進了框架，成為靜態 deck 的選用活潑模式：deck-svg 新增 `asset/deck-motion.js`（屬性詞彙見該 skill § Motion and print），deck-runtime 只多一個換頁前的可取消事件 `deckstep` 與講者視窗的拍數顯示，`docs/DESIGN.md` 有決定條目。`live.html` 留在課程單元當參考；這門課的 `deck.html` 前七頁已標上拍與延續作為實證。

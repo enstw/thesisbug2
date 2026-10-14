@@ -38,6 +38,7 @@ house-style tokens — drive accents off `var(--chapter)` (set per slide via
 
 ## Entrance
 - `.rise` + `.d1`/`.d2`/`.d3`/`.d4` — staggered fade-up; plays when the slide becomes active. Respects `prefers-reduced-motion`.
+- Lively mode (optional, SKILL § Motion and print): `data-beat="n"` reveals the element on the n-th key press (`data-fx` fadeup / pop / draw / type / count / hold, `data-delay`, `data-dur`); `data-id` carries an element to the next slide (FLIP); `data-enter="fade|push|zoom"` on the section, `data-zoom-from="<data-id>"` for zoom; `data-along="<selector>"` rides an SVG path. Not combined with `.rise` on the same element.
 
 ## Type
 Sized for a classroom projector at 1920×1080: body 40px, tables / labels / captions 34px at least, `.hero__hint` key hints the only smaller text (presenter chrome). `deck.html#debug` reports anything under 34px.

@@ -32,6 +32,7 @@ def deck_assets() -> dict[str, Path]:
         "asset/deck-font-controls.js": deck / "asset" / "deck-font-controls.js",
         "asset/deck-check.js": deck / "asset" / "deck-check.js",         # deck.html#debug self-check
         "asset/deck-theme-controls.js": deck / "asset" / "deck-theme-controls.js",   # c/g live themes
+        "asset/deck-motion.js": deck / "asset" / "deck-motion.js",       # optional lively mode (beats, continuity, transitions)
         "asset/deck-theme-rules.js": house / "themes" / "deck-theme-rules.js",      # colour rules (one source)
         "asset/deck-palette.js": house / "themes" / "deck-palette.js",              # check + seeded generator
         "asset/tokens.css": house / "css" / "tokens.css",                # look

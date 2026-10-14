@@ -280,6 +280,14 @@
   }
 
   /* ============================================================
+     活潑模式（asset/deck-motion.js，選用）— 投影片元素標 data-beat 逐拍出現。
+     引擎載入並開啟時 <html> 帶 data-deck-motion，拍未到的元素先藏；
+     沒有引擎、或按 M 關掉，什麼都不藏，deck 就是原本的靜態版。
+     ============================================================ */
+  html[data-deck-motion] [data-beat] { opacity: 0; }
+  svg [data-id], svg [data-beat] { transform-box: fill-box; transform-origin: 50% 50%; }  /* SVG 子元素的 pop／FLIP 以自己的中心縮放 */
+
+  /* ============================================================
      PRINT — reveal every slide for Print → Save as PDF.
      deck-stage's print CSS forces the <section>s visible, but ::slotted()
      can't reach .rise descendants, so without this only the active slide's
@@ -288,6 +296,8 @@
   @media print {
     .rise { opacity:1 !important; transform:none !important; animation:none !important; }
     .flow,.pulse,.aurora { animation:none !important; }
+    [data-beat] { opacity:1 !important; transform:none !important; }   /* 活潑模式：每頁全展開 */
+    deck-stage > section { transform:none !important; }                 /* 拿掉鏡頭緩推 */
   }
 
   /* ---------- two-column text block (.colblock) — used by reading-guide ---------- */

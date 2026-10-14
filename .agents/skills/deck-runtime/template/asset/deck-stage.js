@@ -29,6 +29,13 @@
  * `visibility: hidden` + `opacity: 0`, so their state (videos, iframes,
  * form inputs, React trees) is preserved across navigation.
  *
+ * Step hook — before next/prev (keyboard, click, tap, presenter console)
+ * change the slide, the component dispatches a cancelable `deckstep`
+ * CustomEvent ({direction: ±1, reason}); a listener that calls
+ * preventDefault() keeps the slide, which is how deck-svg's optional
+ * deck-motion.js plays one reveal step per press. Jumps (goTo, digits,
+ * Home/End, R) do not ask.
+ *
  * Lifecycle event — the component dispatches a `slidechange` CustomEvent on
  * itself whenever the active slide changes (including the initial mount).
  * The event bubbles and composes out of shadow DOM, so you can listen on
@@ -1286,6 +1293,10 @@
      *  nothing further in that direction. */
     _advance(dir, reason) {
       if (!this._slides.length) return;
+      // Cancelable hook before the slide changes: an engine script (deck-svg's
+      // deck-motion.js) plays the active slide's next reveal step here and
+      // calls preventDefault, so the runtime never has to know what a beat is.
+      if (!this.dispatchEvent(new CustomEvent('deckstep', { detail: { direction: dir, reason }, cancelable: true, bubbles: true, composed: true }))) return;
       let i = this._index + dir;
       while (i >= 0 && i < this._slides.length && this._slides[i].hasAttribute('data-deck-skip')) {
         i += dir;

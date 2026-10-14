@@ -17,6 +17,7 @@
    file:// frame access (notably Chrome's null-origin file:// policy). */
 (() => {
   let p = null, notes = [], labels = [];
+  let lastBeat = [0, 0]; // from deck-motion's deckbeat events; 0 beats = plain slide
   let projector = null; // the screen the next P sends the deck to, once the console sits on the laptop
   const stage = () => document.querySelector('deck-stage');
 
@@ -81,10 +82,10 @@ h1{font-family:var(--serif);font-size:22px;font-weight:600;margin:0;color:var(--
 </style></head><body>
 <div class="thumbs" id="thumbs"></div>
 <div class="place" id="place" hidden>下一步：按 <span class="kbd">P</span>，投影片會全螢幕到投影幕。若投影片先跳到前面，再按一次 <span class="kbd">P</span>。</div>
-<header><span class="label">Speaker Notes</span><span class="hr"><button class="gridbtn" id="gridBtn" type="button">全部投影片 O</button><span class="pn"><span id="cur">—</span> / <span id="tot">?</span></span></span></header>
+<header><span class="label">Speaker Notes</span><span class="hr"><button class="gridbtn" id="gridBtn" type="button">全部投影片 O</button><span class="pn"><span id="cur">—</span> / <span id="tot">?</span><span id="beat"></span></span></span></header>
 <h1 id="title">—</h1>
 <div class="note" id="note"><span class="empty-note">（無備註）</span></div>
-<div class="footer"><span class="kbd">←</span><span class="kbd">→</span> 切換 ｜ <span class="kbd">Space</span> 下一頁 ｜ <span class="kbd">+</span><span class="kbd">−</span> 調整投影片字級 ｜ <span class="kbd">C</span> 換主題 <span class="kbd">G</span> 隨機配色（Shift 反向）｜ <span class="kbd">R</span> 重置 ｜ 點縮圖跳頁 ｜ <span class="kbd">O</span> 全部投影片 ｜ <span class="kbd">Esc</span> 關閉視窗</div>
+<div class="footer"><span class="kbd">←</span><span class="kbd">→</span> 切換 ｜ <span class="kbd">Space</span> 下一頁 ｜ <span class="kbd">+</span><span class="kbd">−</span> 調整投影片字級 ｜ <span class="kbd">C</span> 換主題 <span class="kbd">G</span> 隨機配色（Shift 反向）｜ <span class="kbd">M</span> 活潑模式 ｜ <span class="kbd">R</span> 重置 ｜ 點縮圖跳頁 ｜ <span class="kbd">O</span> 全部投影片 ｜ <span class="kbd">Esc</span> 關閉視窗</div>
 <div id="grid" hidden><div class="ghead"><span class="label">全部投影片</span><span class="pn">點一張跳過去 ｜ <span class="kbd">←</span><span class="kbd">→</span><span class="kbd">↑</span><span class="kbd">↓</span> 選 ｜ <span class="kbd">Enter</span> 跳頁 ｜ <span class="kbd">Esc</span> 返回</span></div><div id="gridList"></div></div>
 <script>
 const DECK_URL = ${JSON.stringify(deckUrl)};
@@ -254,6 +255,7 @@ window.addEventListener('message',(e)=>{
     render(d.current||0);
   }
   else if(typeof d.slideIndexChanged==='number'){render(d.slideIndexChanged);}
+  if(Array.isArray(d.deckBeat)){document.getElementById('beat').textContent=d.deckBeat[1]?' · 第 '+d.deckBeat[0]+' / '+d.deckBeat[1]+' 拍':'';}
   if(typeof d.placeHint==='boolean'){document.getElementById('place').hidden=!d.placeHint;}
 });
 function render(i){
@@ -266,7 +268,7 @@ function render(i){
   if(n&&String(n).trim()){el.textContent=n;}else{el.innerHTML='<span class="empty-note">（這張無備註）</span>';}
   renderThumbs(i);
 }
-window.addEventListener('keydown',(e)=>{if(e.metaKey||e.ctrlKey||e.altKey)return;if(gridOpen()){gridKey(e.key);e.preventDefault();return;}if(e.key==='o'||e.key==='O'){openGrid();e.preventDefault();return;}if(e.key==='Escape'){window.close();return;}const k=e.key;if(k==='p'||k==='P'){if(!document.getElementById('place').hidden&&window.opener&&!window.opener.closed){window.opener.focus();window.opener.postMessage({presenterPlace:true},'*');}e.preventDefault();return;}const direction=(k==='+'||k==='=')?1:k==='-'?-1:0;if(direction){if(window.opener&&!window.opener.closed){window.opener.postMessage({deckFontDirection:direction},'*');}e.preventDefault();return;}if(!e.ctrlKey&&!e.metaKey&&!e.altKey&&/^[cg]$/i.test(k)){if(window.opener&&!window.opener.closed){window.opener.postMessage({deckThemeKey:e.shiftKey?k.toUpperCase():k.toLowerCase()},'*');}e.preventDefault();return;}if(['ArrowLeft','ArrowRight','PageDown','PageUp',' ','r','R','Home','End'].includes(k)){if(window.opener&&!window.opener.closed){window.opener.postMessage({presenterKey:k},'*');}e.preventDefault();}});
+window.addEventListener('keydown',(e)=>{if(e.metaKey||e.ctrlKey||e.altKey)return;if(gridOpen()){gridKey(e.key);e.preventDefault();return;}if(e.key==='o'||e.key==='O'){openGrid();e.preventDefault();return;}if(e.key==='Escape'){window.close();return;}const k=e.key;if(k==='p'||k==='P'){if(!document.getElementById('place').hidden&&window.opener&&!window.opener.closed){window.opener.focus();window.opener.postMessage({presenterPlace:true},'*');}e.preventDefault();return;}const direction=(k==='+'||k==='=')?1:k==='-'?-1:0;if(direction){if(window.opener&&!window.opener.closed){window.opener.postMessage({deckFontDirection:direction},'*');}e.preventDefault();return;}if(k==='m'||k==='M'){if(window.opener&&!window.opener.closed){window.opener.postMessage({deckMotionKey:true},'*');}e.preventDefault();return;}if(!e.ctrlKey&&!e.metaKey&&!e.altKey&&/^[cg]$/i.test(k)){if(window.opener&&!window.opener.closed){window.opener.postMessage({deckThemeKey:e.shiftKey?k.toUpperCase():k.toLowerCase()},'*');}e.preventDefault();return;}if(['ArrowLeft','ArrowRight','PageDown','PageUp',' ','r','R','Home','End'].includes(k)){if(window.opener&&!window.opener.closed){window.opener.postMessage({presenterKey:k},'*');}e.preventDefault();}});
 <\/script></body></html>`;
   }
 
@@ -358,7 +360,7 @@ window.addEventListener('keydown',(e)=>{if(e.metaKey||e.ctrlKey||e.altKey)return
     p.document.close();
     setTimeout(() => {
       const s = stage();
-      if (p && !p.closed) p.postMessage({ init: true, notes, labels, current: s ? s.index : 0, placeHint: placeHint() }, '*');
+      if (p && !p.closed) p.postMessage({ init: true, notes, labels, current: s ? s.index : 0, placeHint: placeHint(), deckBeat: lastBeat }, '*');
     }, 80);
     // Keep the next P on the deck if the browser lets it; the console's P covers it if not.
     if (projector) window.focus();
@@ -370,6 +372,11 @@ window.addEventListener('keydown',(e)=>{if(e.metaKey||e.ctrlKey||e.altKey)return
     if (s) {
       s.addEventListener('slidechange', (e) => {
         if (p && !p.closed) p.postMessage({ slideIndexChanged: e.detail.index }, '*');
+      });
+      // deck-motion.js (optional) reports the reveal step; the console shows 第 n/m 拍.
+      document.addEventListener('deckbeat', (e) => {
+        lastBeat = [e.detail.beat, e.detail.beats];
+        if (p && !p.closed) p.postMessage({ deckBeat: lastBeat }, '*');
       });
     }
   }

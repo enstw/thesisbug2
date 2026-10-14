@@ -26,7 +26,7 @@ engine    deck-svg, deck-image   author slides onto the shell
 
 | File | Role | Edit it? |
 |---|---|---|
-| `deck-stage.js` | The `<deck-stage>` custom element: slide flight/nav, keyboard (→/Esc/digits/F), `slidechange` event, print CSS (`@page 1920×1080`, one slide per page), `#debug` self-check. | **No — frozen.** Treat as a dependency. |
+| `deck-stage.js` | The `<deck-stage>` custom element: slide flight/nav, keyboard (→/Esc/digits/F), cancelable `deckstep` before a step, `slidechange` event, print CSS (`@page 1920×1080`, one slide per page), `#debug` self-check. | **No — frozen.** Treat as a dependency. |
 | `presenter-stage.js` | Dual-screen presenter console (P key): current/next preview and speaker notes in a popup that drives the deck window over `postMessage`; **O** (or the 全部投影片 button) opens a grid of every slide, so a far slide is one click away (arrows + Enter also pick one, Esc returns to the notes). With an extended desktop it puts the deck fullscreen on the external screen and the console on the built-in one (see below). Forwards `+`/`=`/`-` as `{deckFontDirection: ±1}` so the presenter can resize the deck's text, and `c`/`g` (Shift = reverse) as `{deckThemeKey}` so the theme can change from the console; an engine without a handler ignores the message. | **No.** |
 
 This is the only home for these two files. deck-svg and deck-image copy them in;
@@ -58,6 +58,14 @@ A deck the engines produce must satisfy what `deck-stage.js` expects:
   slide does not flash unstyled before the element upgrades.
 - The runtime emits `slidechange` with `e.detail.index/previousIndex/total/slide/reason`
   (used e.g. by the number-counter helper).
+- Before `next()`/`prev()` (keyboard, click, tap, console) change the slide, the
+  runtime dispatches a cancelable `deckstep` event (`detail.direction` ±1,
+  `reason`); an engine that calls `preventDefault()` keeps the slide, which is
+  how deck-svg's optional `deck-motion.js` plays one reveal step per press
+  without the runtime knowing what a beat is. Jumps (`goTo`, digits, Home/End,
+  R) do not ask. The console relays an engine's `deckbeat` event (`detail.beat`,
+  `beats`) as 第 n/m 拍 beside the page number and forwards `M` as
+  `{deckMotionKey: true}`; a deck without the engine ignores both.
 
 What the runtime gives for free, so an engine writes none of it: ←/→,
 PgUp/PgDn, Space, Home/End, **R** (reset), number keys, the hover overlay,

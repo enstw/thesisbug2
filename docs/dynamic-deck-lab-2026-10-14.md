@@ -183,3 +183,21 @@ function seek(t){
 若作者接受這個 look and feel，整合的方向是：把「拍」做成靜態 deck 的漸進增強（投影片元素標 `data-beat`、`data-fx`，由一支新的 engine 腳本在 `deck-stage` 的 `→` 之前攔截，拍未播完就不換頁；講者視窗顯示第幾拍），縮圖、列印與 `#debug` 檢查一律全展開；轉場與跨景延續則需要 `deck-stage` 多一個換頁前的可取消事件。這些都還沒做。
 
 **完結（2026-10-14 晚）**：維護者看過原型後裁定，要留下的是引擎帶來的特色而不是版面，於是這整套進了框架，成為靜態 deck 的選用活潑模式：deck-svg 新增 `asset/deck-motion.js`（屬性詞彙見該 skill § Motion and print），deck-runtime 只多一個換頁前的可取消事件 `deckstep` 與講者視窗的拍數顯示，`docs/DESIGN.md` 有決定條目。`live.html` 留在課程單元當參考；這門課的 `deck.html` 前七頁已標上拍與延續作為實證。
+
+## 引擎 PoC：四個引擎跑同一套七景（2026-10-14 深夜）
+
+活潑模式定案後，維護者問為什麼投影機情境不能用 Remotion、Motion Canvas、GSAP、anime.js，並要求把 Motion Canvas 的簡報模式也納入。於是把原型的七景與效果宣告抽成引擎契約（`scenes.js` 宣告「哪個元素第幾拍、什麼效果」，`shell.js` 管縮放、HUD、按鍵、主題，引擎只實作 `init / goTo / next / prev / reverse? / replay? / speed?`），同一套場景跑四個引擎：手寫、GSAP 3.15、anime.js 4.5（三者 `file://` 雙擊即開）、Motion Canvas 3.17（七景用 TSX 重寫，走它的 Presenter）。對照表、數字與踩到的坑在課程單元 `tools/motion/README.md`；這裡只記對框架有意義的結論。
+
+| | 手寫（＝deck-motion.js 的路線） | GSAP | anime.js | Motion Canvas |
+| :--- | :--- | :--- | :--- | :--- |
+| 引擎碼／函式庫 | 86 行／0 | 89 行／121 KB | 80 行／118 KB | 305 行／133 MB `node_modules`＋Vite |
+| 授權 | — | 免費含外掛，非 MIT | MIT | MIT |
+| 動畫倒退、變速 | ✗ | ✓ | ✓ | ✗（倒退＝重跑到上一拍末狀態） |
+| 跨景延續 | 自己量 | Flip 外掛 | 自己量 | 無，手動放座標 |
+| `file://`、主題沿用 | ✓ | ✓ | ✓ | ✗ |
+
+1. 手寫路線站得住：七景的全部效果 86 行、零相依，正是活潑模式進框架時的規模；沒有一個引擎讓同樣的效果更短。
+1. GSAP 是記錄在案的後繼，這次實測確認了對應關係：Flip、DrawSVG、SplitText 對 `data-id`、`draw`、`chars` 一對一，多出來的是動畫式倒退、重播、全域變速，代價是 121 KB 與非 MIT 的免費授權。什麼時候換：講者要「倒放這一拍」而不是瞬間退的時候。
+1. anime.js 沒有 GSAP 做不到的事，又少了 Flip；不列候選。
+1. Motion Canvas 的簡報模式是真的（`beginSlide` 一拍一個、拍清單側欄、鍵控、全螢幕），逐字、畫線、數字遞增、三種轉場都有原生寫法，先前擔心的中文換行其實沒問題（它用隱藏 DOM 量尺寸再畫到 Canvas）。擋住它的是別的：要開發伺服器、不能 `file://`、tokens.css 的 14 套主題不能沿用、`Camera` 的子節點不在座標鏈上導致淡入時文字被切（3.17.2）、最後一版 2025-02。它適合從零做的影片或簡報，不適合疊在既有靜態 deck 上。`docs/DESIGN.md` 活潑模式條目的理由據此修正。
+

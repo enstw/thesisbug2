@@ -201,3 +201,11 @@ function seek(t){
 1. anime.js 沒有 GSAP 做不到的事，又少了 Flip；不列候選。
 1. Motion Canvas 的簡報模式是真的（`beginSlide` 一拍一個、拍清單側欄、鍵控、全螢幕），逐字、畫線、數字遞增、三種轉場都有原生寫法，先前擔心的中文換行其實沒問題（它用隱藏 DOM 量尺寸再畫到 Canvas）。擋住它的是別的：要開發伺服器、不能 `file://`、tokens.css 的 14 套主題不能沿用、`Camera` 的子節點不在座標鏈上導致淡入時文字被切（3.17.2）、最後一版 2025-02。它適合從零做的影片或簡報，不適合疊在既有靜態 deck 上。`docs/DESIGN.md` 活潑模式條目的理由據此修正。
 
+
+## 強項展示：每個引擎只做自己獨有的事（2026-10-14 深夜，續）
+
+維護者指出，四個引擎跑同一套七景只證明「都做得到」，看不出強項。於是每個引擎另做一頁，只用它獨有、或手寫引擎要花很多力氣的能力，素材不變（課程單元 `tools/motion/showcase-gsap.html`、`showcase-anime.html`、`motion-canvas/src/showcase/`；做法與坑在該單元 `tools/motion/README.md`「各引擎的強項展示」）。對框架有意義的結論：
+
+1. GSAP 的差異在外掛：MorphSVG（圖形變形）、MotionPath（沿路徑飛、自動轉向）、ScrambleText、SplitText 行遮罩，以及 Flip 能把字級與內距一起補間、GSDevTools 把一拍拉成可拖的時間軸。這些都不在 deck-motion.js 的詞彙裡，也都不是活潑模式缺的東西；後繼者的定位不變。
+1. anime.js 的差異是互動：Draggable（拖圓點捲時間軸、數字卡橡皮筋）、真彈簧、跟著滑鼠走的 Animatable，加上 4.3 起內建的 Layout（相當於 Flip）。先前「沒有 GSAP 做不到的事」要修正為：它做到的是**另一類**事。對現場簡報真正有用的是兩件——拖時間軸、雷射光點——都是講者的互動，不是投影片的動畫，和活潑模式（屬性宣告、鍵控）是不同的層；要做也是做成 deck-runtime 的工具，不是 deck-motion 的詞彙。它的 Draggable 與 Layout 在有 `transform` 的縮放舞台底下各有一個座標 bug，要繞。
+1. Motion Canvas 的差異是 DOM 引擎做不到的：一張世界加 Camera（含沿曲線騎行）、排版引擎的重排、訊號驅動的圖表、GLSL 著色器。但前一節的限制一個也沒少，Camera 的離屏快取 bug 這次又中了兩次（透明度與著色器）。結論不變：從零做的影片或簡報用它，疊在靜態 deck 上不用。

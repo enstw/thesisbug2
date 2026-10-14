@@ -95,7 +95,7 @@ class ApaZhSelectionTests(unittest.TestCase):
         self.assertIn("cite-lang.lua", yml)
         self.assertIn("bibliography-csl:", yml)
         self.assertIn("apa-zh/headings.tex", yml)
-        self.assertIn("\\renewcommand\\thesection{\\fw@zhbig", (build.FRAMEWORK / "assets/templates/thesis/apa-zh/headings.tex").read_text(encoding="utf-8"))
+        self.assertIn("\\renewcommand\\thesection{第\\fw@zh", (build.FRAMEWORK / "assets/templates/thesis/apa-zh/headings.tex").read_text(encoding="utf-8"))
         zh = (self.unit / "_bib-zh.bib").read_text(encoding="utf-8")
         en = (self.unit / "_bib-en.bib").read_text(encoding="utf-8")
         self.assertIn("chen_2010", zh)

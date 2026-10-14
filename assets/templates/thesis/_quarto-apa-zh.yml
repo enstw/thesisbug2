@@ -49,7 +49,7 @@ lang: zh-TW-u-co-stroke
 # class's chapter macros (\@makechapterhead, \chaptermark) and the build dies with
 # "Use of \@makechapterhead doesn't match its definition". CJK typesetting is xeCJK's
 # job (preamble.tex), and the 「第N章」 chapter head is defined there (numbered in
-# Chinese by apa-zh/headings.tex, which also sets 壹、一、（一） sections), so babel's
+# Chinese by apa-zh/headings.tex, which also sets 第一節／一、／（一） sections), so babel's
 # Chinese captions are not needed. lang stays zh-TW for citeproc and the UI strings.
 babel-lang: english
 
@@ -63,7 +63,7 @@ language:
   crossref-tbl-title: "表"
   crossref-fig-prefix: "圖 %s"
   crossref-tbl-prefix: "表 %s"
-  crossref-sec-prefix: "第 %s 節"
+  crossref-sec-prefix: "%s"   # \thesection already reads 第一節 (apa-zh/headings.tex)
   crossref-eq-prefix: "式 %s"
   crossref-lst-title: "程式"
   section-title-abstract: "摘要"
@@ -83,7 +83,7 @@ format:
     papersize: a4
     include-in-header:
       - {{FW}}/assets/templates/thesis/preamble.tex
-      - {{FW}}/assets/templates/thesis/apa-zh/headings.tex   # 第一章 → 壹、→ 一、→（一）
+      - {{FW}}/assets/templates/thesis/apa-zh/headings.tex   # 第一章 → 第一節 → 一、→（一）
     toc: true
     toc-depth: 3
     number-sections: true

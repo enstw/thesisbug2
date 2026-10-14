@@ -1,21 +1,23 @@
-% === apa-zh heading scheme: 第一章 → 壹、→ 一、→（一）→ 1. → (1) ===
+% === apa-zh heading scheme: 第一章 → 第一節 → 一、→（一）→ 1. → (1) ===
 % Included after preamble.tex by _quarto-apa-zh.yml. 《遠景基金會季刊》撰稿規範 numbers
-% headings 壹、一、(一)、1、(1) and has no chapter level; a thesis keeps 「第N章」 and
-% writes N in Chinese numerals so the head matches the prose convention 「第三章」.
+% an article 壹、一、(一)、1、(1) and has no chapter level. Taiwan theses that adopt it
+% keep 「第N章／第N節」 and join the regulation's ladder at its third rung, so the
+% hierarchy is 第一章 → 第一節 → 一、→（一）→ 1. → (1), with chapter and section
+% numbers in Chinese numerals, matching how prose refers to them（「見第三章」）.
 % Figures, tables and equations keep the arabic chapter number (圖 3.1), which is
 % what the crossref prefixes in _quarto-apa-zh.yml expect.
 \makeatletter
 \newcommand\fw@zh[1]{\ifcase#1\or 一\or 二\or 三\or 四\or 五\or 六\or 七\or 八\or 九\or 十\or 十一\or 十二\or 十三\or 十四\or 十五\or 十六\or 十七\or 十八\or 十九\or 二十\else\number#1\fi}
-\newcommand\fw@zhbig[1]{\ifcase#1\or 壹\or 貳\or 參\or 肆\or 伍\or 陸\or 柒\or 捌\or 玖\or 拾\or 拾壹\or 拾貳\or 拾參\or 拾肆\or 拾伍\or 拾陸\or 拾柒\or 拾捌\or 拾玖\or 貳拾\else\number#1\fi}
 \renewcommand\thechapter{第\fw@zh{\c@chapter}章}
-\renewcommand\thesection{\fw@zhbig{\c@section}、}
+\renewcommand\thesection{第\fw@zh{\c@section}節}
 \renewcommand\thesubsection{\fw@zh{\c@subsection}、}
 \renewcommand\thesubsubsection{（\fw@zh{\c@subsubsection}）}
 \renewcommand\theparagraph{\number\c@paragraph.}
 \renewcommand\thesubparagraph{(\number\c@subparagraph)}
-% 、and（）carry their own spacing, so the label is set with no \quad after it;
-% the half-width 1. and (1) levels get a thin gap.
+% 第一節 is followed by a word space; 、and（）carry their own spacing, so those
+% labels get no \quad; the half-width 1. and (1) levels get a thin gap.
 \renewcommand\@seccntformat[1]{\csname the#1\endcsname\@nameuse{fw@sep@#1}}
+\@namedef{fw@sep@section}{\hskip 0.5em}
 \@namedef{fw@sep@paragraph}{\hskip 0.25em}
 \@namedef{fw@sep@subparagraph}{\hskip 0.25em}
 % The chapter head (preamble.tex) prints \fw@chapterlabel; \thechapter already carries 第…章.
@@ -23,8 +25,10 @@
 \renewcommand\thefigure{\number\c@chapter.\number\c@figure}
 \renewcommand\thetable{\number\c@chapter.\number\c@table}
 \renewcommand\theequation{\number\c@chapter.\number\c@equation}
-% TOC: book.cls reserves 1.5em for the chapter number; 「第十二章」 needs about 5em.
-% Same as book.cls \l@chapter apart from that width.
+% TOC: book.cls reserves 1.5em for the chapter number and 2.3em for the section
+% number; 「第十二章」 needs about 5em and 「第十二節」 about 4.5em. \l@chapter is
+% book.cls's apart from that width.
+\renewcommand*\l@section{\@dottedtocline{1}{1.5em}{4.5em}}
 \renewcommand*\l@chapter[2]{%
   \ifnum \c@tocdepth >\m@ne
     \addpenalty{-\@highpenalty}%

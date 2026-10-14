@@ -101,7 +101,14 @@ range → author → arguments → synthesis → concepts → critique → quest
   the agent) picks from the catalogue, or `./fw deck-motion-pick <talk>`
   turns each row into a bounded choice for Jev and writes the picks back —
   a paid call the author acknowledges with `--ack`; the catalogue explains
-  both routes. `./fw deck-compile` turns the codes into the slide's
+  both routes. Both judge from the same material: the catalogue describes
+  each effect (what the audience sees, what it needs, when it fails) and
+  never says which page type takes which code, and the picker states each
+  page's facts (position, section, title length, lead, item count, number,
+  minutes, source point, neighbours) rather than hints, because a hint is
+  an answer key and two of them on one page gave Jev a coin-flip. A premise
+  bullet `關鍵數字：5,380` marks the deck's one key figure for `M-SCRAMBLE`.
+  `./fw deck-compile` turns the codes into the slide's
   `data-beat`/`data-fx`/`data-enter` attributes; codes that need hand-drawn
   SVG or hand-placed ids stay in the row as the intent and are added by hand
   in deck-svg. A storyboard without the column compiles a static deck.

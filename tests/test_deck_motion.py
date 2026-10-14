@@ -19,7 +19,7 @@ def _load(name: str):
     return mod
 
 
-from scripts._deck_motion import VARIATIONS, apply_motion, options_for, split_codes  # noqa: E402
+from scripts._deck_motion import PAGE_TYPE_WORDS, RESTRAINT, VARIATIONS, apply_motion, more_restrained, options_for, split_codes  # noqa: E402
 
 deck_compile = _load("deck-compile")
 pick = _load("deck-motion-pick")
@@ -38,6 +38,19 @@ class CatalogueTests(unittest.TestCase):
         doc = (REPO / ".agents/skills/deck-plan/reference/motion-catalog.md").read_text(encoding="utf-8")
         for code in VARIATIONS:
             self.assertIn(f"`{code}`", doc, f"{code} missing from motion-catalog.md")
+
+    def test_option_wording_describes_effects_not_page_types(self):
+        # a "suits covers" hint is an answer key; the picker gives Jev the page's facts instead
+        for code, v in VARIATIONS.items():
+            for key in ("what", "pros", "cons"):
+                for word in PAGE_TYPE_WORDS:
+                    self.assertNotIn(word, v[key], f"{code}.{key} names a page type: {word!r}")
+
+    def test_restraint_order_covers_every_code(self):
+        self.assertEqual(set(RESTRAINT), set(VARIATIONS))
+        self.assertEqual(more_restrained("M-CHARS", "M-NONE"), "M-NONE")
+        self.assertEqual(more_restrained("M-STEP", "M-POP"), "M-STEP")
+        self.assertEqual(more_restrained("M-ZOOM", "M-PUSH"), "M-PUSH")
 
     def test_split_codes_accepts_separators(self):
         self.assertEqual(split_codes("M-POP、M-PUSH"), ["M-POP", "M-PUSH"])
@@ -96,6 +109,7 @@ STORYBOARD = """# 分鏡稿
 
 - 標題：半導體戰略
 - 聽眾：研究生
+- 關鍵數字：5,380
 - Seed: 1337
 
 ## 投影片
@@ -130,6 +144,43 @@ class PickerTests(unittest.TestCase):
         for opt in q["criteria"].values():
             self.assertEqual(set(opt), {"what", "pros", "cons"})
         self.assertIn("半導體戰略", json.dumps(req["state"], ensure_ascii=False))
+
+    def test_pages_are_described_by_facts_not_hints(self):
+        req = pick.build_request(self.talk)
+        q = req["questions"]
+        self.assertIn("第一頁", q["s0"]["instructions"])
+        self.assertIn("分節後的第一頁", q["s1"]["instructions"])
+        self.assertIn("cards 3 組", q["s1"]["instructions"])
+        self.assertIn("lead 6 字", q["s1"]["instructions"])
+        self.assertIn("作者標為全場關鍵數字", q["s2"]["instructions"], "the premise 關鍵數字：5,380 marks page 2")
+        self.assertNotIn("關鍵數字", q["s3"]["instructions"])
+        self.assertIn("與前一頁同一來源論點（P2）", q["s3"]["instructions"])
+        self.assertIn("最後一頁", q["s4"]["instructions"])
+        self.assertIn("onesentence 13 字", q["s4"]["instructions"])
+        self.assertIn("前一頁：L-STAT-HERO", q["s4"]["instructions"])
+        self.assertIn("後一頁：無", q["s4"]["instructions"])
+        whole = json.dumps(req, ensure_ascii=False)
+        for hint in ("傾向", "可用 M-", "適合"):
+            self.assertNotIn(hint, whole, f"an answer key leaked into the request: {hint!r}")
+        self.assertEqual(set(req["state"]), {"goal", "constraints", "premises", "slides"})
+        self.assertEqual(req["state"]["slides"][2]["facts"]["數字"], "大數字 5,380，作者標為全場關鍵數字")
+
+    def test_close_race_takes_the_more_restrained(self):
+        answers = {"s0": {"choice": "M-CHARS", "probabilities": {"M-CHARS": .99, "M-NONE": .01}, "confidence": .99},
+                   "s1": {"choice": "M-STEP", "probabilities": {"M-STEP": .75, "M-POP": .19}, "confidence": .71},
+                   "s3": {"choice": "M-TYPE", "probabilities": {"M-TYPE": .54, "M-NONE": .21, "M-STEP": .11}, "confidence": .47},
+                   "s4": {"choice": "M-CHARS", "probabilities": {"M-CHARS": .50, "M-NONE": .40, "M-TYPE": .05}, "confidence": .46}}
+        picks, notes = pick.picks_from_answers(self.talk, answers)
+        self.assertEqual(picks["0"], "M-CHARS", "a clear winner stays")
+        self.assertEqual(picks["1"], "M-STEP")
+        self.assertEqual(picks["3"], "M-TYPE", "a clear margin stands even when the confidence is low; it is only noted")
+        self.assertEqual(picks["4"], "M-NONE", "a close race (margin .10) falls back to the more restrained of the top two")
+        self.assertEqual(len(notes), 2)
+        self.assertIn("第 3 頁", notes[0]); self.assertIn("信心偏低", notes[0])
+        self.assertIn("第 4 頁", notes[1]); self.assertIn("取較克制的 M-NONE", notes[1]); self.assertIn("信心 0.46", notes[1])
+        # a hand-written answer with no distribution is taken as is
+        picks, notes = pick.picks_from_answers(self.talk, {"s4": {"choice": "M-CHARS"}})
+        self.assertEqual((picks["4"], notes), ("M-CHARS", []))
 
     def test_answers_become_picks_with_deck_rules(self):
         answers = {"s0": {"choice": "M-CHARS", "probabilities": {"M-CHARS": .7}, "confidence": .7},

@@ -16,70 +16,93 @@ from __future__ import annotations
 
 import re
 
-# code → what the audience sees (what), why to pick it (pros), what it costs (cons);
+# code → what the audience sees (what), what the effect buys (pros), what it needs and what it costs (cons);
 # compile: deck-compile can add the attributes itself; applies: "*" or the layout codes it fits.
+#
+# The wording describes the EFFECT only — timing, key presses, what it needs to work, when it fails —
+# and never names a page type ("covers", "section breaks", "number slides"). The picker hands Jev the
+# page's facts (position, title length, item count, number present, minutes, neighbours) next to these
+# descriptions and lets it judge; a "suits covers" hint here would be an answer key, and two answer keys
+# that both apply to one page produced a coin-flip on the finale of the first live run (2026-10-14).
+# The same wording serves an author or agent choosing by hand; a test keeps page-type names out.
 VARIATIONS: dict[str, dict] = {
     "M-STEP": dict(name="逐拍出現", compile=True, applies="*",
-                   what="版型原本的進場順序（.rise d1–d4）改成一拍一組：標題與導語隨頁出現，每張卡、節點或階層按一次出一個，收束框最後",
-                   pros="最省、最通用；講者自己控制節奏，台下跟著講到的那一格看",
-                   cons="每張卡都要按一次，卡多的頁會按很多下"),
+                   what="標題與導語隨頁出現；之後每按一次出現一組（一張卡、一個節點或一層），每組上浮 0.6 秒；收束框是最後一拍。按鍵次數＝組數＋1",
+                   pros="台下只看得到講到的那一格；動作最小，任何版型都能用",
+                   cons="組越多按越多次；頁上只有一組或沒有組時，和 M-NONE 幾乎看不出差別"),
     "M-POP": dict(name="彈入", compile=True, applies="*",
-                  what="同 M-STEP，但卡片、節點、階層用縮放彈入（pop）而不是上浮",
-                  pros="方塊類元素更有份量，適合流程節點與時間軸",
-                  cons="段落文字不適合；連續幾頁都彈會膩"),
+                  what="同 M-STEP 的拍序，但每組從 82% 縮放彈到 100%（0.6 秒），不是上浮",
+                  pros="有邊框或底色的方塊（卡、節點、階層）出現時更有份量",
+                  cons="需要頁上有方塊狀的元素才看得出差別；段落文字彈入會抖；連續幾頁都彈會看膩"),
     "M-TYPE": dict(name="導語逐字打出", compile=True, applies="*",
-                   what="導語（lead／副標／一句話）逐字打出，其餘同 M-STEP",
-                   pros="一句話的頁面有節奏，台下會跟著讀",
-                   cons="長句打太久；只能用在純文字元素"),
+                   what="導語（lead、副標或一句話）逐字打出 1.6 秒，其餘同 M-STEP",
+                   pros="台下跟著字一個一個讀，那一句被放慢、被讀完",
+                   cons="需要頁上有一句純文字導語；句子超過約 25 字就打太久；台下等它打完才會看別處"),
     "M-CHARS": dict(name="標題逐字彈入", compile=True, applies="*",
-                    what="標題逐字彈入，其餘同 M-STEP",
-                    pros="封面、分節頁、結論頁有力",
-                    cons="標題長就吵；一份簡報三次以內"),
+                    what="標題的字依序彈入（每字錯開 0.04 秒，整個約 0.7 秒），其餘同 M-STEP",
+                    pros="短標題單獨出現時有重量，台下的目光停在它上面",
+                    cons="需要標題短（約 12 字內），長標題逐字彈就吵；同一份簡報第三次用就不稀奇了"),
     "M-LINES": dict(name="標題行遮罩", compile=True, applies="*",
-                    what="標題整行從遮罩下升起，其餘同 M-STEP",
-                    pros="克制，適合正式場合與多行標題",
-                    cons="單行短標題看不出差別"),
+                    what="標題整行從遮罩下升起（每行錯開 0.1 秒，約 0.7 秒），其餘同 M-STEP",
+                    pros="動作小而正式；多行標題一行一行出現，讀的順序清楚",
+                    cons="單行短標題幾乎看不出和 M-STEP 的差別"),
     "M-COUNT": dict(name="數字遞增", compile=True, applies=["L-STAT-HERO"],
-                    what="大數字從 0 遞增到位（保留前後綴與千分位），其餘同 M-STEP",
-                    pros="數字頁的標準做法，數字大小一眼有感",
-                    cons="只對純數字有效；比較兩個口徑不同的數字時遞增會誤導"),
+                    what="大數字從 0 遞增到位（1.2 秒，保留前後綴與千分位），其餘同 M-STEP",
+                    pros="數字的大小被看見，不只是被讀到",
+                    cons="需要頁上有一個純數字；並列兩個口徑不同的數字時，遞增會讓人誤以為可以相比"),
     "M-SCRAMBLE": dict(name="數字解碼", compile=True, applies=["L-STAT-HERO"],
-                       what="大數字從亂碼解出，其餘同 M-STEP",
-                       pros="比遞增更有懸念，適合全場只有一個關鍵數字",
-                       cons="一份簡報用一次就夠；台下要等它解完"),
+                       what="大數字從亂碼解出（1.2 秒），其餘同 M-STEP",
+                       pros="解出前台下不知道數字多大，有懸念；比遞增更搶眼",
+                       cons="需要頁上有一個純數字；台下要等它解完才讀得到；同一份簡報第二次用就沒有懸念（全場只保留一次）"),
     "M-PUSH": dict(name="推進轉場", compile=True, applies="*",
-                   what="進這頁時前一頁往左推出（其餘同 M-STEP）",
-                   pros="同一主題連續幾頁（時間軸上下半年、同一表格的兩段）有延續感",
-                   cons="連用會暈；主題換了就不要推"),
+                   what="進這頁時前一頁往左推出、這頁從右滑入（0.5 秒），之後同 M-STEP",
+                   pros="兩頁像同一條內容的前後段，台下感覺「接著看」",
+                   cons="兩頁內容不相連時，推進暗示了不存在的連續；連續幾頁都推會暈（不會連續兩頁用）"),
     "M-ZOOM": dict(name="推入轉場", compile=True, applies="*",
-                   what="前一頁放大推入這一頁（從畫面中心；手寫 data-zoom-from 可改成從前一頁的某個元素推入；其餘同 M-STEP）",
-                   pros="從總覽進到細節，告訴台下「現在看的是剛才那一格」",
-                   cons="一份簡報一兩次；只有真的從上一頁某處進來才用"),
+                   what="前一頁放大 2.6 倍淡出、這頁從 96% 放大進來（0.8 秒；手寫 data-zoom-from 可改成從前一頁的某個元素放大），之後同 M-STEP",
+                   pros="台下讀到「現在看的是剛才那一格的細節」",
+                   cons="這頁不是前一頁某處的細節時，放大會誤導；動作大，全場最多兩次"),
     "M-DRAW": dict(name="畫線", compile=False, applies="*",
-                   what="SVG 線條自己畫出來（流程箭頭、時間軸軌道、自繪圖）",
-                   pros="自繪圖的標準做法，線畫到哪台下看到哪",
-                   cons="版型目錄的流程與時間軸是 DOM 不是 SVG；要手寫 SVG 並標 data-fx=\"draw\""),
+                   what="SVG 線條沿著路徑畫出來（流程箭頭、時間軸軌道、自繪圖），線畫到哪台下看到哪",
+                   pros="自繪圖的結構依講述的順序出現",
+                   cons="要手寫 SVG 並標 data-fx=\"draw\"；版型目錄的流程與時間軸是 DOM 不是 SVG，用不上"),
     "M-PACKET": dict(name="流動封包", compile=False, applies="*",
-                     what="一個元素沿 SVG 路徑循環移動（data-along），例如資料流上的封包",
-                     pros="資料流一看就懂，講到「轉送」時畫面在動",
-                     cons="要手寫 SVG 路徑與封包元素"),
+                     what="一個元素沿 SVG 路徑循環移動，例如資料流上的封包",
+                     pros="講到「資料往哪裡去」時畫面正在流",
+                     cons="要手寫 SVG 路徑與封包元素並標 data-along"),
     "M-CONTINUE": dict(name="跨頁延續", compile=False, applies="*",
-                       what="同 data-id 的元素從前一頁的位置滑過來，例如圖裡的小字長成下一頁的大數字",
-                       pros="兩頁之間有因果，台下不用重新找",
-                       cons="兩頁都要手標 data-id"),
+                       what="同 data-id 的元素從前一頁的位置滑到這頁的位置（0.8 秒），例如圖裡的小字長成這頁的大數字",
+                       pros="台下不用在新頁重新找；兩頁的因果用位置接起來",
+                       cons="要手標兩頁的 data-id；兩頁沒有共同的元素就沒有東西可接"),
     "M-REGROUP": dict(name="版面重排", compile=False, applies="*",
-                      what="同一批卡片換 class 重排，從舊位置飛到新位置（data-relayout）：時間順序 ⇄ 依類型分組",
-                      pros="「同樣的事實換個分類看」一頁講完",
+                      what="同一批卡片換 class 重排，從舊位置飛到新位置（data-relayout），例如時間順序 ⇄ 依類型分組",
+                      pros="同樣的事實換個分類看，在同一頁完成",
                       cons="要手寫兩套版面 class"),
     "M-MORPH": dict(name="圖形變形", compile=False, applies="*",
                     what="SVG path 變形成另一個形狀（data-morph），例如標籤變成鏈條",
-                    pros="概念轉換很直觀",
+                    pros="一個概念變成另一個概念，變形的過程本身就是說明",
                     cons="要手畫兩個以上的形狀"),
     "M-NONE": dict(name="靜態", compile=True, applies="*",
-                   what="不標拍，沿用版型原本的進場動畫（整頁一次出現）",
-                   pros="分節頁、引文頁、一句話的頁不需要拍；省按鍵",
-                   cons="—"),
+                   what="不標拍，整頁隨版型原本的進場動畫一次出現；按一次就換下一頁",
+                   pros="零按鍵；台下一眼看到整頁，自己決定先看哪裡",
+                   cons="頁上有好幾組內容時，台下會先把全部讀完，不會跟著講者"),
 }
+
+# Most restrained first: fewer key presses, smaller movement. The picker falls back to the more
+# restrained of Jev's top two when the race is close, and prints that it did; an author choosing
+# by hand applies the same tie-break.
+RESTRAINT = ["M-NONE", "M-STEP", "M-LINES", "M-COUNT", "M-TYPE", "M-POP", "M-CHARS", "M-SCRAMBLE", "M-PUSH", "M-ZOOM",
+             "M-DRAW", "M-CONTINUE", "M-PACKET", "M-REGROUP", "M-MORPH"]
+
+# Words that would turn an option into an answer key; a test keeps them out of what/pros/cons.
+PAGE_TYPE_WORDS = ["封面", "分節", "結論", "引文", "一句話的頁", "數字頁", "適合"]
+
+
+def more_restrained(a: str, b: str) -> str:
+    """The more restrained of two codes (unknown codes count as least restrained)."""
+    rank = {c: i for i, c in enumerate(RESTRAINT)}
+    return a if rank.get(a, len(RESTRAINT)) <= rank.get(b, len(RESTRAINT)) else b
+
 
 CODE_RE = re.compile(r"\bM-[A-Z]+\b")
 

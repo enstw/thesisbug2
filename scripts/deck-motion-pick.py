@@ -9,10 +9,22 @@
 Each storyboard row with a layout code becomes one Choice question over the
 variations that `deck-compile` can apply to that layout (`_deck_motion.py`;
 documented in deck-plan/reference/motion-catalog.md). The questions share one
-state: the talk's premises, the rules of restraint and every slide in order,
-so a pick can see its neighbours. Deck-wide rules Jev cannot enforce across
-independent questions are applied afterwards and reported (one scramble per
-deck, at most two zooms, no push after push).
+state: the goal, the limits this script applies afterwards, the talk's
+premises and every slide in order, each with its facts — position, section,
+title length, lead sentence, item count, number (and whether the author marked
+it the deck's key figure with a premise bullet 「關鍵數字：5,380」), minutes,
+source point, neighbours. The options describe effects only (what the
+audience sees, what the effect needs, when it fails); nothing tells Jev which
+page type takes which code, because such hints are answer keys, and two of
+them applied to one page turned the first live run's finale into a
+0.53/0.38 coin-flip. Jev judges from the facts.
+
+Afterwards the script applies what independent questions cannot: a close
+race (top two within 0.15) falls back to the more restrained of the two and
+says so; a diffuse answer (confidence < 0.60) is only reported, because with
+eight to ten options a clear margin matters and a low confidence alone does
+not (jev-decide § Why margin); one scramble per deck, at most two zooms, no
+push after a transition — each downgrade is reported.
 
 The call goes through the jev-decide runner (`JEV_DECIDE`, or a discovered
 `jev-decide/scripts/jev_decide.mts`), which does the ack gate, the cache and
@@ -35,18 +47,22 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
-from _deck_motion import VARIATIONS, options_for  # noqa: E402
+from _deck_catalog import parse_slot_payload  # noqa: E402
+from _deck_motion import VARIATIONS, more_restrained, options_for  # noqa: E402
 from _paths import resolve_talk  # noqa: E402
 
-RULES = [
+# What Jev is told about the deck: the goal and the limits this script enforces afterwards. Facts only —
+# no "a cover takes M-CHARS" hints; each page is described by its facts next to the options' effect
+# descriptions, and Jev judges.
+GOAL = "為這場簡報的每一頁選一個動態變化（活潑模式：講者每按一次，畫面多出現一拍），讓台下跟著講到的地方看，又不花俏。"
+CONSTRAINTS = [
+    "台下約十秒要看懂一頁；每多一拍，講者就多按一次。",
+    "全場限制，送出後由程式套用：M-SCRAMBLE 全場只保留一次；M-ZOOM 最多兩次；連續兩頁不會都用轉場（M-PUSH、M-ZOOM）。",
     "每頁只選一個代碼。",
-    "連續兩頁不要同一種轉場（M-PUSH、M-ZOOM）；主題換了就不要推。",
-    "M-SCRAMBLE 全場最多一次，留給唯一的關鍵數字；其他數字頁用 M-COUNT。",
-    "M-ZOOM 全場最多兩次，只在這頁真的是上一頁某處的細節時用。",
-    "分節頁、引文頁、一句話的頁傾向 M-NONE 或 M-LINES；封面與結論可用 M-CHARS。",
-    "卡片、流程、階層、時間軸傾向 M-POP 或 M-STEP；導語重要的頁可用 M-TYPE。",
-    "台下約十秒要看懂一頁；拍越多講者按越多次，不確定就選較克制的。",
 ]
+MIN_MARGIN, MIN_CONFIDENCE = 0.15, 0.60   # jev-decide's defaults: a margin below the first is a close race; a confidence below the second is only noted
+KEY_NUMBER_RE = re.compile(r"^關鍵數字\s*[:：]\s*(.+)$")
+SENTENCE_SLOTS = ("onesentence", "lead", "sub", "claim", "question", "statement")
 
 
 def _rows(text: str) -> tuple[list[str], list[list[str]], list[str]]:
@@ -69,6 +85,16 @@ def _rows(text: str) -> tuple[list[str], list[list[str]], list[str]]:
     return premises, rows, headers
 
 
+def key_numbers(premises: list[str]) -> list[str]:
+    """The figures a premise bullet 「關鍵數字：5,380、2,300 萬」 marks as the deck's key numbers."""
+    out = []
+    for p in premises:
+        m = KEY_NUMBER_RE.match(re.sub(r"\*\*", "", p))
+        if m:
+            out += [x.strip() for x in re.split(r"[、,，;；]\s*", m.group(1)) if x.strip()]
+    return out
+
+
 def _cell(row: list[str], headers: list[str], name: str) -> str:
     try:
         i = headers.index(name)
@@ -82,62 +108,133 @@ def _trim(s: str, n: int) -> str:
     return s if len(s) <= n else s[: n - 1] + "…"
 
 
+def _slots(content: str) -> dict:
+    try:
+        return parse_slot_payload(content or "")
+    except Exception:   # a legacy row's free text is not micro-syntax; facts then say "無"
+        return {}
+
+
+def page_facts(i: int, slides: list[dict], keys: list[str]) -> dict[str, str]:
+    """What is true of one page, computed from the storyboard, so Jev need not guess it from prose."""
+    s, n = slides[i], len(slides)
+    slots = s["slots"]
+    title = next((slots[k] for k in ("title", "heading") if isinstance(slots.get(k), str) and slots[k]), "")
+    sentence = next((k for k in SENTENCE_SLOTS if isinstance(slots.get(k), str) and slots[k]), None)
+    groups = {k: len(v) for k, v in slots.items() if isinstance(v, list) and v}
+    num = slots.get("num") if isinstance(slots.get("num"), str) else ""
+    section = s["shape"].startswith("14")
+    after_section = i > 0 and slides[i - 1]["shape"].startswith("14")
+    point, prev_point = s["point"], slides[i - 1]["point"] if i > 0 else ""
+    real = point and point != "—"
+    return {
+        "位置": f"第 {s['n']} 頁，共 {n} 頁" + ("，第一頁" if i == 0 else "") + ("，最後一頁" if i == n - 1 else ""),
+        "分節": "分節頁（章節、封面或結尾）" if section else ("分節後的第一頁" if after_section else "內文頁"),
+        "標題": f"{len(title)} 字「{title}」" if title else "無",
+        "導語": f"{sentence} {len(slots[sentence])} 字" if sentence else "無",
+        "項目": "、".join(f"{k} {v} 組" for k, v in groups.items()) or "無",
+        "數字": (f"大數字 {num}" + ("，作者標為全場關鍵數字" if any(k and k in num for k in keys) else "")) if num else "無",
+        "講述": s["minutes"] or "未填",
+        "論點": (f"與前一頁同一來源論點（{point}）" if real and point == prev_point else
+                 f"來源論點 {point}" + ("，與前一頁不同" if i > 0 and prev_point else "") if real else "無來源論點"),
+    }
+
+
+def _neighbour(slides: list[dict], i: int) -> str:
+    if not 0 <= i < len(slides):
+        return "無"
+    s = slides[i]
+    return f"{s['layout'] or '（無版型代碼）'}（{s['shape']}，{s['point'] or '—'}）"
+
+
 def build_request(talk: Path) -> dict:
     """One Jev raw request: shared state + one Choice per layout row (ids s<row#>)."""
     text = (talk / "storyboard.md").read_text(encoding="utf-8")
     premises, rows, headers = _rows(text)
+    keys = key_numbers(premises)
     slides = []
     for r in rows:
+        content = _cell(r, headers, "畫面內容")
         slides.append({
             "n": r[0], "layout": _cell(r, headers, "版型"), "shape": _cell(r, headers, "內容形狀"),
-            "content": _trim(_cell(r, headers, "畫面內容"), 220), "spoken": _trim(_cell(r, headers, "口說重點"), 120),
+            "point": _cell(r, headers, "來源論點"), "minutes": _cell(r, headers, "講"),
+            "content": _trim(content, 220), "spoken": _trim(_cell(r, headers, "口說重點"), 120),
+            "slots": _slots(content),
         })
+    for i in range(len(slides)):
+        slides[i]["facts"] = page_facts(i, slides, keys)
     state = {
-        "goal": "為這場簡報的每一頁選一個動態變化（活潑模式：講者每按一次 → 出現一拍），讓台下跟著講到的地方看，又不花俏。",
+        "goal": GOAL,
+        "constraints": CONSTRAINTS,
         "premises": premises,
-        "rules": RULES,
-        "slides": slides,
+        "slides": [{k: v for k, v in s.items() if k != "slots"} for s in slides],
     }
     questions = {}
     for i, s in enumerate(slides):
         opts = options_for(s["layout"]) if re.match(r"L-[A-Z0-9-]+$", s["layout"]) else {}
         if not opts:
             continue
-        prev_ = slides[i - 1]["layout"] if i > 0 else "（無，這是第一頁）"
-        next_ = slides[i + 1]["layout"] if i + 1 < len(slides) else "（無，這是最後一頁）"
+        facts = "；".join(f"{k}：{v}" for k, v in s["facts"].items())
         questions[f"s{s['n']}"] = {
             "type": "choice",
-            "instructions": (f"第 {s['n']} 頁，版型 {s['layout']}，內容形狀「{s['shape']}」。畫面內容：{s['content']}。口說重點：{s['spoken']}。"
-                             f"前一頁的版型是 {prev_}，後一頁是 {next_}。依 state.rules，為這一頁選一個最合適的動態代碼；每個選項都列了做法、好處與代價，要權衡。"),
+            "instructions": (f"第 {s['n']} 頁。版型 {s['layout']}，內容形狀「{s['shape']}」。事實：{facts}。"
+                             f"前一頁：{_neighbour(slides, i - 1)}；後一頁：{_neighbour(slides, i + 1)}。"
+                             f"畫面內容：{s['content']}。口說重點：{s['spoken']}。"
+                             f"依 state 的 goal 與 constraints，為這一頁選一個最合適的動態；每個選項都寫了台下看到什麼、好處與代價（含它需要什麼才成立），要權衡。"),
             "criteria": {code: {"what": v["what"], "pros": v["pros"], "cons": v["cons"]} for code, v in opts.items()},
         }
     return {"state": state, "questions": questions, "meta": {"talk": str(talk), "tool": "deck-motion-pick"}}
 
 
-def _choice(answer) -> tuple[str, float]:
-    """(picked code, probability) from one Jev answer, whatever its exact shape."""
+def _dist(answer) -> tuple[list[tuple[str, float]], float]:
+    """((code, probability) best first, confidence) from one Jev answer, whatever its exact shape."""
     if isinstance(answer, str):
-        return answer, 0.0
+        return [(answer, 0.0)], 0.0
     if not isinstance(answer, dict):
-        return "", 0.0
-    probs = answer.get("probabilities") or {}
-    pick = answer.get("choice") or answer.get("answer") or answer.get("value") or (max(probs, key=probs.get) if probs else "")
-    return str(pick), float(probs.get(pick, answer.get("confidence", 0.0)) or 0.0)
+        return [], 0.0
+    probs = {str(k): float(v) for k, v in (answer.get("probabilities") or {}).items()}
+    pick = answer.get("choice") or answer.get("answer") or answer.get("value")
+    if pick and str(pick) not in probs:
+        probs[str(pick)] = float(answer.get("confidence", 0.0) or 0.0)
+    ranked = sorted(probs.items(), key=lambda kv: -kv[1])
+    if pick:   # the service's own pick stays first whatever the rounding
+        ranked.sort(key=lambda kv: kv[0] != str(pick))
+    conf = answer.get("confidence")
+    return ranked, float(conf if conf is not None else (ranked[0][1] if ranked else 0.0))
+
+
+def _choice(answer) -> tuple[str, float]:
+    """(picked code, probability) from one Jev answer."""
+    ranked, _ = _dist(answer)
+    return (ranked[0][0], ranked[0][1]) if ranked else ("", 0.0)
 
 
 def picks_from_answers(talk: Path, answers: dict) -> tuple[dict[str, str], list[str]]:
-    """Row number → code, after the deck-wide rules; notes say what was downgraded and why."""
+    """Row number → code, after the tie-break and the deck-wide rules; notes say what changed and why."""
     text = (talk / "storyboard.md").read_text(encoding="utf-8")
     _, rows, headers = _rows(text)
     picks: dict[str, tuple[str, float]] = {}
+    notes: list[str] = []
     for r in rows:
         a = answers.get(f"s{r[0]}")
         if a is None:
             continue
-        code, p = _choice(a)
-        if code in VARIATIONS:
-            picks[r[0]] = (code, p)
-    notes: list[str] = []
+        ranked, conf = _dist(a)
+        ranked = [(c, p) for c, p in ranked if c in VARIATIONS]
+        if not ranked:
+            continue
+        code, p = ranked[0]
+        if len(ranked) > 1:   # a close race between the top two: the more restrained wins, and the author hears about it
+            second, p2 = ranked[1]
+            margin = p - p2
+            why = f"{code} {p:.2f} 對 {second} {p2:.2f}，差距 {margin:.2f}、信心 {conf:.2f}"
+            if margin < MIN_MARGIN:
+                chosen = more_restrained(code, second)
+                notes.append(f"第 {r[0]} 頁：{why}，拉鋸，取較克制的 {chosen}" if chosen != code else f"第 {r[0]} 頁：{why}，拉鋸，第一名已是較克制的")
+                code = chosen
+            elif conf < MIN_CONFIDENCE:
+                notes.append(f"第 {r[0]} 頁：{why}，信心偏低但差距夠，照選；要改就自己填")
+        picks[r[0]] = (code, p)
     ordered = [r[0] for r in rows if r[0] in picks]
     # one scramble per deck: keep the most probable
     scr = [n for n in ordered if picks[n][0] == "M-SCRAMBLE"]
@@ -263,8 +360,7 @@ def main() -> int:
 
     picks, notes = picks_from_answers(talk, answers)
     for n, code in picks.items():
-        a = answers.get(f"s{n}")
-        _, p = _choice(a)
+        p = dict(_dist(answers.get(f"s{n}"))[0]).get(code, 0.0)
         print(f"  第 {n} 頁  {code:<11} {VARIATIONS[code]['name']}" + (f"  ({p:.2f})" if p else ""))
     for note in notes:
         print("  · " + note)

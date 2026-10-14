@@ -3,7 +3,7 @@
 
     ./fw unit-init --type paper --name final --title "…"
                    [--author "…"] [--subtitle "…"] [--date YYYY-MM-DD]
-                   [--citation apa|apa-zh]          (paper only)
+                   [--citation apa|apa-zh]          (paper and thesis)
                    (author and citation default to COURSE.md)
                    [--variant thesis|reading-guide] (presentation only)
                    [--extends <earlier-unit>] [--no-build]
@@ -34,6 +34,7 @@ from _deck import deck_problems, presentation_files  # noqa: E402
 
 TYPES = ("preparation", "homework", "paper", "journal", "thesis", "presentation")
 CITATION_TYPES = ("preparation", "paper", "journal", "thesis", "presentation")
+APA_ZH_TYPES = ("paper", "thesis")   # types with a _quarto-apa-zh.yml template
 TEMPLATES = FRAMEWORK / "assets" / "templates"
 SHARED = FRAMEWORK / "assets" / "scaffold"
 
@@ -95,7 +96,8 @@ def main() -> None:
                     help="the specific case and scope; the title itself is the hook or course theme")
     ap.add_argument("--date", default=dt.date.today().isoformat())
     ap.add_argument("--citation", choices=("apa", "apa-zh"),
-                    help="paper only; default: the Citation style row of COURSE.md, else apa")
+                    help="paper and thesis; apa-zh is 《遠景基金會季刊》撰稿規範 (中文/西文 split); "
+                         "default: the Citation style row of COURSE.md, else apa")
     ap.add_argument("--variant", choices=("thesis", "reading-guide"))
     ap.add_argument("--extends", help="earlier unit this one builds on (recorded, never included live)")
     ap.add_argument("--no-build", action="store_true", help="skip the verification build")
@@ -128,7 +130,7 @@ def main() -> None:
 
     work = {"type": a.type, "title": a.title, "subtitle": a.subtitle,
             "author": a.author, "date": a.date}
-    if a.type == "paper":
+    if a.type in APA_ZH_TYPES:
         work["citation"] = a.citation
     if a.type == "presentation":
         work["variant"] = a.variant
@@ -151,8 +153,9 @@ def main() -> None:
                        ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     else:
         copy_tree(TEMPLATES / a.type / "scaffold", unit)
-        if a.type == "paper" and a.citation == "apa-zh":
-            copy_tree(TEMPLATES / "paper" / "apa-zh", unit)
+        if a.type in APA_ZH_TYPES and a.citation == "apa-zh":
+            # the variant's own files (a references page with 中文/西文 divs)
+            copy_tree(TEMPLATES / a.type / "apa-zh", unit)
 
     shutil.copy2(SHARED / "PROGRESS.md", unit / "PROGRESS.md")
     # History lives beside PROGRESS.md, not in it: agents read PROGRESS.md at

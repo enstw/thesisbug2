@@ -14,6 +14,14 @@ ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
 WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
 ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+Modified for thesisbug2 (2026-10-14): a topic bibliography may use its own
+style and locale, read from the document metadata maps `bibliography-csl`
+and `bibliography-lang` keyed like `bibliography` (e.g. zh / en). 《遠景基金會
+季刊》撰稿規範 prints the 中文文獻 list with full-width punctuation and 筆劃
+order, and the 西文文獻 list with English terms (Eds., pp., n.d.); one CSL and
+one locale cannot do both, two runs can. Unlisted topics keep the document's
+`csl` and `lang` as before.
 ]]
 PANDOC_VERSION:must_be_at_least '2.11'
 
@@ -87,7 +95,7 @@ end
 
 --- Explicitly create a new meta object with all fields relevant for
 --- pandoc-citeproc.
-local function meta_for_pandoc_citeproc (bibliography)
+local function meta_for_pandoc_citeproc (bibliography, name)
   -- We could just indiscriminately copy all meta fields, but let's be
   -- explicit about what's important.
   local fields = {
@@ -101,6 +109,13 @@ local function meta_for_pandoc_citeproc (bibliography)
     new_meta[field] = doc_meta[field]
   end
   new_meta.bibliography = bibliography
+  -- thesisbug2: per-topic style and locale (see header)
+  for _, pair in ipairs({{'bibliography-csl', 'csl'}, {'bibliography-lang', 'lang'}}) do
+    local map = doc_meta[pair[1]]
+    if name and metatype(map) == 'table' and map[name] then
+      new_meta[pair[2]] = pandoc.MetaString(stringify(map[name]))
+    end
+  end
   return new_meta
 end
 
@@ -126,7 +141,7 @@ local function create_topic_bibliography (div)
     return nil
   end
   local tmp_blocks = {pandoc.Para(all_cites), refs_div}
-  local tmp_meta = meta_for_pandoc_citeproc(bibfile)
+  local tmp_meta = meta_for_pandoc_citeproc(bibfile, name)
   local tmp_doc = pandoc.Pandoc(tmp_blocks, tmp_meta)
   local res = citeproc(tmp_doc)
   -- First block of the result contains the dummy paragraph, second is

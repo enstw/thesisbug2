@@ -4,6 +4,8 @@ _output/
 **/_preamble.tex
 **/_bib-zh.bib
 **/_bib-en.bib
+**/_bib-zh.json
+**/_bib-en.json
 **/.quarto/
 *_files/
 

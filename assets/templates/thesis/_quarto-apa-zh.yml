@@ -1,0 +1,91 @@
+project:
+  type: book
+  output-dir: _output
+
+book:
+  title: "[論文主標題]"
+  subtitle: "[副標題]"
+  author: "[作者]"
+  date: "[日期]"
+  chapters:
+    - index.qmd
+    - chapters/01-introduction.qmd
+    - chapters/02-literature-review.qmd
+    - chapters/03-methodology.qmd
+    - chapters/04-analysis.qmd
+    - chapters/05-conclusion.qmd
+    - references.qmd
+
+# apa-zh = 《遠景基金會季刊》撰稿規範 (113.10.30). Selected when WORK.json has
+# "citation": "apa-zh" — ./fw build loads THIS file instead of _quarto.yml.
+# The reference list is 中文文獻 (筆劃序, full-width punctuation) then 西文文獻
+# (A–Z, English terms): multibib runs citeproc once per list with its own CSL
+# and locale; cite-lang then gives each in-text citation the punctuation of its
+# own language. ./fw build writes _bib-zh.bib / _bib-en.bib from references.bib
+# by each entry's langid. Details: assets/templates/paper/citation-style.md (shared by paper and thesis).
+citeproc: false          # the multibib filter runs citeproc per bibliography
+validate-yaml: false     # allow the bibliography map below
+filters:
+  - {{FW}}/assets/multibib.lua
+  - {{FW}}/assets/cite-lang.lua
+
+bibliography:
+  zh: _bib-zh.bib
+  en: _bib-en.bib
+csl: {{FW}}/assets/apa-zh-TW.csl
+bibliography-csl:
+  zh: {{FW}}/assets/apa-zh-TW.csl
+  en: {{FW}}/assets/apa-zh-TW-en.csl
+bibliography-lang:
+  zh: zh-TW-u-co-stroke
+  en: en-US
+
+# zh-TW + stroke collation → the 中文文獻 list sorts by 筆劃 (unicode-collation);
+# the citeproc locale for in-text citations is zh-TW (cite-lang westernizes
+# Latin-script items).
+lang: zh-TW-u-co-stroke
+
+# babel gets English, not Chinese: TeX Live 2026's babel chinese ini hooks the book
+# class's chapter macros (\@makechapterhead, \chaptermark) and the build dies with
+# "Use of \@makechapterhead doesn't match its definition". CJK typesetting is xeCJK's
+# job (preamble.tex), and the 「第 N 章」 chapter head is defined there, so babel's
+# Chinese captions are not needed. lang stays zh-TW for citeproc and the UI strings.
+babel-lang: english
+
+# Quarto ships interface strings for zh (Simplified) only; zh-Hant and zh-TW fall
+# back to them — 目錄 prints as 「目录」, 圖 as 「图」. lang: zh-TW also selects the
+# zh-TW citeproc locale (頁／等／編) instead of zh-CN's 页／等／编. The strings a PDF
+# shows are overridden here in Traditional Chinese.
+language:
+  toc-title-document: "目錄"
+  crossref-fig-title: "圖"
+  crossref-tbl-title: "表"
+  crossref-fig-prefix: "圖 %s"
+  crossref-tbl-prefix: "表 %s"
+  crossref-sec-prefix: "第 %s 節"
+  crossref-eq-prefix: "式 %s"
+  crossref-lst-title: "程式"
+  section-title-abstract: "摘要"
+  section-title-references: "參考文獻"
+  section-title-appendices: "附錄"
+  section-title-footnotes: "註腳"
+  callout-note-title: "備註"
+  callout-tip-title: "提示"
+  callout-warning-title: "警告"
+  callout-important-title: "重要"
+  callout-caution-title: "注意"
+
+format:
+  pdf:
+    documentclass: book
+    pdf-engine: xelatex
+    papersize: a4
+    include-in-header:
+      - {{FW}}/assets/templates/thesis/preamble.tex
+    toc: true
+    toc-depth: 3
+    number-sections: true
+    colorlinks: true
+    linkcolor: black
+    urlcolor: blue
+    citecolor: black

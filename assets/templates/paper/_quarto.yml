@@ -36,4 +36,27 @@ bibliography: references.bib
 #     assets/templates/paper/citation-style.md.
 csl: {{FW}}/assets/apa.csl
 
-lang: zh-Hant
+lang: zh-TW
+
+# Quarto ships interface strings for zh (Simplified) only; zh-Hant and zh-TW fall
+# back to them — 目錄 prints as 「目录」, 圖 as 「图」. lang: zh-TW also selects the
+# zh-TW citeproc locale (頁／等／編) instead of zh-CN's 页／等／编. The strings a PDF
+# shows are overridden here in Traditional Chinese.
+language:
+  toc-title-document: "目錄"
+  crossref-fig-title: "圖"
+  crossref-tbl-title: "表"
+  crossref-fig-prefix: "圖 %s"
+  crossref-tbl-prefix: "表 %s"
+  crossref-sec-prefix: "第 %s 節"
+  crossref-eq-prefix: "式 %s"
+  crossref-lst-title: "程式"
+  section-title-abstract: "摘要"
+  section-title-references: "參考文獻"
+  section-title-appendices: "附錄"
+  section-title-footnotes: "註腳"
+  callout-note-title: "備註"
+  callout-tip-title: "提示"
+  callout-warning-title: "警告"
+  callout-important-title: "重要"
+  callout-caution-title: "注意"

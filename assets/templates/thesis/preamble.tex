@@ -28,3 +28,25 @@
 \fancyhf{}
 \fancyhead[R]{\thepage}
 \renewcommand{\headrulewidth}{0pt}
+
+% === Chapter head 「第 N 章」 ===
+% babel is loaded with english (see _quarto.yml), because its Chinese module breaks
+% the book class's chapter macros under TeX Live 2026; the Chinese chapter label is
+% therefore set here, independent of babel. Sections keep arabic numbers (1.1).
+\makeatletter
+\renewcommand{\@chapapp}{第}
+\def\@makechapterhead#1{%
+  \vspace*{50\p@}%
+  {\parindent \z@ \raggedright \normalfont
+    \ifnum \c@secnumdepth >\m@ne
+      \if@mainmatter
+        \huge\bfseries \@chapapp\space\thechapter\space{}章 % {} ends \space: under XeTeX 章 is a letter and would join the control word
+        \par\nobreak
+        \vskip 20\p@
+      \fi
+    \fi
+    \interlinepenalty\@M
+    \Huge \bfseries #1\par\nobreak
+    \vskip 40\p@
+  }}
+\makeatother

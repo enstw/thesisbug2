@@ -1,34 +1,44 @@
-# Paper 引用與參考文獻規範：APA-zh-TW（繁體中文 author-date 體例）
+# 引用與參考文獻規範：apa-zh ＝《遠景基金會季刊》撰稿規範（paper 與 thesis 共用）
 
-> **`paper` 預設體例 = 標準 APA 7th**：自動、CSL 驅動（`../assets/apa.csl`），`[@key]` 自動產生夾註與單一字母序清單。乾淨、通用、零維護。
-> **APA-zh-TW = 選用體例**：APA 7th author-date 的繁體中文／臺灣（`zh-TW`）變體 — 中文/西文分欄、全形夾註括號、條目詞彙中文化。slug：`apa-zh-TW`，CSL：`.framework/assets/apa-zh-TW.csl`，語系一律 `zh-TW`。
-> **啟用方式（首選）**：建立時指定 `./fw unit-init --type paper --citation apa-zh`（互動模式會詢問）；`./fw build` 依 `WORK.json` 的 `"citation": "apa-zh"` 自動改用 `_quarto-apa-zh.yml` + multibib，**照常 `./fw build` 出稿**，無需手改設定。
-> **三型別引用分工**：`homework` 不引註；`journal` = Chicago full-note（英文期刊，`chicago-fullnote-bibliography.csl`）；`paper` = APA 7th（預設）/ APA-zh-TW（選用）。
-> **本文件角色**：定義 APA-zh-TW 的**目標體例**（§1–§8），並記錄自訂 CSL 的達成度（下表）。
+> **`paper`／`thesis` 預設體例 = 標準 APA 7th**：自動、CSL 驅動（`../assets/apa.csl`），`[@key]` 自動產生夾註與單一字母序清單。乾淨、通用、零維護。
+> **apa-zh = 選用體例**：《遠景基金會季刊》撰稿規範（113 年 10 月 30 日修訂）的實作——author-date 夾註、中文文獻（筆劃序、全形標點）在前、西文文獻（A–Z、英文術語）在後、非英文條目附 `[英譯]`。台灣國際關係／戰略學門多所系所指定此規範為學位論文格式，故以它為目標而非泛泛的「APA 中文化」。
+> **啟用方式**：建立時指定 `./fw unit-init --type paper|thesis --citation apa-zh`；既有 unit 在 `WORK.json` 加 `"citation": "apa-zh"` 並把參考文獻頁改為兩個 div（下節）。`./fw build` 據此改用 `_quarto-apa-zh.yml`，**照常出稿**，無需手改設定；`_metadata.yml` 不可再釘 `csl:`，否則蓋掉變體。
+> **三型別引用分工**：`homework` 不引註；`journal` = Chicago full-note（英文期刊，`chicago-fullnote-bibliography.csl`）；`paper`／`thesis` = APA 7th（預設）/ apa-zh（選用）。
+> **本文件角色**：定義 apa-zh 的**目標體例**（§1–§8，即遠景規範的摘錄）、實作與 bib 資料約定（下兩節）。
 
-## 實作狀態（apa-zh-TW.csl + multibib）
+## 實作（兩份 CSL ＋ multibib ＋ cite-lang）
 
-`apa-zh-TW.csl` 由官方 `apa.csl` 衍生：`default-locale="zh-TW"` + `<locale xml:lang="zh-TW">` 詞彙覆寫（頁／編／譯／版／載於／檢索自／未註明）＋全形夾註括號；中文/西文分欄由 `.framework/assets/multibib.lua` 完成；中文清單依**筆畫**排序由 `_quarto-apa-zh.yml` 的 `lang: zh-TW-u-co-stroke` 觸發（pandoc unicode-collation）。已用 `./fw build` 出 PDF 驗證。
+一份 CSL 只能有一種語系與一套標點，遠景卻要中文條目全形、西文條目英文術語，夾註也逐筆依來源語言切換。所以：
 
-| 目標（§5–§7） | 現況 | 備註／補完 |
+- **`apa-zh-TW.csl`**（中文文獻列＋全文夾註）與 **`apa-zh-TW-en.csl`**（西文文獻列）都由 `apa.csl` 衍生，共同改動：夾註頁碼不加 p.／頁；年代欄只印年，網頁、新聞與未標型別條目的月日接在網站名之後；期刊「卷 (期), pp. x-y」／「卷（期），頁x-y」；專書論文編者姓前名後；學位論文〔類別〕後接校名；頁碼範圍連字號；`annote` 欄附於條目末作 `[英譯]`。中文版另：全形標點、作者以「、」相連（不用 &）、無斜體、術語 頁／編／譯／版／載於／未註明／等人。
+- **`multibib.lua`**（thesisbug2 修改版）依 `bibliography-csl`／`bibliography-lang` 對每一列各自跑 citeproc：zh 列用中文 CSL＋`zh-TW-u-co-stroke`（筆劃序），en 列用西文 CSL＋`en-US`。
+- **`cite-lang.lua`** 在 citeproc 之後把拉丁字母開頭的夾註改回半形：`(Jervis, 1999, 94)`、`(Allen & Goldston, 2024)`、`(Stuster et al., 2018, 417-418)`、`(n.d.)`；中文的維持 `（陳欣之，2010，25-40）`、`（蔡佳泓、俞振華，2011，74）`、`（黃秀端等人，2020，37）`。合引以第一筆的語言決定外括號與分隔。
+- **`./fw build`** 合併兩層 `references.bib`，依 `langid` 寫出 `_bib-zh`／`_bib-en`（.bib 與 .json；json 供 citeproc 讀，避免 pandoc 讀 .bib 時把英文題名改成 sentence case），均為建置產物不進版控。漏 `langid` 者依題名文字判斷並在建置訊息點名。
+
+| 目標（§3–§7） | 現況 | 備註 |
 | :--- | :--- | :--- |
-| author-date 夾註、APA 條目結構 | ✅ | 沿用 apa.csl |
-| 中文文獻／西文文獻 分欄 | ✅ | multibib；`./fw build` 依各條目的 `langid` 自動產生中文、西文兩份暫存 bib |
-| 條目詞彙中文化（載於／編／版／頁…） | ✅ | `zh-TW` `<locale>` 覆寫，PDF 驗證 |
-| 全形夾註括號（）＋「作者，年代」 | ✅ | citation layout affixes/delimiter |
-| 內文頁碼定位詞（引特定頁）| ✅ 標記 | `[@key, {頁碼}]` 大括號 → 純頁碼（見 §3）|
-| 中文依**筆劃**排序 | ✅ | `lang: zh-TW-u-co-stroke`（unicode-collation 筆畫 tailoring）|
-| 非英文條目雙語英譯 `[…]` | ⚠️ | 需 bib 欄位約定（`original-title`/`note`）|
+| 夾註（作者，年代，頁別）／(Author, Year, page) 逐筆分語言 | ✅ | `[@key, 25-40]` 即可，不必再寫 `{25-40}`；cite-lang 處理西文 |
+| 中文文獻／西文文獻 分列 | ✅ | multibib；`langid` 決定歸屬 |
+| 中文筆劃序、西文字母序 | ✅ | `zh-TW-u-co-stroke`；同筆劃數次序由 collation 次鍵決定 |
+| 中文條目全形標點、作者「、」相連、西文條目英文術語 | ✅ | 兩份 CSL 各跑一次 |
+| 非英文條目 `[英譯／拼音]` | ✅ | bib `annote` 欄（下節） |
+| 網頁、新聞類「網站名稱，月日」 | ✅ | bib 須有 `month`／`day`；未標型別的 `@misc` 走此路 |
+| 無具名作者的新聞不入參考文獻 | 人工 | 遠景 八：改為正文敘述，或補記者姓名為 author |
+| 機構作者首次全稱、之後簡稱 | 人工 | CSL 無此機制 |
+| 標題層級 壹、一、(一) | 選用 | §1；學位論文章節式亦常見，依系所 |
 
-**結論**：分欄、條目詞彙中文化、全形括號均已**自動達成並 PDF 驗證**。引特定頁的內文定位詞也已解決 — 用大括號標記 `[@key, {頁碼}]` 即得純頁碼 `（作者，2011，390）`（見 §3，PDF 驗證）。預設的 `[@key, p. 390]` 會由 pandoc citeproc 自動補上 `p.`；改用大括號即可避免。中文清單的**筆畫排序**亦已自動化（`lang: zh-TW-u-co-stroke`）；唯同筆畫數者次序由 collation 次鍵決定，必要時手動微調。
+### bib 資料約定（apa-zh 必要）
 
-### APA-zh-TW 的 scaffold 內容
+1. 每筆條目有 `langid = {chinese}` 或 `{english}`（其他語言亦歸西文列）。
+1. 中文（非英文）條目加 `annote = {英譯或逐詞漢語拼音}`：原刊有正式英譯者用之（期刊論文的英文題名、機構官方英文名），無則以詞為單位音譯；整段會原樣印在 `[ ]` 內，自行寫成 `Author (Year). Title. Source.` 形式。
+1. 學位論文加 `type = {碩士論文}`／`{博士論文}`（否則印成 pandoc 的 Mathesis）。
+1. 研究報告的編號放 `number`、系列名放 `type`：`type = {BIS Working Papers}, number = {880}` → 「(BIS Working Papers No. 880)」。
+1. 網頁、公告、新聞補 `month` 與 `day`；有具名記者的新聞以記者為 `author`，媒體名放 `howpublished`。
+1. `institution`／`publisher` 內含 and 的機構名用雙大括號 `{{A and B}}`，否則被當成兩個名字。
 
-`./fw unit-init --type paper --citation apa-zh` 比預設多給：
+### scaffold 內容
 
-1. `<unit>/paper.qmd` 參考文獻段為兩個**不編號**具名 div（`{.unnumbered}` 不可省，否則小標被編成 1.1／1.2）：`## 中文文獻 {.unnumbered}` + `::: {#refs-zh}`、`## 西文文獻 {.unnumbered}` + `::: {#refs-en}`。
-1. 每一層只有一個 `references.bib`（unit 的與 `library/` 的），每筆條目以 `langid` 標明語言：`langid = {chinese}` 排進中文文獻，`langid = {english}`（或其他語言）排進西文文獻。`./fw build` 會合併兩層並產生 `_bib-zh.bib`／`_bib-en.bib` 兩份暫存檔交給 multibib——那兩個檔是建置產物，不要手改、也不進版控。漏寫 `langid` 的條目會依標題文字判斷，並在建置訊息中點名。
-1. `WORK.json` 記 `"citation": "apa-zh"`；`./fw build` 據此改用 `.framework/assets/templates/paper/_quarto-apa-zh.yml`（`citeproc: false` + `validate-yaml: false` + `filters: multibib.lua` + `bibliography` 雙檔 map + `csl: apa-zh-TW.csl` + `lang: zh-TW-u-co-stroke`，後者觸發筆畫排序）。
+`./fw unit-init --type paper|thesis --citation apa-zh` 比預設多給參考文獻頁的兩個**不編號**具名 div（`{.unnumbered}` 不可省，否則小標被編成 1.1／1.2）：`## 中文文獻 {.unnumbered}` + `::: {#refs-zh}`、`## 西文文獻 {.unnumbered}` + `::: {#refs-en}`（paper 在 `paper.qmd` 內，thesis 在 `references.qmd`）。`WORK.json` 記 `"citation": "apa-zh"`。
 
 之後照常 `./fw build` 出稿。
 
@@ -36,7 +46,7 @@
 
 APA-zh-TW 整併兩份 author-date 來稿規範，遇衝突時以下列優先序裁定：
 
-1. **《遠景基金會季刊》撰稿規範（2024-10-30）** — 主骨幹。最完整的夾註規則與各類文獻範例（TSSCI 中文核心期刊）。
+1. **《遠景基金會季刊》撰稿規範（113 年 10 月 30 日修訂，2025 年 1 月刊於第 26 卷第 1 期）** — 主骨幹，本實作的目標。最完整的夾註規則與各類文獻範例（TSSCI 中文核心期刊）。
 1. **東海大學 2015 研討會論文格式（附件3）** — 同屬 APA author-date（明列「APA 格式第六版」），用於交叉驗證；較簡略。
 
 **不納入本規範者**：
@@ -97,7 +107,7 @@ APA-zh-TW 整併兩份 author-date 來稿規範，遇衝突時以下列優先序
 
 - 同作者多筆依年代先後排列。
 - 西文作者於夾註中只標姓氏（Strange, 1987），全名留待參考文獻。中、日文作者標全名。
-- **引特定頁（重要）**：頁碼用大括號鎖定 `[@key, {25-40}]` → `（張五岳，2004，25-40）`（純頁碼、全形逗號，合規範）。**不要**寫 `[@key, p. 25-40]` — pandoc citeproc 會自動補 `p.` 成 `（…, p. 25-40）`。需中文「頁」標籤時寫 `[@key, {頁 25}]`。
+- **引特定頁**：寫 `[@key, 25-40]` 即得 `（張五岳，2004，25-40）`／`(Allison, 2020, 94)`——CSL 已不印定位詞標籤；寫成 `[@key, p. 25]` 也只印 25。
 
 ---
 
@@ -114,7 +124,7 @@ APA-zh-TW 整併兩份 author-date 來稿規範，遇衝突時以下列優先序
 1. **整體排序建議**（依文獻性質，遠景變體）：官方文件 → 專書 → 期刊論文 → 會議論文 → 學位論文 → 網路資料 → 其他。報紙、訪談可不列入。
 1. **收錄原則**：凡正文夾註者必列；凡清單所列者正文必曾引用。
 1. **雙語化**：非英文文獻加註漢語拼音或英文參照，英譯置於 `[…]` 內；原刊已有正式英譯則沿用，無則以詞為單位音譯（機構、出版社、地名等已有官方/學術譯名者用之）。
-1. **連結**：有穩定 URL 或 DOI 者置於條目最末；DOI 已含 URL；冗長者可用短網址；連結後加句點。
+1. **連結**：有穩定 URL 或 DOI 者置於條目最末；DOI 已含 URL；冗長者可用短網址；連結後不加句點（遠景參）。
 
 ---
 
@@ -185,7 +195,7 @@ APA-zh-TW 整併兩份 author-date 來稿規範，遇衝突時以下列優先序
 - [ ] 中文文獻在前（筆劃序）、西文在後（A–Z）。
 - [ ] 非英文條目已附漢語拼音／英譯 `[…]`。
 - [ ] 同作者同年已標 a/b/c。
-- [ ] 引特定頁用大括號 `[@key, {頁碼}]`（避免自動 `p.`）。
+- [ ] 中文條目都有 `langid` 與 `annote`；網頁類有月日。
 - [ ] 腳註只用於補充說明，無引用出處混入。
 - [ ] 章節編號依 §1 階層；摘要/Abstract/關鍵詞齊備。
 - [ ] 全形標點、《》〈〉/斜體用法一致。

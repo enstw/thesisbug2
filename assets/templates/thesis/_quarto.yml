@@ -18,10 +18,45 @@ book:
 
 bibliography: references.bib
 
-# Citation style — APA 7th (automatic, single alphabetical reference list),
-# matching the YAML documented in writing-protocol.md.
+# Citation style.
+#   Default — APA 7th: automatic, single alphabetical reference list.
+#   Option — apa-zh = 《遠景基金會季刊》撰稿規範 (中文/西文 split, 筆劃 sort,
+#     per-language punctuation): ./fw unit-init --type thesis --citation apa-zh;
+#     build reads "citation": "apa-zh" from WORK.json and loads
+#     _quarto-apa-zh.yml INSTEAD of this file. Do not pin csl in _metadata.yml
+#     when using the option. Details: assets/templates/paper/citation-style.md.
 csl: {{FW}}/assets/apa.csl
-lang: zh-Hant
+lang: zh-TW
+
+# babel gets English, not Chinese: TeX Live 2026's babel chinese ini hooks the book
+# class's chapter macros (\@makechapterhead, \chaptermark) and the build dies with
+# "Use of \@makechapterhead doesn't match its definition". CJK typesetting is xeCJK's
+# job (preamble.tex), and the 「第 N 章」 chapter head is defined there, so babel's
+# Chinese captions are not needed. lang stays zh-TW for citeproc and the UI strings.
+babel-lang: english
+
+# Quarto ships interface strings for zh (Simplified) only; zh-Hant and zh-TW fall
+# back to them — 目錄 prints as 「目录」, 圖 as 「图」. lang: zh-TW also selects the
+# zh-TW citeproc locale (頁／等／編) instead of zh-CN's 页／等／编. The strings a PDF
+# shows are overridden here in Traditional Chinese.
+language:
+  toc-title-document: "目錄"
+  crossref-fig-title: "圖"
+  crossref-tbl-title: "表"
+  crossref-fig-prefix: "圖 %s"
+  crossref-tbl-prefix: "表 %s"
+  crossref-sec-prefix: "第 %s 節"
+  crossref-eq-prefix: "式 %s"
+  crossref-lst-title: "程式"
+  section-title-abstract: "摘要"
+  section-title-references: "參考文獻"
+  section-title-appendices: "附錄"
+  section-title-footnotes: "註腳"
+  callout-note-title: "備註"
+  callout-tip-title: "提示"
+  callout-warning-title: "警告"
+  callout-important-title: "重要"
+  callout-caution-title: "注意"
 
 format:
   pdf:

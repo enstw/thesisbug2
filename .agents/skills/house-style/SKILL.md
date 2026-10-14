@@ -85,7 +85,8 @@ here, adopt per deck with deck-refresh.
   `--deck-themes`.
 - **Citation style:** the CSL files do NOT live here — their canonical home is
   the framework's `assets/`: `apa.csl` (paper & thesis default), `apa-zh-TW.csl`
-  (paper option, `./fw unit-init --citation apa-zh`, with `multibib.lua`), and
+  + `apa-zh-TW-en.csl` (paper & thesis option `--citation apa-zh` = 《遠景基金會
+  季刊》撰稿規範, with `multibib.lua` and `cite-lang.lua`), and
   `chicago-fullnote-bibliography.csl` (journal & preparation). Each template's
   `_quarto.yml` wires its CSL as `csl: ../assets/<name>.csl`. They migrate into
   this skill if/when **deck-beamer** is built and starts consuming them.

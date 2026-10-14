@@ -57,7 +57,7 @@ AI 應根據使用者要求的章節屬性，自動切換寫作模式：
 
 ## 技術環境與排版（以 template 為準）
 
-環境安裝與建置指令見 `.framework/README.md` § Install，不在本協定重複維護。排版設定的唯一來源是 **`.framework/assets/templates/thesis/_quarto.yml`**（APA 7th：`apa.csl`）與 **`preamble.tex`**（xeCJK + ENSFont + 版面）；`./fw build` 每次建置依此重新產生 `<unit>/_quarto.yml`，**請勿手寫或手改** work 下的 YAML。參考文獻末章由 scaffold 的 `references.qmd`（`# 參考文獻 {.unnumbered}` + `#refs` div）提供，無需手動加 `\newpage`。
+環境安裝與建置指令見 `.framework/README.md` § Install，不在本協定重複維護。排版設定的唯一來源是 **`.framework/assets/templates/thesis/_quarto.yml`**（APA 7th：`apa.csl`；`WORK.json` 記 `"citation": "apa-zh"` 時改用 `_quarto-apa-zh.yml`＝《遠景基金會季刊》撰稿規範，見 `../paper/citation-style.md`）與 **`preamble.tex`**（xeCJK + ENSFont + 版面）；`./fw build` 每次建置依此重新產生 `<unit>/_quarto.yml`，**請勿手寫或手改** work 下的 YAML。參考文獻末章由 scaffold 的 `references.qmd`（`# 參考文獻 {.unnumbered}` + `#refs` div）提供，無需手動加 `\newpage`。
 
 ### 圖表 (Diagrams)
 

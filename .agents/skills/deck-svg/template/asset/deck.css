@@ -285,7 +285,7 @@
      沒有引擎、或按 M 關掉，什麼都不藏，deck 就是原本的靜態版。
      ============================================================ */
   html[data-deck-motion] [data-beat] { opacity: 0; }
-  svg [data-id], svg [data-beat] { transform-box: fill-box; transform-origin: 50% 50%; }  /* SVG 子元素的 pop／FLIP 以自己的中心縮放 */
+  /* SVG 子元素的縮放原點由引擎（GSAP）自己算，要的是預設的 transform-box: view-box；這裡不設 fill-box，否則 pop／FLIP 會偏 */
 
   /* ============================================================
      PRINT — reveal every slide for Print → Save as PDF.
@@ -297,6 +297,7 @@
     .rise { opacity:1 !important; transform:none !important; animation:none !important; }
     .flow,.pulse,.aurora { animation:none !important; }
     [data-beat] { opacity:1 !important; transform:none !important; }   /* 活潑模式：每頁全展開 */
+    [data-beat][data-fx="draw"] { stroke-dasharray:none !important; stroke-dashoffset:0 !important; }   /* 畫到一半的線也畫滿 */
     deck-stage > section { transform:none !important; }                 /* 拿掉鏡頭緩推 */
   }
 

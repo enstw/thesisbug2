@@ -22,6 +22,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 from _deck_catalog import CATALOG, VisualRhythmResolver, get_layout, parse_slot_payload  # noqa: E402
+from _deck_motion import apply_motion, split_codes  # noqa: E402
 from _paths import course_root, rel, resolve_talk  # noqa: E402
 
 from html.parser import HTMLParser
@@ -181,8 +182,10 @@ def compile_storyboard(talk: Path) -> tuple[str, list[str]]:
             title=slots.get("label") or slots.get("data_label") or slots.get("title", ""),
         )
 
-        # Render slide HTML
+        # Render slide HTML, then the 動態 column's motion codes (deck-motion.js attributes)
         rendered = layout_def.render_func(slots, chosen_variant, ctx)
+        rendered, motion_warnings = apply_motion(rendered, split_codes(row.get("動態", "")))
+        warnings.extend(f"投影片 #{slide_num}: {w}" for w in motion_warnings)
         slides_html.append(rendered)
 
     compiled_block = "\n\n".join(slides_html)

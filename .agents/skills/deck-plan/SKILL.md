@@ -75,9 +75,9 @@ Then one row per slide, ordered along the variant's spine — thesis: problem �
 gap → question → method → evidence → finding → contribution; reading guide:
 range → author → arguments → synthesis → concepts → critique → questions:
 
-| # | 來源論點 | 內容形狀 | 版型 | 講 | 畫面內容 | 口說重點 | 名詞與提問 | AI 協助 |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| 5 | `points.md` P4 | 4 Two-axis typology | `.matrix` 3×3 | 2 min | axis y = 極數, axis x = 權威密度; highlight the cell the author's case falls in | why the axes, the author's case with page, transition to the critique | 極數、權威密度、Q3 | AI drafted the cell labels; author chose the axes and checked them against the source |
+| # | 來源論點 | 內容形狀 | 版型 | 動態 | 講 | 畫面內容 | 口說重點 | 名詞與提問 | AI 協助 |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| 5 | `points.md` P4 | 4 Two-axis typology | `.matrix` 3×3 | M-STEP | 2 min | axis y = 極數, axis x = 權威密度; highlight the cell the author's case falls in | why the axes, the author's case with page, transition to the critique | 極數、權威密度、Q3 | AI drafted the cell labels; author chose the axes and checked them against the source |
 
 - **來源論點** names the point; the point names the Model file and section. That chain
   is the traceability the author reviews: every slide points back to a cited
@@ -91,6 +91,20 @@ range → author → arguments → synthesis → concepts → critique → quest
   and copy storyboard rows with one click. Naming both before
   the slide exists makes an unfitting choice visible at review instead of as
   oddly reshaped content on a finished deck.
+- **動態** names how the slide reveals in the deck's lively mode (deck-svg
+  § Lively mode): one code from [`reference/motion-catalog.md`](reference/motion-catalog.md)
+  (`M-STEP`, `M-POP`, `M-COUNT`, …), optionally plus a transition (`M-PUSH`,
+  `M-ZOOM`), or `—` for a static slide. It is chosen here, with the layout,
+  because the reveal order is part of how the audience reads the slide, and
+  the same deck-wide restraint (one scramble, at most two zooms, no push
+  after push) is only visible with every row in view. Either the author (or
+  the agent) picks from the catalogue, or `./fw deck-motion-pick <talk>`
+  turns each row into a bounded choice for Jev and writes the picks back —
+  a paid call the author acknowledges with `--ack`; the catalogue explains
+  both routes. `./fw deck-compile` turns the codes into the slide's
+  `data-beat`/`data-fx`/`data-enter` attributes; codes that need hand-drawn
+  SVG or hand-placed ids stay in the row as the intent and are added by hand
+  in deck-svg. A storyboard without the column compiles a static deck.
 - **畫面內容** carries the structured semantic slots for the chosen layout
   using micro-syntax (key-values, `<br>`, bullet cards `- [tag] head: body`, verdict),
   as detailed in [`reference/layout-catalog.md`](reference/layout-catalog.md).

@@ -34,7 +34,8 @@ engine    deck-svg       asset/deck.css + deck-font-controls.js + deck-theme-con
 | `template/asset/deck-font-controls.js` | Deck-wide font size: `+`/`=` and `-` step `--deck-font-scale` by 10% (80–150%), remembered per deck and synced across its windows. | No. |
 | `template/asset/deck-theme-controls.js` | Live colour: `c`/Shift+C cycle the fixed themes in `tokens.css`, `g`/Shift+G generate or step back through seeded palettes; `#theme=<id>` or `#theme=r<seed>` loads one. Remembered per deck and synced across its windows like the font size. Needs house-style's `deck-theme-rules.js` + `deck-palette.js` loaded before it. | No. |
 | `template/asset/deck-check.js` | The `deck.html#debug` self-check (type floor, overflow, rendered contrast, § Run & verify); does nothing without `#debug`. | No. |
-| `template/asset/deck-motion.js` | The optional lively mode (§ Motion and print): elements marked `data-beat` reveal one press at a time with an effect, `data-id` carries an element across slides, `data-enter` picks the slide transition. Off, or absent, the deck is the plain static one. | No. |
+| `template/asset/gsap.min.js` | GSAP 3.15 core + Flip, DrawSVG, Text, SplitText, MorphSVG, MotionPath, ScrambleText, GSDevTools in one local file (free "no charge" licence, not MIT), so the lively mode works from `file://`. Update by concatenating the nine `dist/*.min.js` of a newer release (header comment says how). |
+| `template/asset/deck-motion.js` | The optional lively mode on GSAP (§ Motion and print): elements marked `data-beat` reveal one press at a time with an effect, `data-id` glides an element from where it sat on an earlier slide, `data-enter` picks the slide's entrance, `data-along` rides an SVG path, `data-morph` morphs a path, `data-relayout` re-flows a container with Flip; `M` turns it off. |
 | `reference/slide-patterns.md` | Content shape → pattern (read **first**: the storyboard row names the shape), then the component cheat-sheet. | No. |
 
 ## Scaffolding a new deck
@@ -257,31 +258,49 @@ tofu; subsetting it to shrink a final file is optional (house-style § Font).
 
 `asset/deck-motion.js` turns a slide into a sequence of **beats** the presenter
 plays one key press at a time, the way the narrated-video lab revealed a scene
-sentence by sentence (framework `docs/dynamic-deck-lab-2026-10-14.md`). It is a
-progressive enhancement: a deck with none of these attributes, a deck without
-the script, or a presenter who presses `M` gets the plain static deck, so
-nothing in the storyboard, the paragraph-reference check or the print path
-changes. Author it with attributes on the slide's own elements:
+sentence by sentence (framework `docs/dynamic-deck-lab-2026-10-14.md`). It runs
+on GSAP 3.15 (`asset/gsap.min.js`, a local bundle of the core and eight
+plugins, 233 KB, loaded right before it; free "no charge" licence, not MIT),
+chosen after a bake-off and a per-engine showcase because its plugins give
+morphing, motion paths, text effects, layout FLIP and a scrubber for one line
+each, where the hand-written engine needed tens of lines and a debugging
+round per effect. It is a progressive enhancement: a deck with none of these
+attributes, a deck without the scripts, or a presenter who presses `M` gets
+the plain static deck, so nothing in the storyboard, the paragraph-reference
+check or the print path changes. Author it with attributes on the slide's own
+elements (the storyboard's 動態 column chooses them per slide and
+`./fw deck-compile` writes the compile-able ones; deck-plan
+`reference/motion-catalog.md`):
 
 | Attribute | Meaning |
 |---|---|
-| `data-beat="n"` | Appears on beat n (0 = with the slide). `→` plays the next beat and changes slide only when the beats are spent; `←` steps back instantly and leaves the slide fully revealed when it goes back a page. Drop `.rise`/`.dN` from these elements (the script removes them: a CSS animation would override the inline styles it drives). |
-| `data-fx` | `fadeup` (default), `pop`, `draw` (an SVG stroke draws itself; the script sets `pathLength`), `type` (typewriter; plain-text elements only, markup inside would be lost), `count` (the number in the element's text counts up, keeping its prefix, suffix, grouping and decimals), `hold` (instant). `data-delay`/`data-dur` in seconds stagger a beat. |
-| `data-id="x"` | Continuity across slides: on entry the element glides from where the same id sat on the previous slide, or on the nearest earlier slide (FLIP: measure both, invert, animate), so a number in a diagram grows into the big figure on the next slide and the closing slide's cards return to where the audience first saw them. The element on the earlier slide is hidden while the two overlap. |
-| `data-enter` on `<section>` | How the slide comes in: `fade` (default), `push` (previous slides out left), `zoom` (previous slide pushes into one of its elements: `data-zoom-from="<data-id>"`). A chapter card is just a `.kicker` section with the default fade. |
-| `data-along="<selector>"` | The element rides the named SVG path on its slide in a loop (`data-period` seconds): the packet that keeps moving through a flow diagram. |
+| `data-beat="n"` | Appears on beat n (0 = with the slide). `→` plays the next beat and changes slide only when the beats are spent; `←` steps back instantly and leaves the slide fully revealed when it goes back a page; `Shift+←` plays the beat backwards, `Shift+→` replays it, `[`/`]` halve/double the speed, `D` opens a scrubber for the current beat (GSDevTools; for tuning delays, not for the talk). Drop `.rise`/`.dN` from these elements (the script removes them: a CSS animation would override the inline styles it drives). |
+| `data-fx` | `fadeup` (default), `pop`, `draw` (an SVG stroke draws itself), `type` (typewriter; plain-text elements only, markup inside would be lost), `count` (the number in the element's text counts up, keeping its prefix, suffix, grouping and decimals), `hold` (instant), `chars` (characters pop in one by one), `lines` (each line rises from under a mask), `scramble` (the text decodes from noise; `data-chars` sets the noise characters, default digits for a number, else the text's own characters). `data-delay`/`data-dur` in seconds stagger a beat. |
+| `data-id="x"` | Continuity across slides: on entry the element glides from where the same id sat on the previous slide, or on the nearest earlier slide (Flip), so a number in a diagram grows into the big figure on the next slide and the closing slide's cards return to where the audience first saw them. The element on the earlier slide is hidden while the two overlap. |
+| `data-morph="n:#sel …"` | On beat n this SVG `<path>` morphs into the shape of `#sel` on the same slide (keep the target invisible, e.g. `stroke:none`); several beats may be listed. |
+| `data-relayout="n:cls …"` | On beat n the container gets class `cls` (the previous step's class removed) and its children fly from their old to their new boxes — width, height, font size and padding interpolated (Flip). The initial layout is the container's own classes. |
+| `data-enter` on `<section>` | How the slide comes in: `fade` (default), `push` (previous slides out left), `zoom` (previous slide pushes into one of its elements: `data-zoom-from="<data-id>"`, else into its centre). A chapter card is just a `.kicker` section with the default fade. |
+| `data-along="<selector>"` | The element rides the named SVG path on its slide in a loop (`data-period` seconds; `data-rotate` turns its +x axis along the path): the packet that keeps moving through a flow diagram. |
 
 The camera pushes in 4% as the beats are spent. Thumbnails (`?_snthumb`),
 `deck.html#debug` and print reveal every beat and skip the transitions, so
-`deck-check.js` measures the finished slide and the PDF is complete; under
+`deck-check.js` measures the finished slide and the PDF is complete (the
+print CSS also fills a half-drawn `draw` stroke); under
 `prefers-reduced-motion` every step lands instantly. The presenter console
 shows 第 n/m 拍 beside the page number and forwards `M`. The runtime's only
 part in this is a cancelable `deckstep` event before it changes slide
-(deck-runtime § contract); the vocabulary stays here because motion is the
-engine's. Only free tools are involved: it is 230 lines of plain JavaScript
-over standard Web APIs; if the effects ever outgrow it, GSAP (free since
-2025, timelines with `addPause`, Flip, DrawSVG, TextPlugin) is the drop-in
-successor, and Remotion stays reserved for rendering a narrated video.
+(deck-runtime § contract); the engine takes `Shift+←/→`, `[`, `]` and `D` in
+the capture phase so the runtime never sees them; the vocabulary stays here
+because motion is the engine's. Each beat is a GSAP timeline built when the
+beat is reached (a Flip has to measure at the moment the layout changes), so
+stepping back rebuilds the slide to the previous beat rather than scrubbing.
+Elements are hidden with `opacity` only, never `visibility`, because the print
+rule only forces `opacity` back. SVG children keep the default
+`transform-box: view-box`: GSAP computes its own origins, and `fill-box` would
+offset every pop and Flip. The hand-written predecessor (230 lines, zero
+dependencies) is kept in the lab note's history and the course unit's
+`tools/motion/engine-vanilla.js`; Remotion stays reserved for rendering a
+narrated video.
 
 ## Run & verify
 
@@ -317,12 +336,12 @@ successor, and Remotion stays reserved for rendering a narrated video.
   reports stale assets and any tag the current starter loads that the deck
   does not. Otherwise confirm `deck.html` links `asset/tokens.css`
   + `asset/deck.css`, loads `asset/deck-check.js`, `asset/deck-theme-rules.js`,
-  `asset/deck-palette.js`, `asset/deck-theme-controls.js` and
+  `asset/deck-palette.js`, `asset/deck-theme-controls.js`, `asset/gsap.min.js` and
   `asset/deck-motion.js` first (because deck-stage rewrites the `#debug` /
   `#theme=` hash to the slide number as it starts), then `asset/deck-stage.js`,
   `asset/presenter-stage.js` and `asset/deck-font-controls.js`, and that
   `#speaker-notes` has one entry per `<section class="slide">`. Run
-  `node --check` on the eight JS assets and
+  `node --check` on the nine JS assets (`gsap.min.js` included) and
   `./fw check-contrast <talk>` on the deck's `tokens.css`. In a browser
   console, notes alignment is
   `document.querySelectorAll('deck-stage>section').length` against

@@ -48,7 +48,8 @@ lang: zh-TW-u-co-stroke
 # babel gets English, not Chinese: TeX Live 2026's babel chinese ini hooks the book
 # class's chapter macros (\@makechapterhead, \chaptermark) and the build dies with
 # "Use of \@makechapterhead doesn't match its definition". CJK typesetting is xeCJK's
-# job (preamble.tex), and the 「第 N 章」 chapter head is defined there, so babel's
+# job (preamble.tex), and the 「第N章」 chapter head is defined there (numbered in
+# Chinese by apa-zh/headings.tex, which also sets 壹、一、（一） sections), so babel's
 # Chinese captions are not needed. lang stays zh-TW for citeproc and the UI strings.
 babel-lang: english
 
@@ -82,6 +83,7 @@ format:
     papersize: a4
     include-in-header:
       - {{FW}}/assets/templates/thesis/preamble.tex
+      - {{FW}}/assets/templates/thesis/apa-zh/headings.tex   # 第一章 → 壹、→ 一、→（一）
     toc: true
     toc-depth: 3
     number-sections: true

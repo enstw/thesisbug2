@@ -32,15 +32,18 @@
 % === Chapter head 「第 N 章」 ===
 % babel is loaded with english (see _quarto.yml), because its Chinese module breaks
 % the book class's chapter macros under TeX Live 2026; the Chinese chapter label is
-% therefore set here, independent of babel. Sections keep arabic numbers (1.1).
+% therefore set here, independent of babel. Sections keep arabic numbers (1.1);
+% the apa-zh variant appends apa-zh/headings.tex, which redefines \fw@chapterlabel
+% (第一章) and the section counters (壹、一、（一）).
 \makeatletter
 \renewcommand{\@chapapp}{第}
+\def\fw@chapterlabel{\@chapapp\space\thechapter\space{}章} % {} ends \space: under XeTeX 章 is a letter and would join the control word
 \def\@makechapterhead#1{%
   \vspace*{50\p@}%
   {\parindent \z@ \raggedright \normalfont
     \ifnum \c@secnumdepth >\m@ne
       \if@mainmatter
-        \huge\bfseries \@chapapp\space\thechapter\space{}章 % {} ends \space: under XeTeX 章 is a letter and would join the control word
+        \huge\bfseries \fw@chapterlabel
         \par\nobreak
         \vskip 20\p@
       \fi

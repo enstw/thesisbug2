@@ -36,3 +36,7 @@ The predecessor is `thesisbug-template` (private), usually checked out beside th
 - **Explain rules when you add them.** An instruction added to a skill, a protocol, or this file carries its reason in the same sentence. Current models follow instructions literally and generalise from the reason; a bare prohibition gets applied too broadly or too narrowly.
 - **Skill descriptions stay at roughly 300–500 characters**, third person, stating what the skill does and when to use it. Every agent loads all descriptions at startup, and long ones get truncated at a point the author did not choose. The hard limit is 1,024.
 - **Diagrams are Mermaid** in fenced blocks inside the Markdown, so the rendered diagram cannot drift from its source.
+
+## Authorizations
+
+- **Jev calls for the deck pickers** (`./fw deck-motion-pick` and the `deck-pick` planned in DESIGN.md § Open questions) are acknowledged by the maintainer (2026-10-14, "jev可以用"): an agent may pass `--ack` for a run on a storyboard without asking again. Run the estimate first, report the tokens used after, and keep each run to one storyboard; the runner caches identical requests, so a replay is free. Any other Jev use still needs the maintainer's ack per call (jev-decide skill).

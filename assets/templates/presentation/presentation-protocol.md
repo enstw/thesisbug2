@@ -257,6 +257,7 @@ Single- or two-source guides may skip the cross-reading map; the paper skeleton,
 - [ ] `<talk>/deck.html` exists; sections == speaker notes, none empty; every `<section>` has `data-label`; `./fw deck-notes <talk> --check` passes.
 - [ ] `./fw deck-refresh <talk> --dry-run` reports no stale asset and no missing tag, and the engine scripts load in the order `deck-svg` § Run & verify gives.
 - [ ] `./fw check-contrast <talk>` passes; `#debug` reports `minfont=ok`, `overflow=none` and `contrast=ok` on every slide.
+- [ ] The comprehension test (`deck-svg` § Run & verify) has run on the final slide text: an isolated reader given only `./fw deck-text <talk>` output can restate every content slide as who did what to whom.
 - [ ] `deck-svg` § Hard rules hold, and its `@media print` block forces `.rise` visible.
 - [ ] Title slide with main title and subtitle; Q&A / closing slide.
 - [ ] (Image-deck mode) `<talk>/prompts-and-page-content.md` matches the shipped PNGs; every page passed the string/digit proofread; every `<img>` carries a content-bearing `alt`.

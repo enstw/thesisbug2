@@ -143,7 +143,14 @@ flowdiag, inline `svg.art`). Stagger entrance with
 seconds, because the audience is listening while it reads; detail goes to the
 speaker notes, and a prose-heavy passage becomes a short on-slide statement
 with the full detail in the note. Time never justifies cramming or
-pre-cutting — the presenter adjusts pace or skips slides live.
+pre-cutting — the presenter adjusts pace or skips slides live. Condensing
+cuts words, never the event: every line keeps who did what to whom, and a
+qualifier (單方, 未證實, 推估) comes after the claim it qualifies, on its own
+line when it is a different kind of statement — a cut that keeps the
+qualifier and drops the claim leaves the audience nothing to qualify. Define
+a term where it first appears and keep one name for one thing across the
+deck, because a new name reads as a new thing. The comprehension test
+(§ Run & verify) checks all of this from the audience's side.
 
 **Keep look and structure separate (the whole point of the split):**
 - Never hard-code colours in `deck.html`; use `var(--chapter)`, `var(--text)`,
@@ -332,6 +339,15 @@ narrated video.
   capture commands.
   Do not assume a home-directory path, because agents install skills differently.
   Without browser access, run the structure check and mark visual QA as pending.
+- **Comprehension test (複述測驗):** after the slide text is written or
+  revised, run `./fw deck-text <talk> --out <unit>/gpt-review/<date>-deck-text.md`
+  and give only that file to an isolated reader who restates each slide as
+  "who did what to whom"; every slide it cannot restate, or restates wrongly,
+  is a fix. `#debug` proves the audience can see a slide, not that they can
+  understand it, and the author cannot test this by rereading because the
+  author's context fills every gap. Procedure, prompt and the optional
+  cross-model editor's pass: `reference/comprehension-test.md`. Without an
+  isolated reader, mark the test pending rather than rereading in context.
 - **Structure check (no browser):** `./fw deck-refresh <talk> --dry-run`
   reports stale assets and any tag the current starter loads that the deck
   does not. Otherwise confirm `deck.html` links `asset/tokens.css`

@@ -30,6 +30,12 @@
   const KEY = 'deck-motion.' + location.pathname;
   const EASE = 'power3.out';
   const CLEAR = 'opacity,transform,x,y,scale,scaleX,scaleY,rotate,translate,transformOrigin,strokeDasharray,strokeDashoffset';
+  // 作者寫在元素 style 上、又在 CLEAR 裡的值（虛線、變形）：clearProps 會連同清掉，所以解析時記下、清完還原。
+  // opacity 不還原：未到的拍靠樣式表的 opacity:0 藏起來，行內值會蓋過它讓元素提早露出。
+  const KEEP = ['transform', 'translate', 'scale', 'rotate', 'transform-origin', 'stroke-dasharray', 'stroke-dashoffset'];
+  const keepInline = (el) => KEEP.map((p) => [p, el.style.getPropertyValue(p), el.style.getPropertyPriority(p)]).filter((k) => k[1]);
+  const restoreInline = (it) => { for (const [p, v, pr] of it.inline) it.el.style.setProperty(p, v, pr); };
+  const clearItem = (it) => { gsap.set(it.el, { clearProps: CLEAR }); restoreInline(it); };
   const TRANS = { fade: 1, push: 1, zoom: 1 };
   const q = (sel, root) => { try { return root.querySelector(sel); } catch (e) { return null; } };
   if (RM) gsap.globalTimeline.timeScale(1e3);
@@ -41,7 +47,7 @@
     const items = [], relayouts = [];
     const make = (el, beat) => {
       el.classList.remove('rise', 'd1', 'd2', 'd3', 'd4');
-      const it = { el, beat, delay: parseFloat(el.dataset.delay) || 0, dur: el.dataset.dur != null ? parseFloat(el.dataset.dur) : .6, fx: FX[el.dataset.fx] ? el.dataset.fx : 'fadeup', text: el.textContent, morphs: [], split: null };
+      const it = { el, beat, inline: keepInline(el), delay: parseFloat(el.dataset.delay) || 0, dur: el.dataset.dur != null ? parseFloat(el.dataset.dur) : .6, fx: FX[el.dataset.fx] ? el.dataset.fx : 'fadeup', text: el.textContent, morphs: [], split: null };
       if (it.fx === 'draw') el.removeAttribute('pathLength');   // DrawSVG 自己量長度，pathLength 會讓 dasharray 的單位對不上
       if (it.fx === 'count') {
         const m = /^([^\d]*)(\d[\d,]*(?:\.\d+)?)(.*)$/s.exec(it.text.trim());
@@ -79,7 +85,7 @@
     fadeup: (tl, it, at) => tl.fromTo(it.el, { opacity: 0, y: 36 }, { opacity: 1, y: 0, duration: it.dur, ease: EASE }, at),
     pop: (tl, it, at) => tl.fromTo(it.el, { opacity: 0, scale: .82, transformOrigin: '50% 50%' }, { opacity: 1, scale: 1, duration: it.dur, ease: EASE }, at),
     hold: (tl, it, at) => tl.set(it.el, { opacity: 1 }, at),
-    draw: (tl, it, at) => { tl.set(it.el, { opacity: 1 }, at); if (HAS('DrawSVGPlugin')) tl.fromTo(it.el, { drawSVG: '0%' }, { drawSVG: '100%', duration: it.dur, ease: 'power2.inOut' }, at); },
+    draw: (tl, it, at) => { tl.set(it.el, { opacity: 1 }, at); if (HAS('DrawSVGPlugin')) { tl.fromTo(it.el, { drawSVG: '0%' }, { drawSVG: '100%', duration: it.dur, ease: 'power2.inOut' }, at); if (it.inline.length) tl.call(() => restoreInline(it), null, at + it.dur); } },
     type: (tl, it, at) => { tl.set(it.el, { opacity: 1 }, at); if (HAS('TextPlugin')) { it.el.textContent = ''; tl.to(it.el, { text: { value: it.text }, duration: it.dur, ease: 'none' }, at); } },
     count: (tl, it, at) => { const o = { v: 0 }; tl.set(it.el, { opacity: 1 }, at); tl.to(o, { v: it.n, duration: it.dur, ease: EASE, onUpdate: () => { it.el.textContent = it.fmt(o.v); } }, at); },
     chars: (tl, it, at) => { if (!HAS('SplitText')) return FX.fadeup(tl, it, at); it.split = it.split || new SplitText(it.el, { type: 'chars' }); tl.set(it.el, { opacity: 1 }, at); tl.fromTo(it.split.chars, { opacity: 0, y: 24, scale: .9 }, { opacity: 1, y: 0, scale: 1, duration: .5, stagger: .04, ease: EASE }, at); },
@@ -118,7 +124,7 @@
   function undoBeat(b) {
     const tl = S.tls.get(b); if (tl) tl.kill(); S.tls.delete(b);
     for (const it of S.P.items) {
-      if (it.beat === b) { gsap.killTweensOf(it.el); gsap.set(it.el, { clearProps: CLEAR }); restoreText(it); if (it.split) gsap.set(it.split.chars.length ? it.split.chars : it.split.lines, { clearProps: 'all' }); }
+      if (it.beat === b) { gsap.killTweensOf(it.el); clearItem(it); restoreText(it); if (it.split) gsap.set(it.split.chars.length ? it.split.chars : it.split.lines, { clearProps: 'all' }); }
       if (it.morphs.some((m) => m.beat === b)) it.el.setAttribute('d', shapeAt(it, b - 1));
     }
     for (const r of S.P.relayouts) if (r.steps.some((s) => s.beat === b)) setClass(r, classAt(r, b - 1));
@@ -133,7 +139,7 @@
     for (const it of S.P.items) {
       gsap.killTweensOf(it.el);
       if (it.split) { it.split.revert(); it.split = null; }
-      gsap.set(it.el, { clearProps: CLEAR }); restoreText(it);
+      clearItem(it); restoreText(it);
       if (it.morphs.length) it.el.setAttribute('d', it.origD);
     }
     for (const r of S.P.relayouts) setClass(r, null);

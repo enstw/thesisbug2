@@ -235,6 +235,23 @@ class EnginePackagingTests(unittest.TestCase):
         subprocess.run([node, "--check", str(self.ASSET / "deck-motion.js")], check=True)
         subprocess.run([node, "--check", str(self.ASSET / "gsap.min.js")], check=True)
 
+    def test_engine_keeps_author_inline_styles(self):
+        # clearProps wipes inline style, the author's included: a dashed edge on a beat lost its
+        # dashes at slide entry. Every reset must go through clearItem, which restores what the
+        # author wrote for each cleared CSS property except opacity (that one would unhide a beat).
+        src = (self.ASSET / "deck-motion.js").read_text(encoding="utf-8")
+        self.assertEqual(src.count("clearProps: CLEAR"), 1, "reset an item with clearItem(it), not a bare clearProps: CLEAR")
+        self.assertIn("const clearItem = (it) => { gsap.set(it.el, { clearProps: CLEAR }); restoreInline(it); };", src)
+        clear = re.search(r"const CLEAR = '([^']+)'", src).group(1).split(",")
+        keep = set(re.findall(r"'([a-z-]+)'", re.search(r"const KEEP = \[([^\]]+)\]", src).group(1)))
+        css = {"transform", "translate", "scale", "rotate", "transformOrigin", "strokeDasharray", "strokeDashoffset"}
+        kebab = lambda n: re.sub(r"([A-Z])", lambda m: "-" + m.group(1).lower(), n)
+        for prop in clear:
+            if prop in css:
+                self.assertIn(kebab(prop), keep, f"{prop} is cleared but an author's inline value is not restored")
+        self.assertNotIn("opacity", keep)
+        self.assertIn("restoreInline(it), null, at + it.dur", src, "draw must restore the author's dashes when it ends")
+
     def test_engine_documents_every_fx(self):
         src = (self.ASSET / "deck-motion.js").read_text(encoding="utf-8")
         fxs = re.findall(r"^\s{4}(\w+): \(tl, it, at\)", src, re.M)

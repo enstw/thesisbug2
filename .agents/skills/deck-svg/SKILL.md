@@ -302,7 +302,10 @@ because motion is the engine's. Each beat is a GSAP timeline built when the
 beat is reached (a Flip has to measure at the moment the layout changes), so
 stepping back rebuilds the slide to the previous beat rather than scrubbing.
 Elements are hidden with `opacity` only, never `visibility`, because the print
-rule only forces `opacity` back. SVG children keep the default
+rule only forces `opacity` back. Styles the author writes inline on a beat element — a dashed
+edge, a transform — survive the engine's resets and a `draw` (it records them
+and puts them back after each `clearProps`), but an inline `opacity` does not,
+because it would override the stylesheet's `opacity:0` and show the beat early. SVG children keep the default
 `transform-box: view-box`: GSAP computes its own origins, and `fill-box` would
 offset every pop and Flip. The hand-written predecessor (230 lines, zero
 dependencies) is kept in the lab note's history and the course unit's

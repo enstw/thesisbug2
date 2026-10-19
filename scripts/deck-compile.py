@@ -118,6 +118,65 @@ def extract_storyboard_rows(storyboard_text: str) -> list[dict[str, str]]:
     return rows
 
 
+def render_row(row: dict[str, str], idx: int, total: int,
+               resolver: VisualRhythmResolver) -> tuple[str | None, list[str]]:
+    """Render one storyboard row as a slide, or None with a warning when its layout is not a catalog code.
+
+    Shared with storyboard-review, which previews each row the way the deck will show it."""
+    warnings: list[str] = []
+    slide_num = int(row.get("#", idx))
+    shape_col = row.get("內容形狀", "")
+    layout_col = row.get("版型", "").strip()
+    content_col = row.get("畫面內容", "")
+
+    # Try to resolve layout
+    try:
+        layout_def = get_layout(layout_col)
+    except ValueError as e:
+        warnings.append(f"投影片 #{slide_num}: {e}")
+        return None, warnings
+
+    # Parse slots from content column
+    slots = parse_slot_payload(content_col)
+
+    # Infer title from shape/content if not provided in slot
+    if "title" not in slots:
+        # Check if there is a heading in content
+        first_line = content_col.split("<br>")[0].strip()
+        if first_line and not first_line.startswith(("-", "*", "cards:", "items:")):
+            slots["title"] = first_line.split(":")[-1].strip()
+        else:
+            slots["title"] = shape_col or f"投影片 {slide_num}"
+
+    # Resolve eyebrow: prefer explicit slot eyebrow, then label / data_label,
+    # then non-numeric shape name (strip leading numbers like "3 理論入門" -> "理論入門"),
+    # fallback to "研討進度".
+    resolved_eyebrow = (
+        slots.get("eyebrow")
+        or slots.get("label")
+        or slots.get("data_label")
+    )
+    if not resolved_eyebrow and shape_col:
+        resolved_eyebrow = re.sub(r"^\d+\s*", "", shape_col).strip()
+    if not resolved_eyebrow:
+        resolved_eyebrow = "研討進度"
+
+    # Resolve context and depth variant
+    ctx, chosen_variant = resolver.resolve(
+        layout=layout_def,
+        slide_num=slide_num,
+        total_slides=total - 1 if total > 1 else 1,
+        eyebrow=resolved_eyebrow,
+        title=slots.get("label") or slots.get("data_label") or slots.get("title", ""),
+    )
+
+    # Render slide HTML, then the 動態 column's motion codes (deck-motion.js attributes)
+    rendered = layout_def.render_func(slots, chosen_variant, ctx)
+    rendered, motion_warnings = apply_motion(rendered, split_codes(row.get("動態", "")))
+    warnings.extend(f"投影片 #{slide_num}: {w}" for w in motion_warnings)
+    return rendered, warnings
+
+
 def compile_storyboard(talk: Path) -> tuple[str, list[str]]:
     """Compile storyboard.md of a talk into HTML slides block and warnings."""
     sb_file = talk / "storyboard.md"
@@ -136,57 +195,10 @@ def compile_storyboard(talk: Path) -> tuple[str, list[str]]:
     total = len(rows)
 
     for idx, row in enumerate(rows):
-        slide_num = int(row.get("#", idx))
-        shape_col = row.get("內容形狀", "")
-        layout_col = row.get("版型", "").strip()
-        content_col = row.get("畫面內容", "")
-
-        # Try to resolve layout
-        try:
-            layout_def = get_layout(layout_col)
-        except ValueError as e:
-            warnings.append(f"投影片 #{slide_num}: {e}")
-            continue
-
-        # Parse slots from content column
-        slots = parse_slot_payload(content_col)
-
-        # Infer title from shape/content if not provided in slot
-        if "title" not in slots:
-            # Check if there is a heading in content
-            first_line = content_col.split("<br>")[0].strip()
-            if first_line and not first_line.startswith(("-", "*", "cards:", "items:")):
-                slots["title"] = first_line.split(":")[-1].strip()
-            else:
-                slots["title"] = shape_col or f"投影片 {slide_num}"
-
-        # Resolve eyebrow: prefer explicit slot eyebrow, then label / data_label,
-        # then non-numeric shape name (strip leading numbers like "3 理論入門" -> "理論入門"),
-        # fallback to "研討進度".
-        resolved_eyebrow = (
-            slots.get("eyebrow")
-            or slots.get("label")
-            or slots.get("data_label")
-        )
-        if not resolved_eyebrow and shape_col:
-            resolved_eyebrow = re.sub(r"^\d+\s*", "", shape_col).strip()
-        if not resolved_eyebrow:
-            resolved_eyebrow = "研討進度"
-
-        # Resolve context and depth variant
-        ctx, chosen_variant = resolver.resolve(
-            layout=layout_def,
-            slide_num=slide_num,
-            total_slides=total - 1 if total > 1 else 1,
-            eyebrow=resolved_eyebrow,
-            title=slots.get("label") or slots.get("data_label") or slots.get("title", ""),
-        )
-
-        # Render slide HTML, then the 動態 column's motion codes (deck-motion.js attributes)
-        rendered = layout_def.render_func(slots, chosen_variant, ctx)
-        rendered, motion_warnings = apply_motion(rendered, split_codes(row.get("動態", "")))
-        warnings.extend(f"投影片 #{slide_num}: {w}" for w in motion_warnings)
-        slides_html.append(rendered)
+        rendered, row_warnings = render_row(row, idx, total, resolver)
+        warnings.extend(row_warnings)
+        if rendered is not None:
+            slides_html.append(rendered)
 
     compiled_block = "\n\n".join(slides_html)
     return compiled_block, warnings

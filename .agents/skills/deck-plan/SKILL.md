@@ -136,6 +136,35 @@ range → author → arguments → synthesis → concepts → critique → quest
   changed, because courses increasingly ask for per-slide AI disclosure, and
   noting it while planning is more reliable than reconstructing it later.
 
+## Review — `./fw storyboard-review`
+
+Give the author the storyboard as a page, not as the table: run
+`./fw storyboard-review <talk-or-unit> --open` after writing or changing it.
+The page gathers what the sign-off needs from the files that own it — 前提,
+one card per row with every column, a preview of the layout (the compiled
+slide for a catalog code), the cited points' text, the palette — because a
+ten-column table wraps into walls of text and the author would otherwise
+open four files. It is a build product under `_output/`; edits go to the
+storyboard and the page is rebuilt.
+
+Three optional parts, used when the audience needs them:
+
+- **Where a change sits.** For a talk about changes to a pipeline (a lab, a
+  method), declare the steps in 前提 as `流程步驟：S1 讀取資料、S2 …（圖：@fig-label）`
+  and add a **環節** column (`改：S3、S5；講：S6`, or `—`). The page shows a
+  step strip per card and a slide × step table, with changed steps coloured
+  apart from explained ones, because an audience comparing versions loses track
+  of which stage each slide changed. `流程對照：<course path> § <heading>｜<column prefix>`
+  adds a course-level table, filtered to this occasion's columns.
+- **Formulas.** A **公式** column (`$…$`, KaTeX) lists the formula behind a
+  slide for an audience that reads formulas faster than prose; each formula
+  must match the Model's text, like every other cell.
+- **Choices.** Decisions left to the author go in a `## 待選` section: a bullet
+  per question, indented `- A …` options, and `建議 X：理由` in the question.
+  The page renders radios and a copy button; the author pastes the line back,
+  and the agent writes the result into the rows or premises and deletes the
+  question, because a choice that stays in 待選 is not yet a plan.
+
 The author signs off `points.md` and the storyboard; only then does a View
 get built.
 

@@ -26,8 +26,14 @@ lang: zh-TW
 # Quarto ships interface strings for zh (Simplified) only; zh-Hant and zh-TW fall
 # back to them — 目錄 prints as 「目录」, 圖 as 「图」. lang: zh-TW also selects the
 # zh-TW citeproc locale (頁／等／編) instead of zh-CN's 页／等／编. The strings a PDF
-# shows are overridden here in Traditional Chinese.
+# shows are overridden here in Traditional Chinese; the title-block and
+# copy-button ones are what the HTML report (html.yml) adds.
 language:
+  title-block-author-single: "作者"
+  title-block-author-plural: "作者"
+  title-block-published: "日期"
+  copy-button-tooltip: "複製"
+  copy-button-tooltip-success: "已複製"
   toc-title-document: "目錄"
   crossref-fig-title: "圖"
   crossref-tbl-title: "表"

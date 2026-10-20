@@ -1,0 +1,9 @@
+# The HTML report: one self-contained file read in a browser. build.py puts
+# this block first under format: only when the unit's WORK.json says
+# "format": "html" (or --format html); a PDF build never sees it.
+html:
+  embed-resources: true
+  toc: true
+  toc-depth: 3
+  number-sections: false
+  format-links: false

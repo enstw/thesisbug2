@@ -15,7 +15,7 @@ its content, which the storyboard row names (deck-plan
 | 5 | Spectrum | `.spectrum` (`.marks` > `.mark`, `.bar`, `.ends`) |
 | 6 | Two-sided contrast | `.cols.split` of `.colblock`, or `.grid.two` of `.card`; for claims against weaknesses, `.colblock.against` + `.verdict` |
 | 7 | Multi-item comparison | `table.cmp` (`caption`, header row, row-header `th`; `.tight` for six or more rows) |
-| 8 | Process / causal chain | `.flowdiag` (`.flownode` + `.flowarrow`), or inline `svg.art.dg` for branches or a redrawn source figure |
+| 8 | Process / causal chain | `.flowdiag` (`.flownode` + `.flowarrow`) for one straight chain; `L-CANVAS` for parallel paths between one start and one end (compiled from `start`/`lanes`/`end`) or any other diagram (`svg:`), which keeps the standard frame and gives the drawing the rest of the slide; inline `svg.art.dg` for a redrawn source figure |
 | 9 | Timeline | `.timeline` of `.tl` (`time`, `b`, `p`) |
 | 10 | Levels / hierarchy | `.tiers` of `.tier` (`h3` + `p`) |
 | 11 | Numbers | `.stats` of `.stat` (`.stats.four` for four); a worked numerical example goes in `.matrix` |
@@ -57,6 +57,7 @@ Sized for a classroom projector at 1920×1080: body 40px, tables / labels / capt
 - `.stats` > `.stat` (`.n` number, `.l` label) — metric trio; `.n` with `data-to="47.2"` animates the count on arrival; `.stats.four` for four figures.
 - `ul.clean` (+ `.lead-size`) — dotted bullet list with accent markers.
 - `.flowdiag` > `.flownode` / `.flowarrow` — left-to-right process diagram.
+- `.canvas-frame` > `.canvas` — L-CANVAS: the drawing area takes the height the title, lead and closing box leave; `.canvas-empty` is its placeholder. A diagram in it uses viewBox width 1728 (the content width) so its text stays at 34px.
 
 ## Content-shape components (see § Shape → pattern for when)
 - `.claim` (+ `.hl`) — one statement, 64px; an optional `.lead` beneath.

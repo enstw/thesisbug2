@@ -1,6 +1,6 @@
 """The presentation layout catalog and slot parser for thesisbug2.
 
-Defines the 16 standard layout codes across 5 families, their slot schemas,
+Defines the 17 standard layout codes across 5 families, their slot schemas,
 seeded depth variants, and deterministic HTML renderers.
 
 Layout catalog v1.0:
@@ -20,6 +20,7 @@ Layout catalog v1.0:
      - L-FLOW-3STAGE
      - L-TIMELINE-RAIL
      - L-CASCADE-FUNNEL
+     - L-CANVAS (standard frame around one free drawing area)
   5. Scholarly Critique & Evidence:
      - L-QUOTE-CRITIQUE
      - L-HYPOTHESIS-TEST
@@ -34,7 +35,13 @@ import json
 import random
 import re
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any, Callable
+
+try:
+    from _deck_flow import flow_svg, parse_lane
+except ImportError:          # imported as scripts._deck_catalog (tests)
+    from ._deck_flow import flow_svg, parse_lane
 
 
 @dataclass
@@ -45,6 +52,7 @@ class SlideContext:
     eyebrow: str
     data_label: str
     variant: str
+    base: Path | None = None    # the talk directory, for slots that name a file (L-CANVAS `svg:`)
 
 
 @dataclass
@@ -884,6 +892,73 @@ def render_defn_example(slots: dict[str, Any], variant: str, ctx: SlideContext) 
   </section>"""
 
 
+def warn(msg: str) -> str:
+    """A compile warning carried inside the rendered HTML; render_row lifts it out and reports it."""
+    return f"<!-- deck-compile warning: {html.escape(msg)} -->"
+
+
+def _canvas_svg(rel_path: str, base: Path | None) -> tuple[str, str]:
+    """Inline an SVG file named relative to the talk, so it scales with the slide and takes theme colours."""
+    if base is None:
+        return "", warn(f"svg: {rel_path} 無法讀取（沒有 talk 目錄）")
+    path = (base / rel_path).resolve()
+    if base.resolve() not in path.parents:
+        return "", warn(f"svg: {rel_path} 不在 talk 目錄裡")
+    if not path.is_file():
+        return "", warn(f"svg: 找不到 {rel_path}")
+    text = path.read_text(encoding="utf-8")
+    text = re.sub(r"<\?xml[^>]*\?>|<!DOCTYPE[^>]*>", "", text).strip()
+    return text, ""
+
+
+def render_canvas(slots: dict[str, Any], variant: str, ctx: SlideContext) -> str:
+    """The standard frame (top bar with page number, title, optional lead and closing box)
+    around one drawing area that fills the rest of the slide.
+
+    The area holds either a left-to-right flow chart compiled from `start`, `lanes` and
+    `end`, or an SVG file named by `svg:`, because the free part of a science slide is
+    usually a mechanism diagram that no fixed card layout can express.
+    """
+    title = esc(slots.get("title") or "")
+    dlabel = _dlabel(slots, title)
+    lead = esc(slots.get("lead") or "")
+    verdict = esc(slots.get("verdict") or "")
+    caption = esc(slots.get("caption") or "")
+
+    notes: list[str] = []
+    lanes_raw = slots.get("lanes")
+    if isinstance(lanes_raw, list) and lanes_raw:
+        lanes = [parse_lane(str(it.get("text") or it.get("head", "")) if isinstance(it, dict) else str(it)) for it in lanes_raw]
+        art, flow_warnings = flow_svg(str(slots.get("start") or "開始"), lanes, str(slots.get("end") or "結束"), title)
+        notes += [warn(w) for w in flow_warnings]
+        if not slots.get("start") or not slots.get("end"):
+            notes.append(warn("flow 少了 start 或 end，用「開始」「結束」代替"))
+    elif slots.get("svg"):
+        art, note = _canvas_svg(str(slots["svg"]), ctx.base)
+        art = f'<div class="rise d2">{art}</div>' if art else ""
+        notes.append(note)
+    else:
+        art = ""
+        notes.append(warn("L-CANVAS 沒有畫布內容：寫 start／lanes／end（流程圖）或 svg: <檔名>"))
+    if not art:
+        art = '<div class="canvas-empty">畫布待放圖</div>'
+
+    lead_html = f'<p class="lead rise d1">{lead}</p>' if lead else ""
+    caption_html = f'<p class="art-cap">{caption}</p>' if caption else ""
+    verdict_html = f'<div class="verdict box rise d4">{_note_label(slots, "重點")}{verdict}</div>' if verdict else ""
+
+    return f"""  <section class="slide" style="--chapter:{ctx.accent}" data-label="{dlabel}">
+{_render_topbar(ctx)}
+    <div class="content canvas-frame">
+      <h2 class="kicker rise">{title}</h2>
+      {lead_html}
+      <div class="canvas">{art}</div>
+      {caption_html}
+      {verdict_html}{''.join(n for n in notes if n)}
+    </div>
+  </section>"""
+
+
 # =========================================================================
 # Layout Catalog Registry
 # =========================================================================
@@ -1004,6 +1079,15 @@ CATALOG: dict[str, LayoutDefinition] = {
         render_func=render_cascade_funnel,
         optional_slots=["core_focus", "verdict"],
     ),
+    "L-CANVAS": LayoutDefinition(
+        id="L-CANVAS",
+        family="Progression",
+        name="標準外框＋自由畫布",
+        required_slots=["title"],
+        allowed_variants=["default"],
+        render_func=render_canvas,
+        optional_slots=["lead", "start", "lanes", "end", "svg", "caption", "verdict"],
+    ),
 
     # 5. Scholarly Critique & Evidence
     "L-QUOTE-CRITIQUE": LayoutDefinition(
@@ -1059,6 +1143,7 @@ ALIASES = {
     "l-flow": "L-FLOW-3STAGE",
     "l-timeline": "L-TIMELINE-RAIL",
     "l-funnel": "L-CASCADE-FUNNEL",
+    "l-canvas": "L-CANVAS",
     "l-quote": "L-QUOTE-CRITIQUE",
     "l-hypothesis": "L-HYPOTHESIS-TEST",
     "l-stat": "L-STAT-HERO",

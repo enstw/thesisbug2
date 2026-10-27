@@ -203,6 +203,11 @@ slide.
 A deck is plain HTML with **no Mermaid runtime**: a ` ```mermaid ` block shows
 as literal text, so use one of these instead.
 
+1. **Compiled flow chart** — for one start, one to four parallel lanes and one
+   end (activity-on-node, left to right), write the `L-CANVAS` row's `start`,
+   `lanes` and `end` and let `./fw deck-compile` draw it, because the
+   coordinates of that fixed shape are computed exactly and the text stays at
+   34px; any other diagram goes in the same frame through `svg:`.
 1. **Hand-authored inline SVG** — the default for deck art and simple process
    chains (`.flowdiag`, `svg.art.dg`). Strokes and fills use `var(--chapter)`
    or `currentColor`, so the art follows the theme.

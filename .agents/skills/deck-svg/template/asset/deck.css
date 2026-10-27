@@ -317,6 +317,18 @@
     font-size: calc(36px * var(--deck-font-scale, 1));
   }
 
+  /* ---------- L-CANVAS: standard frame around one free drawing area ----------
+     The canvas takes all height the title, lead and closing box leave, so a diagram
+     sized to the content width (1728px) is drawn at its own pixels and the 34px
+     type floor holds; a taller one scales down and #debug reports the small text. */
+  .canvas-frame { justify-content: flex-start; }
+  .canvas { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; }
+  .canvas > svg, .canvas > div > svg { max-width: 100%; max-height: 100%; width: auto; height: auto; }
+  .canvas-empty { width: 100%; height: 100%; min-height: 320px; display: grid; place-items: center;
+    border: 3px dashed var(--hair); border-radius: 18px; color: var(--muted);
+    font-size: calc(40px * var(--deck-font-scale, 1)); }
+  .canvas-frame .verdict { margin-top: 24px; }
+
   /* ---------- layout catalog additions (breadth & depth) ---------- */
   .card--top-rail::before { content:""; position:absolute; inset:0 0 auto 0; height:4px; background: var(--chapter); opacity:.85; }
   .card--tint-elevated {

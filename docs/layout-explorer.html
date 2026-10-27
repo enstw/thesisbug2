@@ -598,6 +598,29 @@ const CATALOG = [
     snippet: `| 3 | P3 | 10 層級架構 | L-CASCADE-FUNNEL | 2.5 min | title: 外交政策決策的三層分析架構<br>levels:<br>- 體系層 (Systemic) | 權力對比結構: 無政府狀態下的相對獲益競爭與大國博弈<br>- 國內層 (Domestic) | 制度與利益集團: 選民偏好、國會立法約束與關鍵產業利益遊說<br>- 領導層 (Individual) | 決策者認知基模: 歷史借鑑經驗、危機認知與風險偏好特質<br>core_focus: 本文聚焦國內層政治如何扭曲體系層的結構性壓力傳導 | 口說重點 | 分析層次、Q1 | — |`
   },
 
+  {
+    id: "L-CANVAS",
+    name: "標準外框＋自由畫布",
+    family: "歷時演進與因果推進類",
+    variants: ["default"],
+    render: (v, acc) => `
+  <section class="slide" data-deck-active style="--chapter:${acc}">
+      <div class="railtop"></div>
+      <div class="topbar">
+        <span class="eyebrow">流程示意</span>
+        <span class="chap"><b>5</b> / 8</span>
+      </div>
+    <div class="content canvas-frame">
+      <h2 class="kicker rise">兩種欄位分開處理，最後一起訓練</h2>
+      
+      <div class="canvas"><svg class="art dg flowchart" viewBox="0 0 1728 332" width="1728" role="img" aria-label="兩種欄位分開處理，最後一起訓練"><g class="rise d1"><rect class="box fill" x="0.0" y="120.0" width="192.0" height="92" rx="46.0"/><text x="96.0" y="178.2" text-anchor="middle">原始資料</text></g><g class="rise d2"><text class="sub" x="264.0" y="34.0">數值欄位</text><path class="edge" d="M192.0,166.0 H228.0 V98.0 H262.0"/><polygon class="ah" points="262.0,98.0 239.6,82.0 239.6,114.0"/><rect class="box" x="264.0" y="52.0" width="158.0" height="92" rx="14.0"/><text x="343.0" y="110.2" text-anchor="middle">補缺值</text><path class="edge" d="M422.0,98.0 H783.0"/><polygon class="ah" points="783.0,98.0 760.6,82.0 760.6,114.0"/><rect class="box hi" x="785.0" y="52.0" width="158.0" height="92" rx="14.0"/><text x="864.0" y="110.2" text-anchor="middle" class="acc">標準化</text><path class="edge" d="M943.0,98.0 H1304.0"/><polygon class="ah" points="1304.0,98.0 1281.6,82.0 1281.6,114.0"/><rect class="box" x="1306.0" y="52.0" width="158.0" height="92" rx="14.0"/><text x="1385.0" y="110.2" text-anchor="middle">選特徵</text><path class="edge" d="M1464.0,98.0 H1500.0 V166.0 H1534.0"/><polygon class="ah" points="1534.0,166.0 1511.6,150.0 1511.6,182.0"/></g><g class="rise d3"><text class="sub" x="264.0" y="222.0">文字欄位</text><path class="edge" d="M192.0,166.0 H228.0 V286.0 H262.0"/><polygon class="ah" points="262.0,286.0 239.6,270.0 239.6,302.0"/><rect class="box" x="264.0" y="240.0" width="158.0" height="92" rx="14.0"/><text x="343.0" y="298.2" text-anchor="middle">斷詞</text><path class="edge" d="M422.0,286.0 H783.0"/><polygon class="ah" points="783.0,286.0 760.6,270.0 760.6,302.0"/><rect class="box" x="785.0" y="240.0" width="158.0" height="92" rx="14.0"/><text x="864.0" y="298.2" text-anchor="middle">向量化</text><path class="edge" d="M943.0,286.0 H1304.0"/><polygon class="ah" points="1304.0,286.0 1281.6,270.0 1281.6,302.0"/><rect class="box hi" x="1306.0" y="240.0" width="158.0" height="92" rx="14.0"/><text x="1385.0" y="298.2" text-anchor="middle" class="acc">降維</text><path class="edge" d="M1464.0,286.0 H1500.0 V166.0 H1534.0"/><polygon class="ah" points="1534.0,166.0 1511.6,150.0 1511.6,182.0"/></g><g class="rise d4"><rect class="box fill" x="1536.0" y="120.0" width="192.0" height="92" rx="46.0"/><text x="1632.0" y="178.2" text-anchor="middle">模型訓練</text></g></svg></div>
+      
+      <div class="verdict box rise d4"><em>重點：</em>標準化與降維是這次新加的兩步</div>
+    </div>
+  </section>`,
+    snippet: `| 5 | P5 | 8 流程機制 | L-CANVAS | 2 min | eyebrow: 流程示意<br>title: 兩種欄位分開處理，最後一起訓練<br>start: 原始資料<br>lanes:<br>- [數值欄位] 補缺值 → *標準化* → 選特徵<br>- [文字欄位] 斷詞 → 向量化 → *降維*<br>end: 模型訓練<br>verdict: 標準化與降維是這次新加的兩步 | 口說重點 | 流程、Q5 | — |`
+  },
+
   // 5. Critique
   {
     id: "L-QUOTE-CRITIQUE",

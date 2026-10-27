@@ -25,7 +25,10 @@ from _deck_catalog import CATALOG, VisualRhythmResolver, get_layout, parse_slot_
 from _deck_motion import apply_motion, split_codes  # noqa: E402
 from _paths import course_root, rel, resolve_talk  # noqa: E402
 
+import html as html_lib
 from html.parser import HTMLParser
+
+WARNING_RE = re.compile(r"<!-- deck-compile warning: (.*?) -->")
 
 
 class DeckStageLocator(HTMLParser):
@@ -119,7 +122,7 @@ def extract_storyboard_rows(storyboard_text: str) -> list[dict[str, str]]:
 
 
 def render_row(row: dict[str, str], idx: int, total: int,
-               resolver: VisualRhythmResolver) -> tuple[str | None, list[str]]:
+               resolver: VisualRhythmResolver, talk: Path | None = None) -> tuple[str | None, list[str]]:
     """Render one storyboard row as a slide, or None with a warning when its layout is not a catalog code.
 
     Shared with storyboard-review, which previews each row the way the deck will show it."""
@@ -170,8 +173,14 @@ def render_row(row: dict[str, str], idx: int, total: int,
         title=slots.get("label") or slots.get("data_label") or slots.get("title", ""),
     )
 
-    # Render slide HTML, then the 動態 column's motion codes (deck-motion.js attributes)
+    # Render slide HTML, then the 動態 column's motion codes (deck-motion.js attributes).
+    # A renderer that names a file (L-CANVAS `svg:`) reads it relative to the talk; a
+    # renderer reports a problem as an HTML comment, lifted out here so it reaches stderr.
+    ctx.base = talk
     rendered = layout_def.render_func(slots, chosen_variant, ctx)
+    for msg in WARNING_RE.findall(rendered):
+        warnings.append(f"投影片 #{slide_num}: {html_lib.unescape(msg)}")
+    rendered = WARNING_RE.sub("", rendered)
     rendered, motion_warnings = apply_motion(rendered, split_codes(row.get("動態", "")))
     warnings.extend(f"投影片 #{slide_num}: {w}" for w in motion_warnings)
     return rendered, warnings
@@ -195,7 +204,7 @@ def compile_storyboard(talk: Path) -> tuple[str, list[str]]:
     total = len(rows)
 
     for idx, row in enumerate(rows):
-        rendered, row_warnings = render_row(row, idx, total, resolver)
+        rendered, row_warnings = render_row(row, idx, total, resolver, talk)
         warnings.extend(row_warnings)
         if rendered is not None:
             slides_html.append(rendered)

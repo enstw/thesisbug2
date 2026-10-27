@@ -348,9 +348,9 @@ def sketch(layout: str, shape: str, tok: dict[str, str]) -> str:
 
 
 def preview(row: dict[str, str], idx: int, total: int, resolver: VisualRhythmResolver,
-            css_hrefs: list[str], tok: dict[str, str]) -> tuple[str, str]:
+            css_hrefs: list[str], tok: dict[str, str], talk: Path | None = None) -> tuple[str, str]:
     """(preview html, caption): the compiled slide when 版型 is a catalog code."""
-    rendered, _ = deck_compile.render_row(row, idx, total, resolver)
+    rendered, _ = deck_compile.render_row(row, idx, total, resolver, talk)
     if rendered:
         rendered = re.sub(r'<section\b', '<section data-deck-active=""', rendered, count=1)
         doc = ("<!doctype html><html><head><meta charset='utf-8'>"
@@ -498,7 +498,7 @@ def build(unit: Path, talk: Path, root: Path) -> tuple[Path, int]:
         det = ("<details><summary>論點原文（points.md）</summary>"
                + "".join(f'<p class="point"><b>{r}</b> {inline(pts.get(r, "（points.md 沒有這一點）"))}</p>' for r in refs)
                + "</details>") if refs and pts else ""
-        pv, cap = preview(s, idx, len(rows), resolver, css_hrefs, tok)
+        pv, cap = preview(s, idx, len(rows), resolver, css_hrefs, tok, talk)
         side = ""
         if keys:
             st = steps_of(s.get("環節", ""), keys)

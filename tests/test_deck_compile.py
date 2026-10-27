@@ -82,12 +82,13 @@ class VisualRhythmResolverTests(unittest.TestCase):
         for i in range(len(accents) - 1):
             self.assertNotEqual(accents[i], accents[i + 1], f"Slide {i} and {i+1} have the same accent {accents[i]}")
 
-    def test_all_16_layouts_exist(self):
-        self.assertEqual(len(CATALOG), 16)
+    def test_all_17_layouts_exist(self):
+        self.assertEqual(len(CATALOG), 17)
         for lid in (
             "L-HERO-TITLE", "L-FINALE-SUMMARY", "L-3CARD-VERDICT", "L-4CARD-GRID",
             "L-BENTO-FOCUS", "L-SPLIT-ANCHOR", "L-VS-CONFRONT", "L-MATRIX-DEEPDIVE",
             "L-SPECTRUM-POLES", "L-FLOW-3STAGE", "L-TIMELINE-RAIL", "L-CASCADE-FUNNEL",
+            "L-CANVAS",
             "L-QUOTE-CRITIQUE", "L-HYPOTHESIS-TEST", "L-STAT-HERO", "L-DEFN-EXAMPLE"
         ):
             self.assertIn(lid, CATALOG)
@@ -293,6 +294,75 @@ class DeckCompilerIntegrationTests(unittest.TestCase):
             build_mod.deck_gate(self.tmp, self.talk, self.tmp)
         except SystemExit as e:
             self.assertNotIn("deck out of sync", str(e))
+
+
+class CanvasLayoutTests(unittest.TestCase):
+    """L-CANVAS: the standard frame around one drawing area (a compiled flow chart or an SVG file)."""
+
+    FLOW = ("title: 資料流程<br>start: 原始資料<br>lanes:<br>"
+            "- [數值欄位] 補缺值 → *標準化* → 選特徵<br>- [文字欄位] 斷詞 -> 向量化<br>end: 模型訓練")
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp(prefix="thesisbug2-test-canvas-"))
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def render(self, text, base=None):
+        ctx = SlideContext(slide_num=3, total_slides=9, accent="var(--c2)", eyebrow="流程", data_label="d",
+                           variant="default", base=base)
+        return get_layout("L-CANVAS").render_func(parse_slot_payload(text), "default", ctx)
+
+    def test_flow_chart_nodes_lanes_and_highlight(self):
+        html = self.render(self.FLOW)
+        self.assertIn('class="art dg flowchart"', html)
+        self.assertIn('viewBox="0 0 1728 ', html)            # content width: drawn at 34px, never scaled
+        for word in ("原始資料", "模型訓練", "數值欄位", "文字欄位", "補缺值", "選特徵", "斷詞", "向量化"):
+            self.assertIn(word, html)
+        self.assertEqual(html.count('class="box hi"'), 1)   # *標準化* only
+        self.assertIn('class="acc">標準化<', html)
+        self.assertIn('<span class="chap"><b>3</b> / 9</span>', html)   # page number from the shared top bar
+        self.assertNotIn("deck-compile warning", html)
+
+    def test_flow_reveals_start_lanes_end_in_order(self):
+        html = self.render(self.FLOW)
+        order = [html.index('rise d1"><rect'), html.index('rise d2"><text'), html.index('rise d3"><text'),
+                 html.index('rise d4"><rect')]
+        self.assertEqual(order, sorted(order))
+
+    def test_flow_class_does_not_collide_with_marching_dash_hook(self):
+        # `.flow` is deck.css's animated dashed stroke; the chart must not carry it
+        self.assertNotRegex(self.render(self.FLOW), r'class="[^"]*\bflow\b[^"]*"')
+
+    def test_too_many_nodes_warns_instead_of_shrinking(self):
+        html = self.render("title: t<br>start: s<br>lanes:<br>- " + " → ".join(f"很長的節點名稱{i}" for i in range(8)) + "<br>end: e")
+        self.assertIn("放不下", html)
+
+    def test_svg_file_is_inlined_relative_to_talk(self):
+        (self.tmp / "fig").mkdir()
+        (self.tmp / "fig" / "x.svg").write_text('<?xml version="1.0"?><svg class="art dg"><text>自畫</text></svg>', encoding="utf-8")
+        html = self.render("title: t<br>svg: fig/x.svg", base=self.tmp)
+        self.assertIn("<svg class=\"art dg\"><text>自畫</text></svg>", html)
+        self.assertNotIn("<?xml", html)
+
+    def test_svg_outside_talk_is_refused(self):
+        (self.tmp / "talk").mkdir()
+        (self.tmp / "secret.svg").write_text("<svg>x</svg>", encoding="utf-8")
+        html = self.render("title: t<br>svg: ../secret.svg", base=self.tmp / "talk")
+        self.assertIn("不在 talk 目錄裡", html)
+        self.assertIn("canvas-empty", html)
+
+    def test_empty_canvas_compiles_with_placeholder_and_warning(self):
+        html = self.render("title: 還沒放圖")
+        self.assertIn("canvas-empty", html)
+        self.assertIn("deck-compile warning", html)
+
+    def test_render_row_lifts_warnings_out_of_the_slide(self):
+        row = {"#": "1", "內容形狀": "8 流程", "版型": "L-CANVAS", "畫面內容": "title: 還沒放圖"}
+        rendered, warnings = deck_compile.render_row(row, 0, 2, VisualRhythmResolver(1), self.tmp)
+        self.assertNotIn("deck-compile warning", rendered)
+        self.assertEqual(len(warnings), 1)
+        self.assertIn("投影片 #1", warnings[0])
 
 
 if __name__ == "__main__":

@@ -1,10 +1,10 @@
 # Layout Catalog — 簡報版型目錄 (v1.0)
 
-本目錄列出 `thesisbug2` 支援的 16 種標準版型代碼（5 大族群）。在撰寫 `<talk>/storyboard.md` 時，「版型」欄位直接填入版型代碼，「畫面內容」欄位則填入對應的**槽位微語法（Slot Micro-syntax）**。
+本目錄列出 `thesisbug2` 支援的 17 種標準版型代碼（5 大族群）。在撰寫 `<talk>/storyboard.md` 時，「版型」欄位直接填入版型代碼，「畫面內容」欄位則填入對應的**槽位微語法（Slot Micro-syntax）**。
 
 執行 `./fw deck-compile <talk>` 時，編譯腳本會讀取 `storyboard.md` 前提中的 `Seed`（隨機種子），以確定性（Deterministic）演算法自動挑選深度視覺變體（Variants）與色彩節奏，毫秒級編譯出語意結構精準、符合投影機字級規範的 `deck.html`。
 
-> 💡 **互動展示工作台**：可開啟 [`docs/layout-explorer.html`](file:///Users/j/homework/thesisbug2/docs/layout-explorer.html)（或執行 `./fw deck-compile --explorer` 取得連結），在瀏覽器中動態切換 16 種版型、深度變體與 14 種主題，並一鍵複製分鏡語法。
+> 💡 **互動展示工作台**：可開啟 [`docs/layout-explorer.html`](file:///Users/j/homework/thesisbug2/docs/layout-explorer.html)（或執行 `./fw deck-compile --explorer` 取得連結），在瀏覽器中動態切換 17 種版型、深度變體與 14 種主題，並一鍵複製分鏡語法。
 
 ---
 
@@ -166,11 +166,25 @@
   title: 外交政策決策的三層分析架構<br>levels:<br>- 體系層 (Systemic): 大國實力對比結構與無政府狀態下的相對獲益競爭<br>- 國內層 (Domestic): 選民偏好、國會立法約束與關鍵產業利益遊說團體<br>- 領導層 (Individual): 決策者歷史經驗、危機認知基模與風險偏好特質<br>core_focus: 本文聚焦國內層政治如何扭曲體系層的結構性壓力傳導
   ```
 
+### 13. `L-CANVAS`（標準外框＋自由畫布）
+- **使用情境**：理科的機制圖、流程示意、自己畫的圖。外框（標題列、頁碼、標題、選填的說明與收束框）照常，中間一大塊畫布自由發揮；固定的卡片版型裝不下的圖都放這裡。
+- **深度變體**：`default`。
+- **槽位規格**：`title`；畫布二選一：
+  - **流程圖**：`start`、`lanes`（每列一條路線，節點以 `→` 分隔；`[標籤]` 是路線名稱；`*節點*` 以章節色描框，標出這頁要講的節點）、`end`。由左到右：起點 → 一到四條平行路線 → 終點（activity-on-node），座標由 `./fw deck-compile` 算好，畫成 34px 字的 `svg.art.dg`，跟著主題換色；逐步出現的順序是起點、各路線、終點。
+  - **SVG 檔**：`svg: <相對 talk 的路徑>`，把自己畫或程式產生的 SVG 原樣嵌進畫布（不能指到 talk 以外）。viewBox 寬設 1728（投影片內容寬）字才不會被縮小。
+  - 選填：`lead`、`caption`（圖說）、`verdict`（收束框，預設標籤「重點」，可用 `verdict_label` 改）。
+- **為什麼不用 PlantUML 或 Mermaid**：簡報沒有 Mermaid 執行環境；PlantUML 新語法的活動圖只能由上到下（舊語法與 Graphviz 可以左到右，但要另外調版面），輸出的顏色與字級是寫死的，進投影片還要後製、常被縮到 34px 以下。這種固定形狀的圖座標一算就有，不需要自動排版。
+- **放不下時**：最長的路線節點太多或字太長，`deck-compile` 會警告，字不會縮小；縮短節點文字或拆頁。沒寫畫布內容時畫出虛線框「畫布待放圖」並警告。
+- **畫面內容範例**：
+  ```text
+  title: 兩種欄位分開處理，最後一起訓練<br>start: 原始資料<br>lanes:<br>- [數值欄位] 補缺值 → *標準化* → 選特徵<br>- [文字欄位] 斷詞 → 向量化 → *降維*<br>end: 模型訓練<br>verdict: 標準化與降維是這次新加的兩步
+  ```
+
 ---
 
 ## 五、 學術批判、文本與實證類（Scholarly Critique & Evidence）
 
-### 13. `L-QUOTE-CRITIQUE`（文獻原話引述＋三重解構）
+### 14. `L-QUOTE-CRITIQUE`（文獻原話引述＋三重解構）
 - **使用情境**：展示原作者經典引文（附頁碼），並從三個面向批判其漏洞。
 - **深度變體**：`quote-top`（上引文下三卡）、`quote-left`（左引文右三條）。
 - **槽位規格**：`title`, `quote` *(必填)*, `citation` *(必填)*, `critiques` *(必填，3 項；`- [tag] 要點` 或 `- [tag] 標題: 說明`，後者標題與說明都上畫面)*
@@ -179,7 +193,7 @@
   title: 對「攻勢現實主義」核心假說的批判<br>quote: 無政府狀態迫使所有大國最大化其相對權力，因為這是確保自身生存的唯一安全途徑。<br>citation: Mearsheimer (2001), p. 29<br>critiques:<br>- [前提] 單一偏好假設: 忽略國家除生存外可能追求的經濟繁榮與制度合法性<br>- [實證] 歐洲統合反例: 無法解釋後冷戰歐洲安全共同體內部的自願去武裝化<br>- [邏輯] 螺旋困境忽視: 最大化權力的行動往往加速引發周邊制衡聯盟
   ```
 
-### 14. `L-HYPOTHESIS-TEST`（理論假設 vs 實證落差）
+### 15. `L-HYPOTHESIS-TEST`（理論假設 vs 實證落差）
 - **使用情境**：理論預期 vs 實證發現的衝突對比（理論謎題）。
 - **深度變體**：`contrast-pillars`（對照立柱）、`conflict-flow`（實證矛盾箭頭）。
 - **槽位規格**：`title`, `hypothesis`, `finding`, `theoretical_puzzle`
@@ -189,7 +203,7 @@
   title: 貿易相互依存與衝突機率檢驗<br>hypothesis: {label: "古典自由主義假說", head: "雙邊貿易依存度越高，武力衝突機率越低", logic: "戰爭帶來的經貿損失高於潛在領土收益"}<br>finding: {head: "在特定高技術依賴領域，經濟制裁與衝突頻率顯著上升", status: "實證結果與假說背馳"}<br>theoretical_puzzle: 相互依存並未消除衝突，反而提供了非對稱打擊的新弱點槓桿。
   ```
 
-### 15. `L-STAT-HERO`（單一震撼數據指標）
+### 16. `L-STAT-HERO`（單一震撼數據指標）
 - **使用情境**：單一巨大數據（110px 大字）配上背景說明與兩大現實意涵。
 - **深度變體**：`stat-left`（左側大數字）、`stat-center`（置中大數字）。
 - **槽位規格**：`title`, `stat_number`, `stat_label`, `context`, `implications` *(2 項)*
@@ -198,7 +212,7 @@
   title: 全球高階製程的集中度風險<br>stat_number: 92%<br>stat_label: 台灣佔全球 10 奈米以下先進晶片代工市佔率<br>context: 數據來源：波士頓諮詢公司 (BCG) 2021 年全球半導體供應鏈脆弱性報告<br>implications:<br>- 戰略不可替代性: 全球主要經濟體在技術上高度依賴單一地理節點的安全<br>- 供應鏈脆弱樞紐: 任何局部海空封鎖將引發全球電子產業的即時斷鏈危機
   ```
 
-### 16. `L-DEFN-EXAMPLE`（概念界定與典型例證）
+### 17. `L-DEFN-EXAMPLE`（概念界定與典型例證）
 - **使用情境**：術語或新概念界定，同時給出正向典型例證與邊界反例。
 - **深度變體**：`dict-card`（詞典式邊框）、`split-cards`（正反例獨立卡）。
 - **槽位規格**：`title`, `term`, `etymology`, `formal_definition`, `positive_example`, `negative_boundary`

@@ -36,6 +36,13 @@ class BuildFormatTests(unittest.TestCase):
         self.assertIn("\n  pdf:\n", yml)
         self.assertNotIn("# The HTML report", yml)
 
+    def test_target_joins_the_render_list_once(self):
+        # Quarto ignores _quarto.yml for a file off the render list, so a target must be on it.
+        yml = build.add_render_target("project:\n  render:\n    - paper.qmd\n\ntitle: T\n", "plan.qmd")
+        self.assertIn("  render:\n    - paper.qmd\n    - plan.qmd\n", yml)
+        self.assertEqual(build.add_render_target(yml, "plan.qmd"), yml)
+        self.assertEqual(build.add_render_target(yml, None), yml)
+
     def test_template_without_html_refuses(self):
         with self.assertRaises(SystemExit) as e:
             self.generated({"type": "paper", "title": "T"}, "html")

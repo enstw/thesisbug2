@@ -81,6 +81,21 @@ def splice_chapters(yml: str, unit: Path) -> str:
     return yml.replace(m.group(1), "\n".join(out) + "\n")
 
 
+def add_render_target(yml: str, target: str | None) -> str:
+    """Put a --target file on the project's render list.
+
+    Quarto 1.10 renders a file that is not on `project.render` as a standalone
+    document: none of _quarto.yml applies, so a target built from a paper unit
+    came out as HTML, without the preamble, the CJK font or the apa-zh
+    bibliography filters (2026-10-27). Listing it makes the unit's settings
+    reach it, which is the point of building it with ./fw build.
+    """
+    m = re.search(r"^  render:\n((?:    - .+\n)+)", yml, re.M)
+    if not target or not m or re.search(rf"^    - {re.escape(target)}$", m.group(1), re.M):
+        return yml
+    return yml.replace(m.group(1), m.group(1) + f"    - {target}\n", 1)
+
+
 def bib_entries(path: Path) -> list[tuple[str, str]]:
     """(key, raw entry text) for each entry, by brace matching."""
     text = path.read_text(encoding="utf-8")
@@ -181,7 +196,7 @@ def add_html_format(yml: str, tdir: Path, ptype: str) -> str:
     return re.sub(r"^format:\n", lambda m: m.group(0) + lines, yml, count=1, flags=re.M)
 
 
-def generate(unit: Path, root: Path, work: dict, fmt: str = "pdf") -> None:
+def generate(unit: Path, root: Path, work: dict, fmt: str = "pdf", target: str | None = None) -> None:
     ptype = work["type"]
     tdir = FRAMEWORK / "assets" / "templates" / ptype
     # apa-zh (《遠景基金會季刊》撰稿規範) exists for the two types whose templates
@@ -212,6 +227,7 @@ def generate(unit: Path, root: Path, work: dict, fmt: str = "pdf") -> None:
     yml = re.sub(r"^bibliography:.*\n(?:[ \t]+.*\n)*", "", yml, flags=re.M)
     yml = yml.rstrip("\n") + "\n\n" + bibliography_yaml(unit, root, apa_zh)
     yml = splice_chapters(yml, unit)
+    yml = add_render_target(yml, target)
     if fmt == "html":
         yml = add_html_format(yml, tdir, ptype)
     (unit / GEN_YML).write_text(
@@ -430,7 +446,7 @@ def main() -> None:
 
     fmt = output_format(work, argv)
     bib_gate(unit, work)
-    generate(unit, root, work, fmt)
+    generate(unit, root, work, fmt, target)
     if target:
         fix_preamble_include(unit, target)
     render(unit, root, target, fmt)

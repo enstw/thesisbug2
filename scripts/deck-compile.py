@@ -23,6 +23,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 from _deck_catalog import CATALOG, VisualRhythmResolver, get_layout, parse_slot_payload  # noqa: E402
 from _deck_motion import apply_motion, split_codes  # noqa: E402
+from _deck_steps import step_names, strip_html  # noqa: E402
 from _paths import course_root, rel, resolve_talk  # noqa: E402
 
 import html as html_lib
@@ -122,7 +123,8 @@ def extract_storyboard_rows(storyboard_text: str) -> list[dict[str, str]]:
 
 
 def render_row(row: dict[str, str], idx: int, total: int,
-               resolver: VisualRhythmResolver, talk: Path | None = None) -> tuple[str | None, list[str]]:
+               resolver: VisualRhythmResolver, talk: Path | None = None,
+               steps: dict[str, str] | None = None) -> tuple[str | None, list[str]]:
     """Render one storyboard row as a slide, or None with a warning when its layout is not a catalog code.
 
     Shared with storyboard-review, which previews each row the way the deck will show it."""
@@ -177,6 +179,9 @@ def render_row(row: dict[str, str], idx: int, total: int,
     # A renderer that names a file (L-CANVAS `svg:`) reads it relative to the talk; a
     # renderer reports a problem as an HTML comment, lifted out here so it reaches stderr.
     ctx.base = talk
+    # The step strip goes in the top bar only when the storyboard declares 流程步驟 and has
+    # a 環節 column, so a storyboard without them compiles exactly as before.
+    ctx.pmap = strip_html(row["環節"], steps) if steps and "環節" in row else ""
     rendered = layout_def.render_func(slots, chosen_variant, ctx)
     for msg in WARNING_RE.findall(rendered):
         warnings.append(f"投影片 #{slide_num}: {html_lib.unescape(msg)}")
@@ -199,12 +204,13 @@ def compile_storyboard(talk: Path) -> tuple[str, list[str]]:
         sys.exit(f"no slide rows found in {sb_file}")
 
     resolver = VisualRhythmResolver(seed)
+    steps = step_names(text)
     slides_html: list[str] = []
     warnings: list[str] = []
     total = len(rows)
 
     for idx, row in enumerate(rows):
-        rendered, row_warnings = render_row(row, idx, total, resolver, talk)
+        rendered, row_warnings = render_row(row, idx, total, resolver, talk, steps)
         warnings.extend(row_warnings)
         if rendered is not None:
             slides_html.append(rendered)

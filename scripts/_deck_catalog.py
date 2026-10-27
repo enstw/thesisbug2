@@ -53,6 +53,7 @@ class SlideContext:
     data_label: str
     variant: str
     base: Path | None = None    # the talk directory, for slots that name a file (L-CANVAS `svg:`)
+    pmap: str = ""              # the pipeline step strip for this row (_deck_steps), "" = none
 
 
 @dataclass
@@ -223,7 +224,7 @@ class VisualRhythmResolver:
 def _render_topbar(ctx: SlideContext) -> str:
     return f"""      <div class="railtop"></div>
       <div class="topbar">
-        <span class="eyebrow">{esc(ctx.eyebrow)}</span>
+        <span class="eyebrow">{esc(ctx.eyebrow)}</span>{ctx.pmap}
         <span class="chap"><b>{ctx.slide_num}</b> / {ctx.total_slides}</span>
       </div>"""
 

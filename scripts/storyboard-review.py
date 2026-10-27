@@ -46,6 +46,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 from _deck import SKILLS  # noqa: E402
 from _deck_catalog import VisualRhythmResolver  # noqa: E402
+from _deck_steps import premise_value, section, step_names, steps_decl, steps_of  # noqa: E402  (shared with deck-compile)
 from _paths import (course_root, find_talk, included_files, manuscript_files, rel,  # noqa: E402
                     resolve_unit, talk_model_files)
 
@@ -194,11 +195,6 @@ def plain(s: str, n: int | None = None) -> str:
     return html.escape(s if n is None or len(s) <= n else s[:n] + "…", quote=False)
 
 
-def section(md: str, title: str) -> str:
-    m = re.search(rf"^## {re.escape(title)}\s*\n(.*?)(?=^## |\Z)", md, re.S | re.M)
-    return m.group(1) if m else ""
-
-
 def md_table(text: str) -> tuple[list[str], list[list[str]]]:
     rows = [ln for ln in text.splitlines() if ln.startswith("|")]
     if len(rows) < 2:
@@ -211,35 +207,6 @@ def html_table(header: list[str], rows: list[list[str]], cls: str = "") -> str:
     th = "".join(f"<th>{inline(h)}</th>" for h in header)
     tr = "".join("<tr>" + "".join(f"<td>{inline(c)}</td>" for c in r) + "</tr>" for r in rows)
     return f'<div class="scroll"><table class="{cls}"><tr>{th}</tr>{tr}</table></div>'
-
-
-def premise_value(md: str, key: str) -> str | None:
-    m = re.search(rf"^- (?:\*\*)?{key}(?:\*\*)?\s*[：:]\s*(.+)$", section(md, "前提"), re.M)
-    return m.group(1).strip() if m else None
-
-
-def steps_decl(md: str) -> tuple[list[str], str | None]:
-    """`流程步驟：S1 讀取資料、S2 攤平、保留（圖：@fig-x）` → (['S1', 'S2', '保留'], 'fig-x').
-    A step's key is its first word, which is what the 環節 column cites."""
-    val = premise_value(md, "流程步驟")
-    if not val:
-        return [], None
-    fig = re.search(r"[（(]圖[：:]\s*@?([\w-]+)[）)]", val)
-    val = re.sub(r"[（(]圖[：:].*?[）)]", "", val)
-    keys = [item.split()[0] for item in re.split("[、，,]", val) if item.split()]
-    return keys, fig.group(1) if fig else None
-
-
-def steps_of(cell: str, keys: list[str]) -> dict[str, str]:
-    """「改：S3、保留；講：S6」→ {'S3': 'chg', '保留': 'chg', 'S6': 'say'}."""
-    out: dict[str, str] = {}
-    for part in re.split("[；;]", cell):
-        m = re.match(r"\s*(改|講)\s*[：:](.*)", part)
-        if m:
-            for s in re.split("[、，, ＋+]", m.group(2)):
-                if s.strip() in keys:
-                    out[s.strip()] = "chg" if m.group(1) == "改" else "say"
-    return out
 
 
 def model_files(unit: Path, talk: Path) -> list[Path]:
@@ -348,9 +315,10 @@ def sketch(layout: str, shape: str, tok: dict[str, str]) -> str:
 
 
 def preview(row: dict[str, str], idx: int, total: int, resolver: VisualRhythmResolver,
-            css_hrefs: list[str], tok: dict[str, str], talk: Path | None = None) -> tuple[str, str]:
+            css_hrefs: list[str], tok: dict[str, str], talk: Path | None = None,
+            steps: dict[str, str] | None = None) -> tuple[str, str]:
     """(preview html, caption): the compiled slide when 版型 is a catalog code."""
-    rendered, _ = deck_compile.render_row(row, idx, total, resolver, talk)
+    rendered, _ = deck_compile.render_row(row, idx, total, resolver, talk, steps)
     if rendered:
         rendered = re.sub(r'<section\b', '<section data-deck-active=""', rendered, count=1)
         doc = ("<!doctype html><html><head><meta charset='utf-8'>"
@@ -498,7 +466,7 @@ def build(unit: Path, talk: Path, root: Path) -> tuple[Path, int]:
         det = ("<details><summary>論點原文（points.md）</summary>"
                + "".join(f'<p class="point"><b>{r}</b> {inline(pts.get(r, "（points.md 沒有這一點）"))}</p>' for r in refs)
                + "</details>") if refs and pts else ""
-        pv, cap = preview(s, idx, len(rows), resolver, css_hrefs, tok, talk)
+        pv, cap = preview(s, idx, len(rows), resolver, css_hrefs, tok, talk, step_names(md))
         side = ""
         if keys:
             st = steps_of(s.get("環節", ""), keys)

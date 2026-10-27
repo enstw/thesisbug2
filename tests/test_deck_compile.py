@@ -365,5 +365,50 @@ class CanvasLayoutTests(unittest.TestCase):
         self.assertIn("投影片 #1", warnings[0])
 
 
+class StepStripTests(unittest.TestCase):
+    """流程步驟 + 環節 put a pipeline step strip in the compiled top bar."""
+
+    MD = ("# 分鏡稿\n\n## 前提\n\n- Seed: 3\n"
+          "- 流程步驟：S1 讀取資料、S2 攤平、S3 模型、保留、S8 提交檔（圖：@fig-x）\n\n## 投影片\n")
+
+    def test_names_are_two_characters_or_the_override(self):
+        from scripts._deck_steps import step_names
+        self.assertEqual(step_names(self.MD), {"S1": "讀取", "S2": "攤平", "S3": "模型", "保留": "保留", "S8": "提交"})
+        md = self.MD.replace("\n\n## 投影片", "\n- 小地圖：讀取、展開、網路、記憶、交卷\n\n## 投影片")
+        self.assertEqual(list(step_names(md).values()), ["讀取", "展開", "網路", "記憶", "交卷"])
+
+    def test_strip_marks_changed_and_explained_steps(self):
+        from scripts._deck_steps import step_names, strip_html
+        names = step_names(self.MD)
+        html = strip_html("改：S3、保留；講：S8", names)
+        self.assertIn('<span class="pcell chg">模型</span>', html)
+        self.assertIn('<span class="pcell chg">保留</span>', html)
+        self.assertIn('<span class="pcell say">提交</span>', html)
+        self.assertIn('<span class="pcell">讀取</span>', html)
+        self.assertNotIn("S3", html)                       # slides show names, never S numbers
+        self.assertEqual(strip_html("—", names), "")
+        self.assertEqual(strip_html("改：S3", {}), "")
+
+    def compile(self, header, row):
+        tmp = Path(tempfile.mkdtemp(prefix="thesisbug2-test-steps-"))
+        self.addCleanup(shutil.rmtree, tmp, True)
+        (tmp / "storyboard.md").write_text(self.MD + header + "\n" + row + "\n", encoding="utf-8")
+        compiled, _ = compile_storyboard(tmp)
+        return compiled
+
+    def test_compiled_topbar_carries_the_strip(self):
+        html = self.compile("| # | 內容形狀 | 版型 | 畫面內容 | 環節 |\n| :--- | :--- | :--- | :--- | :--- |",
+                            "| 1 | 8 流程 | L-CANVAS | title: t<br>start: a<br>lanes:<br>- b<br>end: c | 改：S3 |")
+        topbar = html.split('class="topbar"')[1].split("</div>")[0]
+        self.assertIn('class="pmap"', topbar)
+        self.assertLess(topbar.index("eyebrow"), topbar.index("pmap"))
+        self.assertLess(topbar.index("pmap"), topbar.index('class="chap"'))
+
+    def test_no_strip_without_a_steps_column(self):
+        html = self.compile("| # | 內容形狀 | 版型 | 畫面內容 |\n| :--- | :--- | :--- | :--- |",
+                            "| 1 | 8 流程 | L-CANVAS | title: t<br>start: a<br>lanes:<br>- b<br>end: c |")
+        self.assertNotIn("pmap", html)
+
+
 if __name__ == "__main__":
     unittest.main()

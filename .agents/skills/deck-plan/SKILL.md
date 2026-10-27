@@ -154,7 +154,11 @@ Three optional parts, used when the audience needs them:
   and add a **環節** column (`改：S3、S5；講：S6`, or `—`). The page shows a
   step strip per card and a slide × step table, with changed steps coloured
   apart from explained ones, because an audience comparing versions loses track
-  of which stage each slide changed. `流程對照：<course path> § <heading>｜<column prefix>`
+  of which stage each slide changed. `./fw deck-compile` puts the same strip in
+  each compiled slide's top bar, between the eyebrow and the page number, with
+  the two-character step names (讀取資料 → 讀取; `小地圖：讀取、攤平、…` overrides
+  them) instead of S numbers, because a listener who hears "S4" cannot recall
+  which stage it was; a `—` row gets no strip. `流程對照：<course path> § <heading>｜<column prefix>`
   adds a course-level table, filtered to this occasion's columns.
 - **Formulas.** A **公式** column (`$…$`, KaTeX) lists the formula behind a
   slide for an audience that reads formulas faster than prose; each formula

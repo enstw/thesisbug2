@@ -410,5 +410,39 @@ class StepStripTests(unittest.TestCase):
         self.assertNotIn("pmap", html)
 
 
+class FormulaLineTests(unittest.TestCase):
+    """The 公式 column becomes one p.fx line, typeset offline by the bundled KaTeX."""
+
+    SLIDE = get_layout("L-CANVAS").render_func(
+        parse_slot_payload("title: t<br>start: a<br>lanes:<br>- b<br>end: c"), "default",
+        SlideContext(1, 2, "var(--c1)", "e", "d", "default"))
+
+    def test_dollar_math_becomes_paren_delimiters_at_the_foot(self):
+        html = deck_compile.add_formula(self.SLIDE, r"$a<b$｜$\lambda$")
+        self.assertIn('<p class="fx rise d4">\\(a&lt;b\\)<span class="sep">｜</span>\\(\\lambda\\)</p>', html)
+        self.assertLess(html.index('class="canvas"'), html.index('class="fx'))
+        self.assertTrue(html.rstrip().endswith("</section>"))
+
+    def test_dash_or_cover_gets_no_line(self):
+        self.assertEqual(deck_compile.add_formula(self.SLIDE, "—"), self.SLIDE)
+        hero = get_layout("L-HERO-TITLE").render_func(parse_slot_payload("title: t"), "default",
+                                                      SlideContext(1, 2, "var(--c1)", "e", "d", "default"))
+        self.assertEqual(deck_compile.add_formula(hero, "$x$"), hero)
+
+    def test_katex_ships_with_the_deck_and_loads_before_deck_stage(self):
+        from scripts._deck import deck_assets, starter_deck
+        assets = deck_assets()
+        for f in ("asset/deck-math.js", "asset/katex/katex.min.js", "asset/katex/auto-render.min.js",
+                  "asset/katex/katex.min.css", "asset/katex/LICENSE", "asset/katex/fonts/KaTeX_Main-Regular.woff2"):
+            self.assertIn(f, assets)
+            self.assertTrue(assets[f].is_file(), f)
+        for variant in ("thesis", "reading-guide"):
+            html = starter_deck(variant).read_text(encoding="utf-8")
+            order = [html.index(f'src="asset/{f}"') for f in
+                     ("katex/katex.min.js", "katex/auto-render.min.js", "deck-math.js", "deck-stage.js")]
+            self.assertEqual(order, sorted(order), variant)
+            self.assertIn('href="asset/katex/katex.min.css"', html)
+
+
 if __name__ == "__main__":
     unittest.main()

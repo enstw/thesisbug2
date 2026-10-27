@@ -41,6 +41,10 @@ def deck_assets() -> dict[str, Path]:
         "asset/ENSFont-Bold.woff2": house / "fonts" / "ENSFont-Bold.woff2",
         "asset/deck-stage.js": runtime / "deck-stage.js",                # runtime
         "asset/presenter-stage.js": runtime / "presenter-stage.js",
+        "asset/deck-math.js": deck / "asset" / "deck-math.js",           # typesets the 公式 line with KaTeX
+        # KaTeX 0.16.11 (MIT, LICENSE beside it), woff2 fonts only: formulas typeset offline
+        **{f"asset/katex/{f.relative_to(deck / 'asset' / 'katex').as_posix()}": f
+           for f in sorted((deck / "asset" / "katex").rglob("*")) if f.is_file()},
     }
 
 

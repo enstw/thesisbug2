@@ -57,6 +57,7 @@ Sized for a classroom projector at 1920×1080: body 40px, tables / labels / capt
 - `.stats` > `.stat` (`.n` number, `.l` label) — metric trio; `.n` with `data-to="47.2"` animates the count on arrival; `.stats.four` for four figures.
 - `ul.clean` (+ `.lead-size`) — dotted bullet list with accent markers.
 - `.flowdiag` > `.flownode` / `.flowarrow` — left-to-right process diagram.
+- `p.fx` — formula line under the slide body (the storyboard's 公式 column), typeset by `asset/katex/` through `deck-math.js`; write math as `\( … \)` (the only delimiter, since `$` also occurs in ordinary text), `.sep` between formulas, `small` for a gloss.
 - `.canvas-frame` > `.canvas` — L-CANVAS: the drawing area takes the height the title, lead and closing box leave; `.canvas-empty` is its placeholder. A diagram in it uses viewBox width 1728 (the content width) so its text stays at 34px.
 
 ## Content-shape components (see § Shape → pattern for when)

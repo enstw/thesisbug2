@@ -339,6 +339,15 @@
     font-size: calc(40px * var(--deck-font-scale, 1)); }
   .canvas-frame .verdict { margin-top: 24px; }
 
+  /* ---------- formula line (storyboard 公式 column → p.fx, typeset by asset/katex) ----------
+     One line under the slide body, at body size, for an audience that reads the formula
+     faster than the prose; .sep separates several formulas, small is a gloss. */
+  p.fx { margin: 28px 0 0; padding-top: 18px; border-top: 1px solid var(--hair);
+    font-size: calc(40px * var(--deck-font-scale, 1)); line-height: 1.6; color: var(--body); }
+  p.fx .katex { font-size: 1em; color: var(--text); }
+  p.fx .sep { margin: 0 .6em; color: var(--body); }
+  p.fx small { font-size: calc(34px * var(--deck-font-scale, 1)); color: var(--body); }
+
   /* ---------- layout catalog additions (breadth & depth) ---------- */
   .card--top-rail::before { content:""; position:absolute; inset:0 0 auto 0; height:4px; background: var(--chapter); opacity:.85; }
   .card--tint-elevated {

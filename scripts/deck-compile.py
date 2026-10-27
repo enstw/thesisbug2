@@ -122,6 +122,22 @@ def extract_storyboard_rows(storyboard_text: str) -> list[dict[str, str]]:
     return rows
 
 
+def add_formula(rendered: str, cell: str) -> str:
+    """The 公式 column as one `p.fx` line at the foot of the slide body, typeset by asset/katex.
+
+    `$…$` becomes `\\(…\\)`, the only delimiter deck-math.js typesets, because `$` also
+    appears in ordinary slide text. A cover or closing slide has no `.content` and gets none.
+    """
+    cell = cell.strip()
+    if not cell or cell in {"—", "-", "–"} or '<div class="content' not in rendered:
+        return rendered
+    tex = html_lib.escape(re.sub(r"\$(.+?)\$", r"\\(\1\\)", cell), quote=False)
+    tex = tex.replace("｜", '<span class="sep">｜</span>')
+    line = f'      <p class="fx rise d4">{tex}</p>\n'
+    head, sep, tail = rendered.rpartition("    </div>\n  </section>")
+    return head + line + sep + tail if sep else rendered
+
+
 def render_row(row: dict[str, str], idx: int, total: int,
                resolver: VisualRhythmResolver, talk: Path | None = None,
                steps: dict[str, str] | None = None) -> tuple[str | None, list[str]]:
@@ -186,6 +202,7 @@ def render_row(row: dict[str, str], idx: int, total: int,
     for msg in WARNING_RE.findall(rendered):
         warnings.append(f"投影片 #{slide_num}: {html_lib.unescape(msg)}")
     rendered = WARNING_RE.sub("", rendered)
+    rendered = add_formula(rendered, row.get("公式", ""))
     rendered, motion_warnings = apply_motion(rendered, split_codes(row.get("動態", "")))
     warnings.extend(f"投影片 #{slide_num}: {w}" for w in motion_warnings)
     return rendered, warnings

@@ -162,7 +162,9 @@ Three optional parts, used when the audience needs them:
   adds a course-level table, filtered to this occasion's columns.
 - **Formulas.** A **公式** column (`$…$`, KaTeX) lists the formula behind a
   slide for an audience that reads formulas faster than prose; each formula
-  must match the Model's text, like every other cell.
+  must match the Model's text, like every other cell. `./fw deck-compile` puts it on
+  the slide as one formula line under the body (`p.fx`; `｜` separates several,
+  `—` means none), typeset offline by the KaTeX the deck carries.
 - **Choices.** Decisions left to the author go in a `## 待選` section: a bullet
   per question, indented `- A …` options, and `建議 X：理由` in the question.
   The page renders radios and a copy button; the author pastes the line back,

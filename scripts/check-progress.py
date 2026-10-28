@@ -32,12 +32,18 @@ What counts as a violation (each has a reason):
 
 `./fw build` runs this check and refuses to build on a violation (override once
 with --no-progress-gate), so the files cannot drift back between cleanups.
+
+A unit may change a size budget in WORK.json, e.g. "progress_budget":
+{"DECISIONS.md": null}; null removes the size limit for that file, a number
+replaces it. The other checks still apply. Use it when the author decides the
+budget is cutting decisions they still need, and delete the key to restore it.
 """
 
 from __future__ import annotations
 
 import argparse
 import datetime as dt
+import json
 import re
 import sys
 from pathlib import Path
@@ -55,11 +61,25 @@ CHANGELOG_HEAD = ("# 變更紀錄\n\n> **不到必要不讀取。** 這是歷程
                   "要追溯時用 `./fw log --find <關鍵字>`，再 `./fw log --show <id>`；不要整份讀。\n\n（新→舊）\n\n")
 
 
-def violations(path: Path) -> list[str]:
+def budgets(unit: Path) -> dict[str, int | None]:
+    """BUDGET, with the unit's WORK.json "progress_budget" overrides (None = no size limit)."""
+    out: dict[str, int | None] = dict(BUDGET)
+    work = unit / "WORK.json"
+    if work.is_file():
+        override = json.loads(work.read_text(encoding="utf-8")).get("progress_budget") or {}
+        for name, value in override.items():
+            if name not in out:
+                sys.exit(f"WORK.json progress_budget: unknown file {name!r} (expected one of {', '.join(BUDGET)})")
+            if value is not None and (not isinstance(value, int) or isinstance(value, bool) or value <= 0):
+                sys.exit(f"WORK.json progress_budget[{name!r}]: expected a positive byte count or null")
+            out[name] = value
+    return out
+
+
+def violations(path: Path, budget: int | None) -> list[str]:
     out = []
     data = path.read_bytes()
-    budget = BUDGET[path.name]
-    if len(data) > budget:
+    if budget is not None and len(data) > budget:
         out.append(f"{len(data):,} bytes, budget {budget:,} — move history to CHANGELOG.md, "
                    "or split a rule's long rationale into the file it governs")
     fence = False
@@ -131,13 +151,14 @@ def main() -> None:
     for problem in store_problems(unit):
         print(f"workflow: {problem}")
         bad += 1
-    for name in BUDGET:
+    for name, budget in budgets(unit).items():
         f = unit / name
         if not f.is_file():
             continue
-        v = violations(f)
+        v = violations(f, budget)
         size = len(f.read_bytes())
-        print(f"{rel(f, root)}: {size:,}/{BUDGET[name]:,} bytes — " + ("OK" if not v else f"{len(v)} problem(s)"))
+        limit = f"{budget:,}" if budget is not None else "no size limit (WORK.json)"
+        print(f"{rel(f, root)}: {size:,}/{limit} bytes — " + ("OK" if not v else f"{len(v)} problem(s)"))
         for line in v:
             print("  · " + line)
         bad += len(v)

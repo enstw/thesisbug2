@@ -3,6 +3,7 @@
 import contextlib
 import importlib.util
 import io
+import json
 import os
 from pathlib import Path
 import shutil
@@ -264,6 +265,18 @@ class CourseInitTests(unittest.TestCase):
         self.assertIn("dated entry", blocked.stdout)
 
         self.run_cmd("./fw", "check-progress", "hw", "--sweep", cwd=course)
+        decisions = unit / "DECISIONS.md"
+        decisions.write_text(decisions.read_text(encoding="utf-8")
+                             + "".join(f"- 規則{n}：" + "理由" * 100 + "\n" for n in range(20)), encoding="utf-8")
+        over = self.run_cmd("./fw", "check-progress", "hw", cwd=course, check=False)
+        self.assertNotEqual(over.returncode, 0)
+        self.assertIn("budget 9,000", over.stdout)
+        work = unit / "WORK.json"
+        meta = json.loads(work.read_text(encoding="utf-8"))
+        meta["progress_budget"] = {"DECISIONS.md": None}
+        work.write_text(json.dumps(meta, ensure_ascii=False), encoding="utf-8")
+        lifted = self.run_cmd("./fw", "check-progress", "hw", cwd=course)
+        self.assertIn("no size limit", lifted.stdout)
         self.assertNotIn("第一章初稿", progress.read_text(encoding="utf-8"))
         self.assertIn("第一章初稿", (unit / "CHANGELOG.md").read_text(encoding="utf-8"))
         self.run_cmd("./fw", "log", "hw", "里程碑一行", cwd=course)

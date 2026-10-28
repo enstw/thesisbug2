@@ -56,6 +56,17 @@ only the required text to a reviewer without filesystem tools. A prompt alone
 is not a write restriction, and the referee needs manuscript evidence rather
 than the authoring environment's instructions.
 
+Confirm that the boundary took effect before calling a run read-only: check
+the result of the reviewer's first command or its startup diagnostics. A CLI
+sandbox can fail to start on a host that lacks the kernel features it needs
+(for example, Linux without unprivileged user namespaces, where bubblewrap
+reports that it cannot create a namespace). The reviewer may then keep running
+commands outside the sandbox, or stop without answering, while its flags still
+say read-only. When the sandbox cannot start, rerun with the reviewer's
+command-execution tool disabled and the required text sent in the prompt. The
+missing kernel feature makes every later run on that host fail the same way,
+and an unenforced run is not read-only.
+
 ## Modes
 
 `/gpt_review [chapters]` → **review**; `/gpt_review challenge [focus]` →
@@ -120,7 +131,9 @@ an unqualified "last session", because it may belong to another task.
    `Recommendation: <action> because <names the most actionable finding>`.
 1. Persist each run to `<unit>/gpt-review/<yyyy-mm-dd>-<mode>-<scope>.md`
    (verbatim output + recommendation + reported usage + referee identity,
-   provider, effort if supported, and independence status). This is coursework, so
+   provider, effort if supported, independence status, and the boundary the run
+   actually had: an enforced read-only sandbox, or text only in the prompt).
+   The record should state what was enforced, not what the flags requested. This is coursework, so
    it lives in the unit and is committed to the course repo — never written
    under `.framework/`.
 1. If a flow-check report or author-side review exists for the same scope,

@@ -34,6 +34,8 @@
   </info>
   <locale xml:lang="en">
     <terms>
+      <!-- Pinned so report numbers keep their No. label whatever en-US locale the installed pandoc bundles; newer bundles dropped it (NASA Contractor Report 220043). -->
+      <term name="number" form="short"><single>no.</single><multiple>nos.</multiple></term>
       <term name="page-range-delimiter">-</term>
       <term name="ad"> C.E.</term>
       <term name="bc"> B.C.E.</term>

@@ -124,12 +124,12 @@ class ApaZhRenderTests(unittest.TestCase):
             (d / "en.bib").write_text(EN, encoding="utf-8")
             for name in ("zh", "en"):
                 subprocess.run([*pandoc_cmd(), str(d / f"{name}.bib"), "-t", "csljson", "-o", str(d / f"{name}.json")],
-                               check=True, capture_output=True)
+                               check=True, capture_output=True, env=build.pandoc_env())
             doc = DOC.format(zh=REPO / "assets/apa-zh-TW.csl", en=REPO / "assets/apa-zh-TW-en.csl")
             (d / "t.md").write_text(doc, encoding="utf-8")
             r = subprocess.run([*pandoc_cmd(), "t.md", "--lua-filter", str(REPO / "assets/multibib.lua"),
                                 "--lua-filter", str(REPO / "assets/cite-lang.lua"), "-t", "plain", "--wrap=none"],
-                               cwd=d, capture_output=True, text=True, timeout=120)
+                               cwd=d, capture_output=True, text=True, timeout=120, env=build.pandoc_env())
             self.assertEqual(r.returncode, 0, r.stderr)
             out = r.stdout
             # in-text, per language

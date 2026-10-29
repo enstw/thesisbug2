@@ -5,12 +5,25 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+import unittest.mock
 
 
 REPO = Path(__file__).resolve().parents[1]
 spec = importlib.util.spec_from_file_location("build", REPO / "scripts/build.py")
 build = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(build)
+
+
+class PandocEnvTests(unittest.TestCase):
+    """pandoc hangs at start-up under a 39-bit address space unless its heap reservation is capped."""
+
+    def test_reservation_is_capped_when_the_author_sets_nothing(self):
+        with unittest.mock.patch.dict("os.environ", clear=True):
+            self.assertEqual(build.pandoc_env()["GHCRTS"], "-xr64G")
+
+    def test_the_authors_own_ghcrts_wins(self):
+        with unittest.mock.patch.dict("os.environ", {"GHCRTS": "-xr16G"}):
+            self.assertEqual(build.pandoc_env()["GHCRTS"], "-xr16G")
 
 
 class BuildFormatTests(unittest.TestCase):

@@ -53,6 +53,20 @@ GEN_BIB_ZH, GEN_BIB_EN = "_bib-zh.bib", "_bib-en.bib"
 GEN_JSON_ZH, GEN_JSON_EN = "_bib-zh.json", "_bib-en.json"
 FORMATS = ("pdf", "html")
 ZH_LANGIDS = {"chinese", "zh", "zh-tw", "zh-hant", "zh-hans", "zh-cn", "tchinese", "schinese"}
+# pandoc's GHC runtime reserves ~1 TB of address space for its heap at start-up
+# and insists the reservation begin above 8 GB, releasing and retrying when the
+# kernel places it lower. Under a 39-bit (512 GB) address space — Android GKI
+# kernels, common aarch64 configs — the reservation that fits often starts lower
+# and the retry never ends: pandoc spins in mmap/munmap before reading any input,
+# at random (placement is randomised), so a build that calls it a dozen times
+# hangs almost surely. 64 GB fits any address space and is still far beyond any
+# heap pandoc needs. -xr exists since GHC 9.10.1. An author's own GHCRTS wins.
+GHCRTS = "-xr64G"
+
+
+def pandoc_env() -> dict[str, str]:
+    """Environment for running pandoc or quarto (which runs pandoc)."""
+    return {"GHCRTS": GHCRTS, **os.environ}
 
 
 def yaml_escape(value: str) -> str:
@@ -170,7 +184,7 @@ def to_csljson(src: Path, dst: Path) -> bool:
         if shutil.which(cmd[0]) is None:
             continue
         r = subprocess.run([*cmd, str(src), "-t", "csljson", "-o", str(dst)],
-                           capture_output=True, text=True)
+                           capture_output=True, text=True, env=pandoc_env())
         if r.returncode == 0:
             return True
         print(f"note: {' '.join(cmd)} could not convert {src.name}: {r.stderr.strip()[:200]}")
@@ -391,7 +405,7 @@ def render(unit: Path, root: Path, target: str | None, fmt: str = "pdf") -> None
     # asked for by name.
     cmd = ["quarto", "render"] + ([target] if target else []) + (["--to", "html"] if fmt == "html" else [])
     print(f"→ {' '.join(cmd)}   (in {rel(unit, root)}/)")
-    r = subprocess.run(cmd, cwd=unit)
+    r = subprocess.run(cmd, cwd=unit, env=pandoc_env())
     if r.returncode:
         sys.exit(r.returncode)
     fresh = [p for d in dirs for p in d.glob(f"*.{fmt}") if before.get(p) != p.stat().st_mtime_ns]

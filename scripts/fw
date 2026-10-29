@@ -46,6 +46,18 @@ def update(root: Path) -> int:
         return 2
     before = subprocess.run(["git", "-C", str(fwdir), "rev-parse", "--short", "HEAD"],
                             capture_output=True, text=True).stdout.strip()
+    # The submodule is shallow (course-init, `shallow = true`), and any
+    # depth-limited fetch — e.g. `git submodule update --remote` — cuts main's
+    # history at a new graft. git then cannot see that the checked-out commit is
+    # an ancestor of main, and --ff-only refuses with "Not possible to
+    # fast-forward" although nothing diverged. Fetching the full history first
+    # restores the ancestry the ff-only check below depends on.
+    shallow = subprocess.run(["git", "-C", str(fwdir), "rev-parse", "--is-shallow-repository"],
+                             capture_output=True, text=True).stdout.strip()
+    if shallow == "true":
+        r = subprocess.run(["git", "-C", str(fwdir), "fetch", "--unshallow", "origin"])
+        if r.returncode:
+            return r.returncode
     # ff-only: coursework never commits inside .framework/, so anything else
     # means someone is mid-edit on the framework and should finish that first.
     r = subprocess.run(["git", "-C", str(fwdir), "pull", "--ff-only", "origin", "main"])

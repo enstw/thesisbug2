@@ -244,6 +244,29 @@ class CourseInitTests(unittest.TestCase):
         self.assertEqual(self.run_cmd("git", "rev-parse", "HEAD", cwd=course).stdout.strip(), head)
         self.assertEqual(self.run_cmd("git", "status", "--porcelain", cwd=course).stdout.strip(), "")
 
+    def test_update_fast_forwards_a_submodule_left_shallow_by_a_depth_limited_fetch(self):
+        # A depth-1 fetch of main grafts its history, so the checked-out pin no
+        # longer looks like an ancestor and a bare `pull --ff-only` refuses.
+        self.run_cmd(sys.executable, str(REPO / "scripts/course-init.py"),
+                     "1142-methods", *self.arguments("--yes"))
+        course = self.root / "courses/1142-methods"
+        sub = course / ".framework"
+        self.run_cmd("git", "checkout", "--detach", cwd=sub)
+        for name in ("between", "latest"):
+            (self.framework / f"{name}.txt").write_text(f"{name}\n")
+            self.run_cmd("git", "add", f"{name}.txt", cwd=self.framework)
+            self.run_cmd("git", "commit", "-qm", name, cwd=self.framework)
+            if name == "between":
+                self.run_cmd("git", "fetch", "-q", "--depth", "1", "origin", "main", cwd=sub)
+        self.assertEqual(self.run_cmd("git", "rev-parse", "--is-shallow-repository", cwd=sub).stdout.strip(), "true")
+        self.assertNotEqual(self.run_cmd("git", "pull", "--ff-only", "origin", "main", cwd=sub, check=False).returncode, 0)
+        expected = self.run_cmd("git", "rev-parse", "HEAD", cwd=self.framework).stdout.strip()
+
+        self.run_cmd("./fw", "update", cwd=course)
+
+        self.assertEqual(self.run_cmd("git", "rev-parse", "HEAD", cwd=sub).stdout.strip(), expected)
+        self.assertEqual(self.run_cmd("git", "rev-parse", "--is-shallow-repository", cwd=sub).stdout.strip(), "false")
+
     def test_status_files_gate_blocks_a_log_and_sweep_clears_it(self):
         self.run_cmd(sys.executable, str(REPO / "scripts/course-init.py"),
                      "1142-methods", *self.arguments("--yes"))

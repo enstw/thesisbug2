@@ -69,10 +69,11 @@ DOC = textwrap.dedent("""
 
 
 def pandoc_cmd():
-    if shutil.which("pandoc"):
-        return ["pandoc"]
+    # The pandoc a build renders with (build.to_csljson's order).
     if shutil.which("quarto"):
         return ["quarto", "pandoc"]
+    if shutil.which("pandoc"):
+        return ["pandoc"]
     return None
 
 

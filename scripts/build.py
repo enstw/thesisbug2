@@ -179,8 +179,12 @@ def bibliography_yaml(unit: Path, root: Path, apa_zh: bool) -> str:
 
 
 def to_csljson(src: Path, dst: Path) -> bool:
-    """Convert a .bib to CSL JSON with pandoc (standalone or Quarto's); False if neither runs."""
-    for cmd in (["pandoc"], ["quarto", "pandoc"]):
+    """Convert a .bib to CSL JSON with pandoc (Quarto's or standalone); False if neither runs.
+
+    Quarto's own pandoc comes first because `quarto render` uses it for the
+    rest of the build, and two pandoc versions in one build print the same
+    bibliography differently (their bundled CSL locales drift)."""
+    for cmd in (["quarto", "pandoc"], ["pandoc"]):
         if shutil.which(cmd[0]) is None:
             continue
         r = subprocess.run([*cmd, str(src), "-t", "csljson", "-o", str(dst)],

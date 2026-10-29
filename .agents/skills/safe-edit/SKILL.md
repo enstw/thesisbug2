@@ -92,7 +92,9 @@ The readability gate reads `<unit>/chapters/*.qmd` plus the work's entry file
 2. `./fw check-zh-variants <unit>`
    — 簡繁與異體碼位的**源頭**檢查（簡體字＋内/爲/録/値 型異體＋Unicode 相容
    區）。scope 是寫作源檔（chapters/*.qmd 與頂層 *.qmd）；refs/ 逐字轉錄不掃。
-   刻意示範簡體字形的行，行尾加 `<!-- zh-source-ok -->` 豁免；無網路時
+   刻意示範簡體字形的行，行尾加 `<!-- zh-source-ok -->` 豁免；直接引用
+   簡體原文時，只把引文包在 `<!-- zh-src -->…<!-- /zh-src -->` 裡（同一行
+   其餘文字照常檢查，所以不要用整行豁免）；無網路時
    `python3` 直跑仍可做異體／相容碼位層。
 3. `./fw count-zh <file>` — stay inside the unit's word budget (its outline,
    or the limit in `COURSE.md`). 嚴禁湊字數: padding to reach a count is worse

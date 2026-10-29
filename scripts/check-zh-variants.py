@@ -22,8 +22,13 @@
 其他的 .md（notes/ 的摘要與備援知識、points.md、storyboard.md、講義），因為 Model 與
 投影片會取用這些內容，簡體字從哪一份進來都會一路傳到成品。不檢查：refs/ 逐字轉錄
 （保留來源原文）、gpt-review/（外部模型報告照原樣保存）、PROGRESS.md、
-DECISIONS.md、CHANGELOG.md（工作紀錄得引用原文）。引文亦不豁免——本語料庫
-的引用體例是「轉字不轉詞」，字級上不應存在簡體字。
+DECISIONS.md、CHANGELOG.md（工作紀錄得引用原文）。
+
+引文預設不豁免，但直接引用簡體原文（如中國官方文件的原句）時，用
+`<!-- zh-src -->…<!-- /zh-src -->` 只包住引文本身：引號裡的字是證據，轉成繁體
+等於改了被引的話。標記只跳過兩個標記之間的字，同一行其他文字照常檢查，
+所以不會像整行豁免那樣放過段落裡混進來的簡體字；標記須在同一行內成對，
+未閉合的開標記本身算一個問題，以免一個漏打的閉標記吞掉整行。
 
 Exit code：發現未列白名單的問題碼位時為 1，否則 0。
 """
@@ -47,6 +52,16 @@ WHITELIST = set("台群准托游淀秘后里干岳余温占划征峰床雇采咸
 # 行內豁免標記：該行刻意示範或討論簡體字形（如 ch4 引用體例補記
 # 「采取强制措施」→「採取強制措施」的轉換範例）時，行尾加此註解
 PRAGMA = "<!-- zh-source-ok -->"
+
+# 行內引文豁免標記（見檔頭說明）：只跳過成對標記之間的字
+SPAN_OPEN, SPAN_CLOSE = "<!-- zh-src -->", "<!-- /zh-src -->"
+SPAN_RE = re.compile(re.escape(SPAN_OPEN) + r".*?" + re.escape(SPAN_CLOSE))
+
+
+def strip_spans(line):
+    """Remove exempt quote spans; return (remaining text, has_unclosed_open)."""
+    rest = SPAN_RE.sub("", line)
+    return rest, SPAN_OPEN in rest
 
 # 異體／變體碼位 → 臺灣標準字（源自 ENSFont cmap 別名分析）
 VARIANTS = {
@@ -86,6 +101,10 @@ def scan(root):
         for lineno, line in enumerate(text.splitlines(), 1):
             if PRAGMA in line:
                 continue
+            line, unclosed = strip_spans(line)
+            if unclosed:
+                problems.append((f, lineno, "<", f"未閉合的 {SPAN_OPEN}（同一行內須有 {SPAN_CLOSE}）"))
+                line = line.split(SPAN_OPEN, 1)[0]
             for ch in line:
                 if ch in WHITELIST:
                     continue

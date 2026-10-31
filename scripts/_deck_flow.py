@@ -31,6 +31,7 @@ GAP_MIN = 72          # room for an arrow between two nodes
 LANE_LABEL = 52       # height of a lane's label line above its nodes
 LANE_GAP = 44
 ARROW = 16
+TIP_GAP = 8           # arrow tip stops this far short of the next node's border, so it never sits on it
 
 
 @dataclass
@@ -123,15 +124,15 @@ def flow_svg(start: str, lanes: list[Lane], end: str, label: str = "") -> tuple[
         # and left of every first node, so a branch never runs through another lane's
         # nodes (with an odd lane count the middle lane sits on the centre line).
         xf = term_w + GAP_MIN / 2
-        g.append(f'<path class="edge" d="M{term_w:.1f},{cy:.1f} H{xf:.1f} V{my:.1f} H{xs[0] - 2:.1f}"/>{_arrow(xs[0] - 2, my)}')
+        g.append(f'<path class="edge" d="M{term_w:.1f},{cy:.1f} H{xf:.1f} V{my:.1f} H{xs[0] - TIP_GAP:.1f}"/>{_arrow(xs[0] - TIP_GAP, my)}')
         for k, node in enumerate(ln.nodes):
             g.append(_node(xs[k], y, node_w, node))
             if k + 1 < n:
-                g.append(f'<path class="edge" d="M{xs[k] + node_w:.1f},{my:.1f} H{xs[k + 1] - 2:.1f}"/>{_arrow(xs[k + 1] - 2, my)}')
+                g.append(f'<path class="edge" d="M{xs[k] + node_w:.1f},{my:.1f} H{xs[k + 1] - TIP_GAP:.1f}"/>{_arrow(xs[k + 1] - TIP_GAP, my)}')
         # last node → end, merging at one x right of every last node, for the same reason
         xe = WIDTH - term_w
         xj = x1 + GAP_MIN / 2
-        g.append(f'<path class="edge" d="M{xs[-1] + node_w:.1f},{my:.1f} H{xj:.1f} V{cy:.1f} H{xe - 2:.1f}"/>{_arrow(xe - 2, cy)}')
+        g.append(f'<path class="edge" d="M{xs[-1] + node_w:.1f},{my:.1f} H{xj:.1f} V{cy:.1f} H{xe - TIP_GAP:.1f}"/>{_arrow(xe - TIP_GAP, cy)}')
         parts.append(f'<g class="rise {beats[i]}">{"".join(g)}</g>')
     parts.append(f'<g class="rise d4">{_node(WIDTH - term_w, cy - NODE_H / 2, term_w, Node(end), "box fill", NODE_H / 2)}</g>')
 

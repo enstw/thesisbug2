@@ -78,6 +78,12 @@ def _arrow(x: float, y: float) -> str:
     return f'<polygon class="ah" points="{x:.1f},{y:.1f} {x - ARROW * 1.4:.1f},{y - ARROW:.1f} {x - ARROW * 1.4:.1f},{y + ARROW:.1f}"/>'
 
 
+def _line_end(tip: float) -> float:
+    """Where an edge's stroke stops: just inside the arrowhead's base. A 4px line drawn
+    to the tip itself shows past the head, because the head tapers to nothing there."""
+    return tip - ARROW * 1.4 + 2
+
+
 def _node(x: float, y: float, w: float, node: Node, cls: str = "box", rx: float = 14) -> str:
     box = f'{cls} hi' if node.hi else cls
     txt = ' class="acc"' if node.hi else ""
@@ -124,15 +130,15 @@ def flow_svg(start: str, lanes: list[Lane], end: str, label: str = "") -> tuple[
         # and left of every first node, so a branch never runs through another lane's
         # nodes (with an odd lane count the middle lane sits on the centre line).
         xf = term_w + GAP_MIN / 2
-        g.append(f'<path class="edge" d="M{term_w:.1f},{cy:.1f} H{xf:.1f} V{my:.1f} H{xs[0] - TIP_GAP:.1f}"/>{_arrow(xs[0] - TIP_GAP, my)}')
+        g.append(f'<path class="edge" d="M{term_w:.1f},{cy:.1f} H{xf:.1f} V{my:.1f} H{_line_end(xs[0] - TIP_GAP):.1f}"/>{_arrow(xs[0] - TIP_GAP, my)}')
         for k, node in enumerate(ln.nodes):
             g.append(_node(xs[k], y, node_w, node))
             if k + 1 < n:
-                g.append(f'<path class="edge" d="M{xs[k] + node_w:.1f},{my:.1f} H{xs[k + 1] - TIP_GAP:.1f}"/>{_arrow(xs[k + 1] - TIP_GAP, my)}')
+                g.append(f'<path class="edge" d="M{xs[k] + node_w:.1f},{my:.1f} H{_line_end(xs[k + 1] - TIP_GAP):.1f}"/>{_arrow(xs[k + 1] - TIP_GAP, my)}')
         # last node → end, merging at one x right of every last node, for the same reason
         xe = WIDTH - term_w
         xj = x1 + GAP_MIN / 2
-        g.append(f'<path class="edge" d="M{xs[-1] + node_w:.1f},{my:.1f} H{xj:.1f} V{cy:.1f} H{xe - TIP_GAP:.1f}"/>{_arrow(xe - TIP_GAP, cy)}')
+        g.append(f'<path class="edge" d="M{xs[-1] + node_w:.1f},{my:.1f} H{xj:.1f} V{cy:.1f} H{_line_end(xe - TIP_GAP):.1f}"/>{_arrow(xe - TIP_GAP, cy)}')
         parts.append(f'<g class="rise {beats[i]}">{"".join(g)}</g>')
     parts.append(f'<g class="rise d4">{_node(WIDTH - term_w, cy - NODE_H / 2, term_w, Node(end), "box fill", NODE_H / 2)}</g>')
 

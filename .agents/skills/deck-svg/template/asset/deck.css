@@ -312,6 +312,9 @@
     [data-beat] { opacity:1 !important; transform:none !important; }   /* 活潑模式：每頁全展開 */
     [data-beat][data-fx="draw"] { stroke-dasharray:none !important; stroke-dashoffset:0 !important; }   /* 畫到一半的線也畫滿 */
     deck-stage > section { transform:none !important; }                 /* 拿掉鏡頭緩推 */
+    /* 封面標題的漸層字（background-clip:text）在 Chrome 存成 PDF 時裁切會失效，
+       整塊漸層印成方框（淺色主題是黑框）：列印改用實色字。 */
+    .hero h1, .hero h1 > div { background:none !important; -webkit-background-clip:border-box !important; background-clip:border-box !important; color:var(--title-from, var(--text)) !important; }
   }
 
   /* ---------- two-column text block (.colblock) — used by reading-guide ---------- */

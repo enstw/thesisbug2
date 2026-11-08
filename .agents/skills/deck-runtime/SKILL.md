@@ -50,7 +50,9 @@ A deck the engines produce must satisfy what `deck-stage.js` expects:
   animations key off `.slide[data-deck-active] .rise`.
 - Speaker notes: a `<script type="application/json" id="speaker-notes">` array,
   one string per slide, in slide order. The presenter console reads it; `\n`
-  inside a string is a line break there.
+  inside a string is a line break there. The engines generate it with
+  `./fw deck-notes` from `speaker-notes.md` rather than typing it, because
+  typed notes pass no gate (deck-svg § Speaker notes).
 - Load order at end of `<body>`: `asset/deck-stage.js` then
   `asset/presenter-stage.js`; an engine's own scripts go around them as its
   skill specifies.

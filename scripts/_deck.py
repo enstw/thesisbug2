@@ -48,6 +48,34 @@ def deck_assets() -> dict[str, Path]:
     }
 
 
+NOTES_FILE = "speaker-notes.md"
+NOTES_MARKER = "./fw deck-notes"   # deck-notes --init writes it into the file's header
+
+
+def notes_source(talk: Path) -> str:
+    """Where a deck's speaker notes come from.
+
+    "deck-notes": speaker-notes.md written for the command, so the notes in
+    deck.html are assembled and can be checked. "own-file": a notes file from
+    before the command, kept in sync by the unit's own script. "none": the
+    notes exist only in deck.html, typed by hand — no gate can check them, and
+    such notes drift toward restating the slide, the sparsest View.
+    """
+    notes = talk / NOTES_FILE
+    if not notes.is_file():
+        return "none"
+    return "deck-notes" if NOTES_MARKER in notes.read_text(encoding="utf-8") else "own-file"
+
+
+def unmanaged_notes(talk_arg: str) -> str:
+    """The message for a deck whose notes are typed into deck.html."""
+    return (f"no {NOTES_FILE} — the speaker notes in deck.html are starter placeholders or typed by "
+            "hand, which no gate checks and the next assembly overwrites; never edit them there: "
+            f"run ./fw deck-notes {talk_arg} --init, write "
+            "each 講法 from the storyboard's 口說重點 and the Model (not from the slide), then "
+            f"./fw deck-notes {talk_arg}")
+
+
 def starter_deck(variant: str) -> Path:
     return SKILLS / "deck-svg" / "template" / "variants" / variant / "deck.html"
 

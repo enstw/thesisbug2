@@ -193,7 +193,17 @@ in `deck.html`. Adding, removing or moving a slide means renumbering the
 sections of `speaker-notes.md` and the storyboard rows to match; `deck-notes`
 compares each section's label with the slide's `data-label` and refuses a
 mismatch, since an unnoticed shift attaches every later note to the wrong
-slide.
+slide. Never type or patch a note inside `deck.html`, even for a one-slide
+fix: notes typed there pass no gate and end up restating the slide, which is
+the sparsest View. A deck with no `speaker-notes.md` (the starter's
+`[講法：…]` placeholders, or a deck written before the command existed) is
+migrated before any note changes — `./fw deck-notes <talk> --init`, then
+write each 講法 from the row's 口說重點 and the Model, add the glossary/Q&A
+entries the rows name, and assemble — because each later edit otherwise
+hand-types notes again. `./fw build` refuses a `talk.json` talk without the
+file and prints a note on every build of an older root deck; `deck-compile`
+prints the same note, and stops with deck-notes' refusal when compiled slides
+no longer match the notes' labels.
 
 **Cited content:** follow `../house-style/reference/content-integrity.md`
 (disputed claims stay disputes, speculation is labeled, citations stay attached).
@@ -363,14 +373,15 @@ narrated video.
   `asset/deck-palette.js`, `asset/deck-theme-controls.js`, `asset/gsap.min.js` and
   `asset/deck-motion.js` first (because deck-stage rewrites the `#debug` /
   `#theme=` hash to the slide number as it starts), then `asset/deck-stage.js`,
-  `asset/presenter-stage.js` and `asset/deck-font-controls.js`, and that
-  `#speaker-notes` has one entry per `<section class="slide">`. Run
+  `asset/presenter-stage.js` and `asset/deck-font-controls.js`. Run
   `node --check` on the nine JS assets (`gsap.min.js` included) and
-  `./fw check-contrast <talk>` on the deck's `tokens.css`. In a browser
-  console, notes alignment is
-  `document.querySelectorAll('deck-stage>section').length` against
-  `JSON.parse(document.getElementById('speaker-notes').textContent).length`,
-  with no empty string among the notes.
+  `./fw check-contrast <talk>` on the deck's `tokens.css`.
+- **Speaker notes:** `./fw deck-notes <talk> --check` passes — it confirms
+  the notes in `deck.html` are the ones assembled from `speaker-notes.md`,
+  one per slide with matching labels, and that every glossary/Q&A entry the
+  storyboard names exists. Counting entries is not enough: hand-typed notes
+  have the right count and pass it while restating the slide. A missing
+  `speaker-notes.md` means the deck is not migrated yet (§ Speaker notes).
 - **Reduced motion:** emulate `prefers-reduced-motion: reduce` and confirm
   every `.rise` is visible and the loops stop.
 - **Present / PDF:** with the projector as an extended screen, press `P`

@@ -92,6 +92,84 @@ class DeckNotesTests(unittest.TestCase):
         r = self.run_fw("build.py", "talk")
         self.assertIn("speaker notes:", r.stdout + r.stderr)
 
+    def test_build_refuses_a_talk_json_deck_whose_notes_have_no_file(self):
+        # Notes typed into deck.html pass no gate; a talk.json talk was made
+        # under the deck-notes contract, so the missing file blocks the build.
+        self.assertTrue((self.unit / "talk.json").is_file())
+        r = self.run_fw("build.py", "talk")
+        self.assertNotEqual(r.returncode, 0)
+        self.assertIn("no speaker-notes.md", r.stdout + r.stderr)
+        self.assertIn("deck-notes", r.stdout + r.stderr)
+        self.assertNotIn("not blocking", r.stdout + r.stderr)
+
+    def test_build_notes_a_root_deck_from_before_talk_json_without_blocking_on_it(self):
+        # An older root deck is not force-migrated, but every build says so.
+        (self.unit / "talk.json").unlink()
+        r = self.run_fw("build.py", "talk")
+        self.assertIn("note: no speaker-notes.md", r.stdout + r.stderr)
+        self.assertIn("not blocking", r.stdout + r.stderr)
+        self.assertNotIn("deck gate: no speaker-notes.md", r.stdout + r.stderr)
+        self.assertNotIn("            no speaker-notes.md", r.stdout + r.stderr)
+
+    def test_starter_decks_carry_placeholders_not_sample_notes(self):
+        # A realistic sample note taught agents to write notes in deck.html.
+        for variant in ("reading-guide", "thesis"):
+            path = REPO / ".agents/skills/deck-svg/template/variants" / variant / "deck.html"
+            html = path.read_text(encoding="utf-8")
+            notes = json.loads(re.search(r'id="speaker-notes">(.*?)</script>', html, re.S).group(1))
+            self.assertTrue(notes and all(n.startswith("[講法") for n in notes), variant)
+            self.assertNotIn("投影片與 speaker-notes", html, variant)
+
+
+class DeckCompileNotesTests(unittest.TestCase):
+    """deck-compile reports what happens to the notes instead of swallowing it."""
+
+    STORYBOARD = ("| # | 來源論點 | 內容形狀 | 版型 | 講 | 畫面內容 | 口說重點 | 名詞與提問 | AI 協助 |\n"
+                  "| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |\n"
+                  "| 0 | — | 14 封面 | L-HERO-TITLE | 0.5 min | title: {title} | 開場 | — | — |\n"
+                  "| 1 | — | 14 結論 | L-FINALE-SUMMARY | 1 min | heading: 結語<br>onesentence: 一句話 | 收尾 | — | — |\n")
+
+    def setUp(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.root = Path(tmp.name)
+        (self.root / "units").mkdir()
+        self.env = dict(os.environ, FW_COURSE_ROOT=str(self.root))
+        r = self.run_fw("unit-init.py", "--title", "T", "--author", "A", "--type", "presentation",
+                        "--variant", "reading-guide", "--name", "talk")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.unit = next((self.root / "units").glob("*-talk"))
+        self.storyboard("開場標題")
+
+    def storyboard(self, title):
+        (self.unit / "storyboard.md").write_text(self.STORYBOARD.format(title=title), encoding="utf-8")
+
+    def run_fw(self, script, *args):
+        return subprocess.run([sys.executable, str(REPO / "scripts" / script), *args], cwd=self.root,
+                              env=self.env, capture_output=True, text=True, timeout=120)
+
+    def test_compile_without_a_notes_file_prints_the_migration(self):
+        r = self.run_fw("deck-compile.py", "talk")
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("note: no speaker-notes.md", r.stderr)
+        self.assertIn("--init", r.stderr)
+
+    def test_compile_reports_a_notes_refusal_and_exits_non_zero(self):
+        self.assertEqual(self.run_fw("deck-compile.py", "talk").returncode, 0)
+        r = self.run_fw("deck-notes.py", "talk", "--init")
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        r = self.run_fw("deck-compile.py", "talk")
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("speaker notes into", r.stdout)
+        self.assertEqual(self.run_fw("deck-notes.py", "talk", "--check").returncode, 0)
+
+        # A renamed slide no longer matches its notes section: say so, do not swallow it.
+        self.storyboard("新標題")
+        r = self.run_fw("deck-compile.py", "talk")
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("§ 0 is '開場標題'", r.stderr)
+        self.assertIn("speaker notes not updated", r.stderr)
+
 
 if __name__ == "__main__":
     unittest.main()

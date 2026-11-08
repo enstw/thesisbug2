@@ -22,7 +22,10 @@
      · asset/deck-motion.js ← deck-svg：活潑模式（選用）：元素標 data-beat 逐拍出現、跨頁延續、進頁轉場、變形、沿路徑；M 開關
      · asset/ENSFont{,-Bold}.woff2 ← house-style：全字集中文字型（Regular＋Bold）
      · asset/katex/ + deck-math.js ← deck-svg：KaTeX 0.16.11（MIT）離線排版 \( … \) 公式（分鏡的「公式」欄編成 p.fx）
-     手寫的部分只有底下 <deck-stage> 內的投影片與 speaker-notes（及 <html> 的起始主題）。 -->
+     手寫的部分只有底下 <deck-stage> 內的投影片（及 <html> 的起始主題）。
+     #speaker-notes 不手寫：講法寫在 speaker-notes.md（./fw deck-notes <talk> --init 依分鏡口說重點建立），
+     名詞與提問寫在 notes/glossary.md、notes/qa.md，由 ./fw deck-notes <talk> 組裝進來；
+     手打進這裡的講稿沒有關卡檢查，下一次組裝也會蓋掉。底下的佔位符就是還沒組裝的意思。 -->
 <link rel="stylesheet" href="asset/tokens.css" />
 <link rel="stylesheet" href="asset/deck.css" />
 <link rel="stylesheet" href="asset/katex/katex.min.css" />
@@ -180,15 +183,15 @@
 
 <script type="application/json" id="speaker-notes">
 [
-"開場。自我介紹並用一句話說明今天要回答的問題。提醒聽眾這場報告的時間長度與大致結構。",
-"研究背景。\n・說明問題的來源與此刻的重要性。\n・把關鍵引用、數據與佐證放在這裡口頭補充，投影片只留主軸。",
-"研究問題。\n・逐一唸出三個問題，說明彼此的關係（遞進？並列？）。\n・讓聽眾知道後面哪一段回答哪一題。",
-"文獻回顧。\n・左欄：既有研究的主流觀點。\n・右欄：它們留下的缺口，正是本研究切入之處。對照講清楚「為什麼還需要這篇」。",
-"分析框架。\n・沿著箭頭說明：從研究問題，經理論概念與案例／資料，推導到分析發現。\n・這是全篇方法論的骨架。",
-"研究設計。\n・資料來源、方法、比較維度逐項交代。\n・說明為何此設計能回答前面的研究問題。",
-"初步發現。\n・三張卡片各講一個發現，先講結果再講意義。\n・若有量化數據，可改用 stats 區塊（.stat 的 .n 支援 data-to 數字滾動）。",
-"結論。\n・用一句話收束貢獻，呼應開場的研究問題。\n・可順帶點出限制與後續研究方向。",
-"Q & A。\n・留白等待提問。\n・預先準備兩三個可能被問到的問題與回答。"
+"[講法：由 ./fw deck-notes 從 speaker-notes.md 組裝]",
+"[講法：由 ./fw deck-notes 從 speaker-notes.md 組裝]",
+"[講法：由 ./fw deck-notes 從 speaker-notes.md 組裝]",
+"[講法：由 ./fw deck-notes 從 speaker-notes.md 組裝]",
+"[講法：由 ./fw deck-notes 從 speaker-notes.md 組裝]",
+"[講法：由 ./fw deck-notes 從 speaker-notes.md 組裝]",
+"[講法：由 ./fw deck-notes 從 speaker-notes.md 組裝]",
+"[講法：由 ./fw deck-notes 從 speaker-notes.md 組裝]",
+"[講法：由 ./fw deck-notes 從 speaker-notes.md 組裝]"
 ]
 </script>
 

@@ -21,6 +21,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
+from _deck import NOTES_FILE, notes_source, unmanaged_notes  # noqa: E402
 from _deck_catalog import CATALOG, VisualRhythmResolver, get_layout, parse_slot_payload  # noqa: E402
 from _deck_motion import apply_motion, split_codes  # noqa: E402
 from _deck_steps import step_names, strip_html  # noqa: E402
@@ -318,10 +319,22 @@ def main() -> int:
     else:
         print(f"{rel(deck_file, root)} is already current")
 
-    # If speaker-notes.md exists or notes script is present, run deck-notes to sync speaker notes
-    notes_script = HERE / "deck-notes.py"
-    if notes_script.is_file():
-        subprocess.run([sys.executable, str(notes_script), str(talk)], capture_output=True)
+    # Reassemble the notes, and say so when that fails or cannot happen: new or
+    # moved slides change the labels deck-notes checks, and a refusal swallowed
+    # here left decks whose notes nobody regenerated, so agents typed them into
+    # deck.html instead. A unit's own notes file keeps its own sync script.
+    source = notes_source(talk)
+    if source == "deck-notes":
+        r = subprocess.run([sys.executable, str(HERE / "deck-notes.py"), str(talk)],
+                           capture_output=True, text=True)
+        if r.returncode:
+            print((r.stdout + r.stderr).strip(), file=sys.stderr)
+            print(f"speaker notes not updated: renumber or relabel the sections of {NOTES_FILE} to match "
+                  f"the compiled slides, then run ./fw deck-notes {rel(talk, root)}", file=sys.stderr)
+            return 1
+        print(r.stdout.strip())
+    elif source == "none":
+        print(f"note: {unmanaged_notes(rel(talk, root))}", file=sys.stderr)
 
     return 0
 

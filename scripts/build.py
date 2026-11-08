@@ -40,6 +40,7 @@ FRAMEWORK = HERE.parent
 sys.path.insert(0, str(HERE))
 from _paths import (course_root, find_talk, library, rel, resolve_unit,
                     talk_config, talk_model_files)  # noqa: E402
+from _deck import notes_source, unmanaged_notes  # noqa: E402
 
 PLACEHOLDERS = {
     "[論文標題]": "title", "[論文主標題]": "title", "[簡報標題]": "title", "[簡報主標題]": "title",
@@ -346,12 +347,23 @@ def deck_gate(unit: Path, talk: Path, root: Path) -> None:
     # reference to a missing entry is a gap found mid-talk. Only a file written
     # for deck-notes (its header names the command) is checked: a unit may keep
     # its own notes file and sync script from before the command existed.
-    notes_md = talk / "speaker-notes.md"
-    if notes_md.is_file() and "./fw deck-notes" in notes_md.read_text(encoding="utf-8"):
+    # Notes with no file at all are typed into deck.html, which no gate can
+    # check; a talk.json talk was created under the deck-notes contract, so it
+    # is refused, while a root deck from before the marker gets a note on every
+    # build instead of a forced migration, because otherwise each later edit
+    # keeps hand-typing notes without anyone being told.
+    source = notes_source(talk)
+    if source == "deck-notes":
         r = subprocess.run([sys.executable, str(HERE / "deck-notes.py"), str(talk), "--check"],
                            capture_output=True, text=True)
         if r.returncode:
             problems.append("speaker notes: " + (r.stdout + r.stderr).strip())
+    elif source == "none":
+        message = unmanaged_notes(rel(talk, root))
+        if (talk / "talk.json").is_file():
+            problems.append(message)
+        else:
+            print(f"note: {message} (not blocking: this deck predates talk.json)")
 
     if n:
         tables = sum(1 for _, b in body if 'class="cmp' in b or "table class=\"cmp" in b)

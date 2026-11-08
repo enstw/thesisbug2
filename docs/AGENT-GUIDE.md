@@ -98,7 +98,7 @@ When the course requires disclosing AI use (`COURSE.md` § What is graded), keep
 
 ## Figures
 
-SVG first. Author PlantUML source beside the manuscript and render with `./fw plantuml2svg <in>.plantuml <out>.svg`; commit both. Quarto embeds the SVG in PDF builds and decks embed it directly. Generated raster imagery is only for what SVG cannot express.
+SVG first, from either of two sources. Author PlantUML beside the manuscript and render it with `./fw plantuml2svg <in>.plantuml <out>.svg`, committing both, when automatic layout suits the diagram; or write the SVG itself, by hand or with a script committed beside it, when the layout has to be set, because PlantUML lays activity diagrams out top to bottom with fixed colours and type sizes, which a 16:9 slide cannot use. Both keep a text source in git. Quarto embeds the SVG in PDF builds and decks embed it directly. Generated raster imagery is only for what SVG cannot express. The `diagram` skill has the details.
 
 ## Git
 

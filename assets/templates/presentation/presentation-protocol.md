@@ -22,7 +22,7 @@ a unit decision file.
 | View: Beamer PDF | § Quarto Beamer Fallback below | root presentation unit's `presentation.qmd` |
 | Deck shell | `deck-runtime` | the `deck-stage` contract, navigation, presenter window, print |
 | Look | `house-style` | tokens, themes, contrast rules, font |
-| Figures | `diagram` | PlantUML → SVG |
+| Figures | `diagram` | SVG, from PlantUML or written directly |
 
 ## Source Files
 

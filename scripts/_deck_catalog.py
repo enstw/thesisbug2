@@ -909,6 +909,14 @@ def _canvas_svg(rel_path: str, base: Path | None) -> tuple[str, str]:
         return "", warn(f"svg: 找不到 {rel_path}")
     text = path.read_text(encoding="utf-8")
     text = re.sub(r"<\?xml[^>]*\?>|<!DOCTYPE[^>]*>", "", text).strip()
+    # The canvas sizes its drawing with `width:auto`, which collapses an SVG that has only a
+    # viewBox to zero width; give such a root the viewBox width, as compiled flow charts carry.
+    root = re.search(r"<svg\b[^>]*>", text)
+    if root and not re.search(r"\swidth\s*=", root.group(0)):
+        vb = re.search(r'viewBox\s*=\s*"[\d.\-]+[\s,]+[\d.\-]+[\s,]+([\d.]+)', root.group(0))
+        if vb:
+            tag = root.group(0)[:-1].rstrip("/").rstrip() + f' width="{vb.group(1)}"' + ("/>" if root.group(0).endswith("/>") else ">")
+            text = text[:root.start()] + tag + text[root.end():]
     return text, ""
 
 

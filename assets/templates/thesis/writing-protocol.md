@@ -61,7 +61,7 @@ AI 應根據使用者要求的章節屬性，自動切換寫作模式：
 
 ### 圖表 (Diagrams)
 
-依 `.framework/docs/AGENT-GUIDE.md` § Figures（SVG-first；PlantUML source + `./fw plantuml2svg`；亦即 `diagram` skill）。碩論常見圖種對應：時序圖（事件推演）、Use Case / Component（系統架構）、ER / 類別圖（概念模型）、Gantt（時程）。
+依 `.framework/docs/AGENT-GUIDE.md` § Figures（SVG-first；來源是 PlantUML ＋ `./fw plantuml2svg`，或直接寫 SVG；亦即 `diagram` skill）。碩論常見圖種對應：時序圖（事件推演）、Use Case / Component（系統架構）、ER / 類別圖（概念模型）、Gantt（時程）。
 
 ---
 

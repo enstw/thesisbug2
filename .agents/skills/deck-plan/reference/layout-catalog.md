@@ -171,7 +171,7 @@
 - **深度變體**：`default`。
 - **槽位規格**：`title`；畫布二選一：
   - **流程圖**：`start`、`lanes`（每列一條路線，節點以 `→` 分隔；`[標籤]` 是路線名稱；`*節點*` 以章節色描框，標出這頁要講的節點）、`end`。由左到右：起點 → 一到四條平行路線 → 終點（activity-on-node），座標由 `./fw deck-compile` 算好，畫成 34px 字的 `svg.art.dg`，跟著主題換色；逐步出現的順序是起點、各路線、終點。
-  - **SVG 檔**：`svg: <相對 talk 的路徑>`，把自己畫或程式產生的 SVG 原樣嵌進畫布（不能指到 talk 以外）。viewBox 寬設 1728（投影片內容寬）字才不會被縮小。
+  - **SVG 檔**：`svg: <相對 talk 的路徑>`，把自己畫或程式產生的 SVG 原樣嵌進畫布（不能指到 talk 以外）。viewBox 寬設 1728（投影片內容寬）字才不會被縮小；根元素沒寫 `width` 時，`deck-compile` 依 viewBox 補上，因為畫布以 `width:auto` 排版，只有 viewBox 的 SVG 會縮成零寬。寫法見 diagram skill 的「SVG written directly」。
   - 選填：`lead`、`caption`（圖說）、`verdict`（收束框，預設標籤「重點」，可用 `verdict_label` 改）。
 - **為什麼不用 PlantUML 或 Mermaid**：簡報沒有 Mermaid 執行環境；PlantUML 新語法的活動圖只能由上到下（舊語法與 Graphviz 可以左到右，但要另外調版面），輸出的顏色與字級是寫死的，進投影片還要後製、常被縮到 34px 以下。這種固定形狀的圖座標一算就有，不需要自動排版。
 - **放不下時**：最長的路線節點太多或字太長，`deck-compile` 會警告，字不會縮小；縮短節點文字或拆頁。沒寫畫布內容時畫出虛線框「畫布待放圖」並警告。

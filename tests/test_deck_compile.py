@@ -345,6 +345,14 @@ class CanvasLayoutTests(unittest.TestCase):
         self.assertIn("<svg class=\"art dg\"><text>自畫</text></svg>", html)
         self.assertNotIn("<?xml", html)
 
+    def test_svg_with_only_a_viewbox_gets_its_width(self):
+        # without a width the canvas's `width:auto` collapses the drawing to nothing
+        (self.tmp / "y.svg").write_text('<svg viewBox="0 0 1728 620" class="art dg"><text>自畫</text></svg>', encoding="utf-8")
+        html = self.render("title: t<br>svg: y.svg", base=self.tmp)
+        self.assertIn('<svg viewBox="0 0 1728 620" class="art dg" width="1728">', html)
+        (self.tmp / "z.svg").write_text('<svg viewBox="0 0 1728 620" width="900"><text>x</text></svg>', encoding="utf-8")
+        self.assertIn('width="900">', self.render("title: t<br>svg: z.svg", base=self.tmp))   # an author's width stays
+
     def test_svg_outside_talk_is_refused(self):
         (self.tmp / "talk").mkdir()
         (self.tmp / "secret.svg").write_text("<svg>x</svg>", encoding="utf-8")

@@ -60,7 +60,7 @@ def parse_bib_keys(bib_path: Path) -> dict[str, dict]:
 
 
 def find_cited_keys(unit: Path) -> dict[str, list[str]]:
-    """All citations in QMD/includes plus the presenter's glossary and Q&A."""
+    """All citations in QMD/includes plus the presenter's knowledge points (and older glossary/Q&A)."""
     cited: dict[str, list[str]] = {}
     for src in citation_files(unit):
         # Commented-out text is not part of the manuscript (scaffolds keep their

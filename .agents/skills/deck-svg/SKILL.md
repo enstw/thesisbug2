@@ -101,8 +101,8 @@ needed component or theme into the framework's skill instead.
 
 ## Start from the storyboard
 
-deck-svg renders the **Views** of a talk: each `<section>` and its
-`#speaker-notes` entry is written from one row of the signed-off
+deck-svg renders the **Views** of a talk: each `<section>` is written, and
+its knowledge points bound, from one row of the signed-off
 `<talk>/storyboard.md` and the declared Model passage that row's point names. The
 storyboard and `points.md` are the Controller, written with **deck-plan**
 before this skill starts; without a signed-off storyboard, plan first. The
@@ -119,14 +119,15 @@ deck ends up saying things the declared Model does not.
   `./fw deck-compile <talk>` to compile the slides automatically and deterministically
   with seeded depth variants (preview all combinations live with `./fw deck-compile --explorer`).
   You can still hand-edit or extend `deck.html` afterwards.
-- Write the note's 講法 in `<talk>/speaker-notes.md` from the row's 口說重點
-  and the Model passage, never from the slide, because the slide is the
-  sparsest View and a note rebuilt from it loses the explanations and the
-  locators. `./fw deck-notes <talk> --init` seeds the file;
-  `./fw deck-notes <talk>` adds the unit glossary and Q&A entries the row names and
-  writes `#speaker-notes` (presentation protocol § Speaker notes). Do not
-  write term explanations or answers into the 講法: they are facts, and they
-  belong in `<unit>/notes/glossary.md` and `<unit>/notes/qa.md`, where the gates check them.
+- Give every slide the row's 講者備註 numbers as `data-notes="K3 K7 Q1"`
+  (`data-notes="—"` when it needs none; `deck-compile` writes it for catalog
+  rows), and `data-time` from 講 when known. The speaker note is the
+  presenter's backup knowledge, not a script: `./fw deck-notes <talk>`
+  expands each number into that point's cited first paragraph from
+  `<unit>/speaker-notes.md` (presentation protocol § Speaker notes). The
+  binding sits on the slide, so moving or inserting a slide cannot shift
+  another slide's notes. A term, abbreviation or fact the presenter needs
+  becomes a K entry there, with its page — never prose in `deck.html`.
 - A fact that turns out wrong while building is corrected in its owning
   factual layer (Model or unit backup knowledge), then in the rows and slides
   that use it; an order or emphasis change goes back to the storyboard
@@ -141,8 +142,8 @@ debate, cards, grids, `table.cmp`, `blockquote.pull`, stats, `ul.clean`,
 flowdiag, inline `svg.art`). Stagger entrance with
 `class="rise d1|d2|d3|d4"`. Keep one idea per slide, graspable in about ten
 seconds, because the audience is listening while it reads; detail goes to the
-speaker notes, and a prose-heavy passage becomes a short on-slide statement
-with the full detail in the note. Time never justifies cramming or
+knowledge points the slide names, and a prose-heavy passage becomes a short
+on-slide statement with the full detail in those points. Time never justifies cramming or
 pre-cutting — the presenter adjusts pace or skips slides live. Condensing
 cuts words, never the event: every line keeps who did what to whom, and a
 qualifier (單方, 未證實, 推估) comes after the claim it qualifies, on its own
@@ -187,23 +188,25 @@ before the talk project one dark and one light slide from the back row and
 keep whichever reads (`c` cycles the themes live; house-style lists them). Colours come only from tokens, so a slide
 that hard-codes one stays put when the theme changes.
 
-**Speaker notes:** `#speaker-notes` is generated — edit `speaker-notes.md`
-and rerun `./fw deck-notes`, because the next assembly overwrites a hand edit
-in `deck.html`. Adding, removing or moving a slide means renumbering the
-sections of `speaker-notes.md` and the storyboard rows to match; `deck-notes`
-compares each section's label with the slide's `data-label` and refuses a
-mismatch, since an unnoticed shift attaches every later note to the wrong
-slide. Never type or patch a note inside `deck.html`, even for a one-slide
-fix: notes typed there pass no gate and end up restating the slide, which is
-the sparsest View. A deck with no `speaker-notes.md` (the starter's
-`[講法：…]` placeholders, or a deck written before the command existed) is
-migrated before any note changes — `./fw deck-notes <talk> --init`, then
-write each 講法 from the row's 口說重點 and the Model, add the glossary/Q&A
-entries the rows name, and assemble — because each later edit otherwise
-hand-types notes again. `./fw build` refuses a `talk.json` talk without the
-file and prints a note on every build of an older root deck; `deck-compile`
-prints the same note, and stops with deck-notes' refusal when compiled slides
-no longer match the notes' labels.
+**Speaker notes:** `#speaker-notes` is generated — edit the knowledge points
+in `<unit>/speaker-notes.md` or a slide's `data-notes` and rerun
+`./fw deck-notes`, because the next assembly overwrites a hand edit in
+`deck.html`. Never type or patch a note inside `deck.html`, even for a
+one-slide fix: notes typed there pass no gate and end up restating the slide,
+which is the sparsest View. `deck-notes` refuses a content slide without
+`data-notes`, a token that is not a K/Q number, a number with no entry, an
+entry whose first paragraph has no citation, and an abbreviation the slide
+shows (two or more capitals, e.g. FPA) without a `全名（縮寫）` point among
+the slide's numbers. A deck with no knowledge file (the starter's
+`[講者備註：…]` placeholders, or a deck written before the command existed)
+is migrated before any note changes — `./fw deck-notes <talk> --init`, move
+its facts, terms and questions into K/Q entries with their pages, bind each
+slide, assemble — because each later edit otherwise hand-types notes again.
+`./fw build` refuses a `talk.json` talk without the file and prints a note on
+every build of an older root deck; `deck-compile` prints the same note, and
+stops with deck-notes' refusal. Decks on the older per-slide 講法 file
+(`## <n>｜<label>` sections plus notes/glossary.md and notes/qa.md) still
+assemble; migrate one the same way when its notes next change.
 
 **Cited content:** follow `../house-style/reference/content-integrity.md`
 (disputed claims stay disputes, speculation is labeled, citations stay attached).
@@ -377,11 +380,12 @@ narrated video.
   `node --check` on the nine JS assets (`gsap.min.js` included) and
   `./fw check-contrast <talk>` on the deck's `tokens.css`.
 - **Speaker notes:** `./fw deck-notes <talk> --check` passes — it confirms
-  the notes in `deck.html` are the ones assembled from `speaker-notes.md`,
-  one per slide with matching labels, and that every glossary/Q&A entry the
-  storyboard names exists. Counting entries is not enough: hand-typed notes
-  have the right count and pass it while restating the slide. A missing
-  `speaker-notes.md` means the deck is not migrated yet (§ Speaker notes).
+  the notes in `deck.html` are the ones assembled from the slides'
+  `data-notes` and `<unit>/speaker-notes.md`, every number exists and is
+  cited, and every abbreviation on a slide is expanded by one of its points.
+  Counting entries is not enough: hand-typed notes have the right count and
+  pass it while restating the slide. A missing `speaker-notes.md` means the
+  deck is not migrated yet (§ Speaker notes).
 - **Reduced motion:** emulate `prefers-reduced-motion: reduce` and confirm
   every `.rise` is visible and the loops stop.
 - **Present / PDF:** with the projector as an extended screen, press `P`

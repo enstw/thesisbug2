@@ -26,7 +26,9 @@ Manifest schema (keys with defaults are optional):
         {"file": "01-title.png",
          "label": "標題",          # thumbnail-rail / presenter label
          "alt":   "alt text",       # <img alt>, also presenter fallback label
-         "notes": "speaker notes"}  # presenter window notes (press P)
+         "knowledge": "K3 K7 Q1",   # data-notes: knowledge-point numbers (course talks)
+         "notes": "speaker notes"}  # presenter window notes (press P); a course talk's
+                                    # notes are assembled by ./fw deck-notes instead
       ]
     }
 
@@ -94,7 +96,7 @@ PAGE = """<!DOCTYPE html>
 </html>
 """
 
-SECTION = """  <section class="imgslide" data-label="{label}">
+SECTION = """  <section class="imgslide" data-label="{label}"{binding}>
     <img src="{src}" alt="{alt}" />{hint}
   </section>
 """
@@ -171,8 +173,10 @@ def main() -> int:
         label = s.get("label", s.get("alt", f"Slide {i + 1}"))
         alt = s.get("alt", label)
         hint = HINT if (i == 0 and show_hint) else ""
+        # a course talk's slide names its knowledge points, so its notes travel with it
+        binding = f' data-notes="{attr(s["knowledge"])}"' if s.get("knowledge") else ""
         sections.append(SECTION.format(label=attr(label), src=attr(src_rel),
-                                       alt=attr(alt), hint=hint))
+                                       alt=attr(alt), hint=hint, binding=binding))
         notes.append(s.get("notes", ""))
 
     notes_json = json.dumps(notes, ensure_ascii=False, indent=0)

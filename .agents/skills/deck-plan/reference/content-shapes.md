@@ -54,7 +54,7 @@ Each of these has appeared in a real deck; each loses information the source had
    audience; six in a row are a spreadsheet read aloud. Keep shape 7 to
    roughly a third of content slides.
 1. **More than six bullets.** Past six the slide is a document. Move the
-   detail to 口說重點 or split the row.
+   detail into knowledge points the row's 講者備註 names, or split the row.
 1. **A discussion question that tests reading.** "What does the author say on
    p. 36?" produces silence. Give a contested claim and two positions, then
    ask which side they take (shape 13).

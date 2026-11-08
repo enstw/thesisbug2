@@ -1,55 +1,59 @@
 #!/usr/bin/env python3
-"""Assemble a deck's speaker notes from the three parts of the talk.
+"""Assemble a deck's speaker notes from the knowledge points its slides name.
 
     ./fw deck-notes [<talk>]            write #speaker-notes into deck.html
     ./fw deck-notes [<talk>] --check    exit 1 if deck.html is out of date or a reference is broken
-    ./fw deck-notes [<talk>] --init     create speaker-notes.md, one section per slide
+    ./fw deck-notes [<talk>] --init     create the unit's speaker-notes.md from the template
 
-A speaker note is the presenter's backup: how to say the slide, and what the
-presenter needs to understand it and to answer questions. Each kind comes
-from the part of the talk that owns it (presentation protocol § Source Files):
+A speaker note is the presenter's backup knowledge, not a script: the terms,
+abbreviations, facts and likely questions behind a slide, each with its page.
+Each part has one owner (presentation protocol § Speaker notes):
 
-  講法  <talk>/speaker-notes.md, one section per slide              — View
-  名詞  <unit>/notes/glossary.md, one section per term              — backup knowledge
-  提問  <unit>/notes/qa.md, one section per question                — backup knowledge
+  知識點  <unit>/speaker-notes.md, one `## K<n> <name>` or `## Q<n> <question>`
+          section per point, first paragraph cited                 — backup knowledge
+  綁定    each slide's data-notes="K3 K7 Q1"                         — View
+  選擇    the storyboard's 講者備註 column; deck-compile copies it
+          into data-notes                                           — Controller
 
-The storyboard's 名詞與提問 column (Controller) says which terms and questions
-each slide carries. Terms and answers are factual backup shared by every talk
-in the unit, so citation and language gates read them directly; they do not
-need to be appended to a submitted paper. The note copies only each entry's
-first paragraph, short enough to read at a glance; the full entry stays in the
-unit for preparation before the talk.
+The numbers sit on the slide, not in a list kept in slide order beside the
+deck, so a moved or inserted slide keeps its own notes. The note copies only
+each entry's first paragraph, short enough to glance at; the full entry stays
+in the unit for preparation. The points are shared by every talk in the unit,
+so citation and language gates read the file directly.
+
+Decks from before the knowledge format still assemble: a per-slide 講法 file
+`<talk>/speaker-notes.md` (`## <n>｜<label>` sections) plus notes/glossary.md
+and notes/qa.md routed by the storyboard's 名詞與提問 column.
 """
 
 from __future__ import annotations
 
+import html as html_lib
+import importlib.util
 import json
 import re
+import shutil
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE))
+from _deck import TEMPLATES, is_knowledge_file, notes_source, unmanaged_notes  # noqa: E402
 from _paths import course_root, rel, resolve_talk  # noqa: E402
 
 NOTES_MD, GLOSSARY, QA = "speaker-notes.md", "notes/glossary.md", "notes/qa.md"
-REFS_COLUMN, SPOKEN_COLUMN = "名詞與提問", "口說重點"
+REFS_COLUMN = "名詞與提問"
 BLOCK = re.compile(r'(<script type="application/json" id="speaker-notes">)(.*?)(</script>)', re.S)
 SECTION = re.compile(r'<section\b([^>]*)>', re.S)
 SLIDE_HEADING = re.compile(r"^(\d+)\s*[｜|]\s*(.*)$")
 QUESTION_ID = re.compile(r"^(Q\d+)\b")
+ENTRY_ID = re.compile(r"^([KQ]\d+)\b")
+NOTE_ID = re.compile(r"^[KQ]\d+$")
 LABEL_PREFIX = re.compile(r"^\*\*[^*]+\*\*[：:]\s*")
 CITE = re.compile(r"\[(@[\w:.-]+),\s*\{([^}]*)\}\]")
-
-SPEAKER_NOTES_HEADER = """# 講者備註
-
-<!-- View：每張投影片一節，標題「## 編號｜標籤」是它在 deck.html 的順序（從 0 起）與 data-label，./fw deck-notes 會核對兩者，
-     因為插入或刪掉一張投影片後，編號沒跟著改，講稿就會接到別張投影片上。
-     這裡只寫「講法」：照順序講什麼、時間、轉場、要停下來問大家的地方，依分鏡的口說重點與 talk.json 宣告的 Model 寫成（下面預先填了口說重點）。
-     名詞解說與預想提問不寫在這裡：它們是事實，寫在單元共用的 notes/glossary.md 與 notes/qa.md（關卡會直接檢查）；
-     分鏡「名詞與提問」欄指定每張帶哪些，./fw deck-notes 把它們的一句話版本接在講法後面，一起寫進 deck.html。
-     改完這份就跑 ./fw deck-notes <talk>；不要直接改 deck.html 的 #speaker-notes，下一次組裝會蓋掉。 -->
-"""
-
+# An abbreviation the audience reads: two or more capitals standing alone (FPA, MAD).
+ABBREVIATION = re.compile(r"(?<![A-Za-z])[A-Z]{2,}(?![A-Za-z])")
+NONE_MARKS = {"—", "-", "–"}
 
 def strip_comments(text: str) -> str:
     return re.sub(r"<!--.*?-->", "", text, flags=re.S)
@@ -209,20 +213,102 @@ def assemble(unit: Path, talk: Path, root: Path) -> tuple[list[str], list[str]]:
     return notes, problems
 
 
+
+def attribute(attrs: str, name: str) -> str | None:
+    m = re.search(rf'\b{name}="([^"]*)"', attrs)
+    return html_lib.unescape(m.group(1)) if m else None
+
+
+def slides(html: str) -> list[dict]:
+    """Each slide's label, kind and knowledge binding, in deck order."""
+    out = []
+    for m in SECTION.finditer(html):
+        attrs = m.group(1)
+        cls = attribute(attrs, "class") or ""
+        if "slide" not in cls:      # deck-svg's .slide and deck-image's .imgslide
+            continue
+        out.append({"label": attribute(attrs, "data-label") or "",
+                    "notes": attribute(attrs, "data-notes"),
+                    "time": attribute(attrs, "data-time"),
+                    "chrome": bool(re.search(r"\b(hero|finale)\b", cls))})
+    return out
+
+
+def visible_texts(html: str) -> list[str]:
+    """What the audience reads on each slide (deck-text's extraction)."""
+    spec = importlib.util.spec_from_file_location("deck_text", HERE / "deck-text.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.slide_texts(html)
+
+
+def knowledge(path: Path) -> dict[str, tuple[str, str]]:
+    """{K7: (heading, short version)}; placeholder headings (with '[') are skipped."""
+    found: dict[str, tuple[str, str]] = {}
+    for heading, body in headed_sections(path.read_text(encoding="utf-8")):
+        m = ENTRY_ID.match(heading)
+        if m and "[" not in heading:
+            found[m.group(1)] = (heading, first_paragraph(body))
+    return found
+
+
+def assemble_knowledge(unit: Path, talk: Path, root: Path) -> tuple[list[str], list[str]]:
+    """(notes, problems): each slide's data-notes expanded from the unit's knowledge points."""
+    html = (talk / "deck.html").read_text(encoding="utf-8")
+    path = unit / NOTES_MD
+    problems: list[str] = []
+    if not is_knowledge_file(path):
+        return [], [f"{rel(path, root)} is missing or not in the knowledge format — "
+                    f"create it with ./fw deck-notes {rel(talk, root)} --init"]
+    points = knowledge(path)
+    for key, (heading, short) in points.items():
+        if "[@" not in short:
+            problems.append(f"{NOTES_MD} § {heading}: the first paragraph carries no citation — the note "
+                            "shows only that paragraph, and the presenter may say it aloud")
+    deck_slides = slides(html)
+    texts = visible_texts(html)
+    notes = []
+    for n, slide in enumerate(deck_slides):
+        where = f"slide {n} ({slide['label']})"
+        if slide["notes"] is None:
+            if not slide["chrome"]:
+                problems.append(f"{where} has no data-notes — list its knowledge points (K/Q numbers) on the "
+                                "slide, or data-notes=\"—\" when it needs none")
+            ids = []
+        else:
+            ids = [t for t in re.split(r"[\s、，,；;]+", slide["notes"]) if t and t not in NONE_MARKS]
+        for token in ids:
+            if not NOTE_ID.match(token):
+                problems.append(f"{where}: data-notes holds only K/Q numbers, found '{token}' — write the "
+                                f"point into {NOTES_MD} and list its number")
+            elif token not in points:
+                problems.append(f"{where} names {token}, which {NOTES_MD} does not have")
+        headings = " ".join(points[t][0] for t in ids if t in points)
+        shown = texts[n] if n < len(texts) else ""
+        for abbr in sorted(set(ABBREVIATION.findall(shown))):
+            if f"（{abbr}）" not in headings and f"({abbr})" not in headings:
+                problems.append(f"{where} shows '{abbr}' but none of its knowledge points is titled "
+                                f"全名（{abbr}） — the presenter must be able to expand every abbreviation on the slide")
+        head = slide["label"] + (f"（{slide['time']} 分）" if slide["time"] else "")
+        parts = [head]
+        for token in ids:
+            if token in points:
+                heading, short = points[token]
+                parts.append(f"・{heading}\n　{short}" if token.startswith("Q") else f"・{heading}：{short}")
+        notes.append("\n".join(parts))
+    return notes, problems
+
+
 def init(unit: Path, talk: Path, root: Path) -> None:
-    target = talk / NOTES_MD
-    if target.exists():
+    target = unit / NOTES_MD
+    if is_knowledge_file(target):
         sys.exit(f"{rel(target, root)} exists; edit it instead")
-    labels = slide_labels((talk / "deck.html").read_text(encoding="utf-8"))
-    spoken = table_column(talk / "storyboard.md", SPOKEN_COLUMN)
-    out = [SPEAKER_NOTES_HEADER]
-    for n, label in enumerate(labels):
-        seed = spoken.get(n, "")
-        seed = "" if seed.startswith("[") else seed
-        lines = [f"- {s.strip()}" for s in re.split(r"<br\s*/?>", seed) if s.strip()]
-        out.append(f"## {n}｜{label}\n\n" + ("\n".join(lines) or "- [講法]") + "\n")
-    target.write_text("\n".join(out), encoding="utf-8")
-    print(f"wrote {rel(target, root)}: {len(labels)} sections seeded from the storyboard's {SPOKEN_COLUMN}")
+    if target.exists():
+        sys.exit(f"{rel(target, root)} exists in another format (per-slide 講法 or the unit's own); move its "
+                 "facts into K/Q entries by hand, because a script cannot tell a fact from a delivery cue")
+    shutil.copy2(TEMPLATES / "presentation" / "scaffold" / NOTES_MD, target)
+    print(f"wrote {rel(target, root)}: add K/Q entries, then list each slide's numbers in the storyboard's "
+          "講者備註 column (deck-compile copies them into data-notes)")
 
 
 def main() -> None:
@@ -234,10 +320,14 @@ def main() -> None:
     if "--init" in sys.argv:
         init(unit, talk, root)
         return
-    if not (talk / NOTES_MD).is_file():
-        sys.exit(f"no {rel(talk / NOTES_MD, root)} — create it with ./fw deck-notes {rel(talk, root)} --init")
 
-    notes, problems = assemble(unit, talk, root)
+    source = notes_source(unit, talk)
+    if source == "knowledge":
+        notes, problems = assemble_knowledge(unit, talk, root)
+    elif (talk / NOTES_MD).is_file():
+        notes, problems = assemble(unit, talk, root)
+    else:
+        sys.exit(unmanaged_notes(rel(talk, root)))
     if problems:
         print("\n".join(f"  {p}" for p in problems))
         sys.exit(f"deck-notes: {len(problems)} problem(s); deck.html not written")
@@ -252,7 +342,7 @@ def main() -> None:
             current = None
         if current != notes:
             sys.exit(f"deck.html speaker notes are out of date — run ./fw deck-notes {rel(talk, root)}")
-        print(f"OK — {len(notes)} speaker notes match {NOTES_MD}, the storyboard and the glossary/Q&A")
+        print(f"OK — {len(notes)} speaker notes match {NOTES_MD} and the slides' references")
         return
     payload = "\n" + json.dumps(notes, ensure_ascii=False, indent=0) + "\n"
     (talk / "deck.html").write_text(html[:m.start(2)] + payload + html[m.end(2):], encoding="utf-8")

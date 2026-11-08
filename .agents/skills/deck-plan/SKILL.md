@@ -38,7 +38,8 @@ Plan only from the declared Model as it renders, including its local Quarto
 includes, because neither points nor storyboard may add a claim. A point the
 talk needs but the Model lacks goes into the Model first. Run
 `./fw check-citations <unit>` before planning, so every point starts from
-sentences whose sources resolve; the same gate checks the unit glossary/Q&A.
+sentences whose sources resolve; the same gate checks the unit's knowledge
+points (`<unit>/speaker-notes.md`).
 
 ## The angle — `<talk>/points.md`
 
@@ -75,9 +76,9 @@ Then one row per slide, ordered along the variant's spine — thesis: problem �
 gap → question → method → evidence → finding → contribution; reading guide:
 range → author → arguments → synthesis → concepts → critique → questions:
 
-| # | 來源論點 | 內容形狀 | 版型 | 動態 | 講 | 畫面內容 | 口說重點 | 名詞與提問 | AI 協助 |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| 5 | `points.md` P4 | 4 Two-axis typology | `.matrix` 3×3 | M-STEP | 2 min | axis y = 極數, axis x = 權威密度; highlight the cell the author's case falls in | why the axes, the author's case with page, transition to the critique | 極數、權威密度、Q3 | AI drafted the cell labels; author chose the axes and checked them against the source |
+| # | 來源論點 | 內容形狀 | 版型 | 動態 | 講 | 畫面內容 | 講者備註 | AI 協助 |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| 5 | `points.md` P4 | 4 Two-axis typology | `.matrix` 3×3 | M-STEP | 2 min | axis y = 極數, axis x = 權威密度; highlight the cell the author's case falls in | K12、K13、K14、Q3 | AI drafted the cell labels; author chose the axes and checked them against the source |
 
 - **來源論點** names the point; the point names the Model file and section. That chain
   is the traceability the author reviews: every slide points back to a cited
@@ -118,20 +119,21 @@ range → author → arguments → synthesis → concepts → critique → quest
   This allows `./fw deck-compile <talk>` to render the slides automatically.
   Keep it graspable in about ten seconds, because the audience reads while listening.
   A row that needs more becomes two rows.
-- **口說重點** is what the talk says — explanation, citations with locators,
-  transitions. With sparse slides the notes carry the talk, so the author
-  reviews them here; the View writes them out in full as the note's 講法.
-- **名詞與提問** lists the terms the presenter must be able to explain on this
-  slide (spelled as the headings of `<unit>/notes/glossary.md`) and the questions
-  this audience is likely to ask (`Q<n>` from `<unit>/notes/qa.md`), separated by
-  `、`. The presenter may not know every detail behind a slide, and the
-  audience asks about exactly those; which ones to prepare depends on the
-  audience in 前提, so the choice is made here, while the explanations and
-  answers are factual backup written once at unit level (protocol § Speaker
-  notes). `./fw deck-notes` refuses a row that names an entry the unit lacks.
-  List every term and abbreviation on the slide or in its 口說重點 that this
-  audience may not know: the command checks that listed entries exist, not
-  that the list is complete, so coverage is checked here at sign-off.
+- **講者備註** holds knowledge-point numbers only — `K<n>` and `Q<n>` from
+  `<unit>/speaker-notes.md`, separated by `、`, or `—` — never sentences. The
+  presenter does not read a script; what they need on stage is the terms,
+  abbreviations, facts and likely questions behind the slide, each with its
+  page, and the audience asks about exactly those details. Which ones to
+  carry depends on the audience in 前提, so the choice is made here, while the
+  points themselves are factual backup written once at unit level (protocol
+  § Speaker notes), extracted and numbered while the Model is written. Detail
+  that does not fit on the slide becomes a knowledge point, not a longer note.
+  `./fw deck-compile` copies the numbers into the slide's `data-notes` (and
+  講 into `data-time`), so the notes move with the slide; `./fw deck-notes`
+  refuses free text, an unknown number, an uncited point, and an abbreviation
+  shown on the slide without a `全名（縮寫）` point among the slide's numbers.
+  It cannot see a term the slide needs but the row omits, so coverage of the
+  remaining terms is checked here at sign-off.
 - **AI 協助** records what AI drafted or verified and what the author wrote or
   changed, because courses increasingly ask for per-slide AI disclosure, and
   noting it while planning is more reliable than reconstructing it later.
@@ -200,5 +202,6 @@ whether a shape fits — that is the author's review.
 
 When the storyboard uses layout catalog codes, run `./fw deck-compile <talk>`
 to compile `storyboard.md` directly into `deck.html`. Each View writes a slide
-and its speaker note from one row and the Model passage the row's point names,
-never the note from the slide.
+from one row and the Model passage the row's point names, and carries the
+row's 講者備註 numbers as its `data-notes`; the note is assembled from the
+knowledge points, never written from the slide.

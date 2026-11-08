@@ -42,8 +42,8 @@ class TalkTests(unittest.TestCase):
         for name in ("points.md", "storyboard.md", "deck.html", "asset/deck-stage.js"):
             self.assertTrue((talk / name).is_file(), name)
         self.assertFalse((talk / "paper.qmd").exists(), "the assignment Model is never copied into a talk")
-        self.assertTrue((self.unit / "notes/glossary.md").is_file())
-        self.assertTrue((self.unit / "notes/qa.md").is_file())
+        self.assertTrue((self.unit / "speaker-notes.md").is_file(), "knowledge points are unit-level")
+        self.assertFalse((talk / "speaker-notes.md").exists())
 
         built = self.run_fw("build.py", str(talk))
         self.assertNotEqual(built.returncode, 0, "a fresh storyboard must not pass the deck gate")

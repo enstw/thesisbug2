@@ -49,18 +49,35 @@ def deck_assets() -> dict[str, Path]:
 
 
 NOTES_FILE = "speaker-notes.md"
-NOTES_MARKER = "./fw deck-notes"   # deck-notes --init writes it into the file's header
+NOTES_MARKER = "./fw deck-notes"   # every notes file the command wrote names it in its header
+KNOWLEDGE_TITLE = "# 講者備註：知識點"
+KNOWLEDGE_HEADING = re.compile(r"(?m)^## +[KQ]\d+\b")
+NOTES_BINDING = re.compile(r'<section\b[^>]*\bdata-notes=')
 
 
-def notes_source(talk: Path) -> str:
+def is_knowledge_file(path: Path) -> bool:
+    """A unit's speaker-notes.md in the knowledge format (K/Q entries)."""
+    if not path.is_file():
+        return False
+    text = path.read_text(encoding="utf-8")
+    return KNOWLEDGE_TITLE in text or bool(KNOWLEDGE_HEADING.search(text))
+
+
+def notes_source(unit: Path, talk: Path) -> str:
     """Where a deck's speaker notes come from.
 
-    "deck-notes": speaker-notes.md written for the command, so the notes in
-    deck.html are assembled and can be checked. "own-file": a notes file from
+    "knowledge": each slide names its knowledge points in data-notes and the
+    unit's speaker-notes.md holds them, so the notes travel with the slide
+    and are assembled from cited entries. "deck-notes": the older per-slide
+    講法 file that deck-notes also assembles. "own-file": a notes file from
     before the command, kept in sync by the unit's own script. "none": the
     notes exist only in deck.html, typed by hand — no gate can check them, and
     such notes drift toward restating the slide, the sparsest View.
     """
+    deck = talk / "deck.html"
+    if is_knowledge_file(unit / NOTES_FILE) or (
+            deck.is_file() and NOTES_BINDING.search(deck.read_text(encoding="utf-8"))):
+        return "knowledge"
     notes = talk / NOTES_FILE
     if not notes.is_file():
         return "none"
@@ -71,9 +88,9 @@ def unmanaged_notes(talk_arg: str) -> str:
     """The message for a deck whose notes are typed into deck.html."""
     return (f"no {NOTES_FILE} — the speaker notes in deck.html are starter placeholders or typed by "
             "hand, which no gate checks and the next assembly overwrites; never edit them there: "
-            f"run ./fw deck-notes {talk_arg} --init, write "
-            "each 講法 from the storyboard's 口說重點 and the Model (not from the slide), then "
-            f"./fw deck-notes {talk_arg}")
+            f"run ./fw deck-notes {talk_arg} --init, write the knowledge points (K/Q, each with a "
+            "cited first paragraph) into the unit's speaker-notes.md, put each slide's numbers in its "
+            f"data-notes (deck-compile copies the storyboard's 講者備註 column), then ./fw deck-notes {talk_arg}")
 
 
 def starter_deck(variant: str) -> Path:
@@ -111,8 +128,9 @@ def presentation_files(variant: str) -> dict[str, Path]:
         **talk_files(variant),
         "presentation.qmd": scaffold / "variants" / variant / "presentation.qmd",
         model: scaffold / model,
-        "notes/glossary.md": scaffold / "notes" / "glossary.md",
-        "notes/qa.md": scaffold / "notes" / "qa.md",
+        NOTES_FILE: scaffold / NOTES_FILE,
+        # notes/ holds the per-source summaries and the AI-use log, so it exists from the start
+        "notes/.gitkeep": scaffold / "notes" / ".gitkeep",
     }
 
 

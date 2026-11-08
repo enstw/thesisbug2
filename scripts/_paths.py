@@ -281,7 +281,8 @@ def citation_files(unit: Path) -> list[Path]:
     """Files whose citations are part of the unit's authored factual layer.
 
     All QMD entry points and their includes are checked.  The presenter's
-    glossary and anticipated answers are checked directly even when they are
+    knowledge points (speaker-notes.md; older units: glossary and anticipated
+    answers) are checked directly even when they are
     deliberately absent from the submitted paper: they are factual backup the
     presenter may say aloud, not appendices the assignment must contain.
     """
@@ -292,7 +293,7 @@ def citation_files(unit: Path) -> list[Path]:
         for f in (qmd.resolve(), *included_files(qmd, unit)):
             if f not in out:
                 out.append(f)
-    for name in ("notes/glossary.md", "notes/qa.md"):
+    for name in ("speaker-notes.md", "notes/glossary.md", "notes/qa.md"):
         path = (unit / name).resolve()
         if path.is_file() and path not in out:
             out.append(path)

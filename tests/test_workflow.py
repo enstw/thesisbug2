@@ -219,7 +219,7 @@ class WorkflowTests(unittest.TestCase):
         template = (REPO / "assets/templates/presentation/scaffold/storyboard.md").read_text(encoding="utf-8")
         self.assertIn("## 前提", template)
         self.assertIn("AI 協助", template)
-        self.assertIn("口說重點", template)
+        self.assertIn("講者備註", template)
         rows = "".join(f"| {i} | notes/a.md | 1 一個主張 | `.claim` | 1 min | 主張一句 | 解釋與引用 | 作者自寫 |\n"
                        for i in (1, 2))
         (self.unit / "storyboard.md").write_text(template + rows, encoding="utf-8")

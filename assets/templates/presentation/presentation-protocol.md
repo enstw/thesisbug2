@@ -15,9 +15,9 @@ a unit decision file.
 | :--- | :--- | :--- |
 | Stable source summary | `source-kit` § Stable per-source summary | `<unit>/notes/<key>.md` |
 | Presentation Model | § Choosing the Model | `guide.qmd`, `paper.qmd`, or files declared by `talk.json` |
-| Backup knowledge | § Speaker notes | `<unit>/notes/glossary.md`, `<unit>/notes/qa.md` |
+| Backup knowledge (speaker notes) | § Speaker notes | `<unit>/speaker-notes.md`: numbered knowledge points K/Q |
 | Controller: angle and flow | `deck-plan` | `<talk>/points.md`, `<talk>/storyboard.md`, content shapes |
-| View: live HTML slides (default) | `deck-svg` | `<talk>/deck.html` and delivery notes, patterns, slide verification |
+| View: live HTML slides (default) | `deck-svg` | `<talk>/deck.html` with each slide's `data-notes`, patterns, slide verification |
 | View: one image per slide | `deck-image` | page prompts, rendering, proofreading |
 | View: Beamer PDF | § Quarto Beamer Fallback below | root presentation unit's `presentation.qmd` |
 | Deck shell | `deck-runtime` | the `deck-stage` contract, navigation, presenter window, print |
@@ -52,7 +52,7 @@ flowchart LR
     R["original / transcript"] --> N["stable source summary<br>source-centred"]
     N --> M["declared Model<br>task-centred"]
     R -. "verify before citing" .-> M
-    M --> B["backup knowledge<br>glossary + Q&A"]
+    M --> B["knowledge points<br>speaker-notes.md K/Q"]
     subgraph C["Controller：angle and flow"]
         P["points.md<br>angle"] --> S["storyboard.md<br>flow"]
     end
@@ -69,29 +69,32 @@ flowchart LR
   `guide.qmd`, organized around the week's problem; a paper/thesis talk uses
   its actual staged deliverable or manuscript (`research-question.qmd`,
   `theory-design.qmd`, `paper.qmd`, etc.), not a presentation copy.
-- **Backup knowledge:** `<unit>/notes/glossary.md` and `notes/qa.md`. It expands
-  what the presenter must understand but need not appear in the submitted
-  paper. Citation and language gates read these fixed paths directly.
+- **Backup knowledge:** `<unit>/speaker-notes.md`, numbered knowledge points
+  (`K<n>` terms, abbreviations and facts; `Q<n>` likely questions). It
+  expands what the presenter must understand but need not appear in the
+  submitted paper. Citation and language gates read this fixed path directly.
 - **Controller:** `<talk>/points.md` selects about 8–12 takeaways, each naming
   a Model section; `<talk>/storyboard.md` fixes audience, order, content shape,
-  on-slide copy, spoken points, backup entries and AI disclosure.
-- **View:** `<talk>/deck.html` and `<talk>/speaker-notes.md`. Its frozen engine,
+  on-slide copy, the knowledge-point numbers each slide carries and AI
+  disclosure.
+- **View:** `<talk>/deck.html`, each slide bound to its points by `data-notes`. Its frozen engine,
   look and runtime live in `<talk>/asset/`; `deck-refresh` updates only those
   framework-owned copies.
 
 **The Model–View–Controller rules:**
 
 1. On-slide facts and claims live in the declared Model. Backup-only
-   explanations live in the cited unit glossary/Q&A. The Controller selects,
+   explanations live in the unit's cited knowledge points. The Controller selects,
    orders and frames; the View renders without inventing either. A new factual
    idea found while building a slide goes into the Model first.
 1. An error is corrected against the original in its owning factual layer
    (Model or backup knowledge), then re-rendered downstream. An order, emphasis
    or audience change belongs to the Controller; a layout or look change
    belongs to the View.
-1. Delivery (講法) is View. Glossary and answers are factual backup shared by
-   every talk in the unit and checked upstream; the storyboard chooses which
-   entries this audience needs.
+1. Speaker notes are knowledge, not a script. The points are factual backup
+   shared by every talk in the unit and checked upstream; the storyboard
+   chooses which ones this audience needs, and each slide carries their
+   numbers.
 1. A different occasion gets a new talk directory over the same Model, not a
    copied manuscript. An image deck is another View of the same Controller.
 
@@ -131,7 +134,7 @@ select and say it:
 | :--- | :--- | :--- |
 | Paper skeleton: question, gap, claims and hypotheses, argument steps, evidence, limits, how the piece is written | the stable summary's 論文骨架 (`source-kit` template) | the argument slides, selected through the Model |
 | Author and field position: affiliation, related earlier work, school and contribution | the summary's 作者與學術位置, restated with citations in the Model's `### 作者與學術位置` under each reading | a spoken introduction at the start of that reading's part; no extra slide needed |
-| Technical terms and abbreviations | `<unit>/notes/glossary.md` | the storyboard's 名詞與提問 column; `./fw deck-notes` adds each one-line version to the note |
+| Technical terms and abbreviations | K entries in `<unit>/speaker-notes.md` | the storyboard's 講者備註 column → the slide's `data-notes`; `./fw deck-notes` puts each one-line version in the note |
 | Critique and discussion questions | the Model's comparison and discussion sections | the critique and discussion slides |
 | Recent events that test the readings (optional) | the Model's `# 近年局勢檢驗`, sources in the unit tier | one timeline slide; a new question gets its own slide |
 
@@ -142,12 +145,12 @@ characterizes the contribution in the presenter's words is marked as the
 presenter's, on the page and aloud.
 
 **Terms and abbreviations.** Every technical term or abbreviation that appears
-on a slide, or in the spoken notes, and that this audience may not know gets a
-glossary entry and is listed in that slide's 名詞與提問. `deck-notes` checks
-that a listed entry exists; it cannot tell a term was left off the list, so
-check coverage slide by slide when signing off the storyboard. Name an
-abbreviation's entry 全名（縮寫）, and spell the abbreviation out at its first
-use in the Model and on its first slide.
+on a slide and that this audience may not know gets a K entry and is listed
+in that slide's 講者備註. Name an abbreviation's entry 全名（縮寫）, and spell
+the abbreviation out at its first use in the Model and on its first slide.
+`deck-notes` refuses an abbreviation (two or more capitals) a slide shows
+without such a point among its numbers; it cannot tell a Chinese term was
+left off, so check those slide by slide when signing off the storyboard.
 
 **Recent-events test (optional).** Current events can test a reading in front
 of the class. Map each event to the discussion question it tests, and say on
@@ -165,19 +168,19 @@ but citation support is still verified against the original (`source-kit`).
 
 ## Speaker notes
 
-The presenter may not know every detail behind a slide, and the audience asks about exactly those details. So a speaker note carries the presenter's backup knowledge as well as the talk:
+The presenter does not read a script, and the audience asks about exactly the details a slide leaves out. So a speaker note is the presenter's backup knowledge: the terms, abbreviations, facts and likely questions behind the slide, each with its page.
 
-| Part of the note | Written in | Owner |
+| Part | Written in | Owner |
 | :--- | :--- | :--- |
-| 【講法】 what to say, in order, with timing, transitions and where to ask the room | `<talk>/speaker-notes.md`, one `## <n>｜<label>` section per slide | View |
-| 【名詞】 the terms on this slide, one line each | `<unit>/notes/glossary.md`, one `## <term>` section per term | factual backup |
-| 【提問】 questions this audience is likely to ask, with a short answer | `<unit>/notes/qa.md`, one `## Q<n> <question>` section per question | factual backup |
-| which terms and questions each slide carries | `<talk>/storyboard.md` 名詞與提問 | Controller |
+| the knowledge points | `<unit>/speaker-notes.md`, one `## K<n> <name>` (term, abbreviation, fact) or `## Q<n> <question>` section each | factual backup |
+| which points this audience needs on each slide | `<talk>/storyboard.md` 講者備註: numbers only | Controller |
+| the binding | each slide's `data-notes="K3 K7 Q1"` (and `data-time` from 講) | View |
 
-- Glossary and Q&A entries open with a one-line version (`**一句話**` / `**簡答**`, cited); the rest of the entry is the full explanation. Citation and language gates read both files directly, so they do not need to be artificial appendices to a submitted paper. The presenter reads the full entries before the talk; the note carries only the one-line versions, because on stage there is time for a glance, not a paragraph.
-- A term is written once and serves every slide that names it; a question an audience will ask but the readings do not answer is answered as "the text does not address this", never with an invented answer, because the presenter will say it aloud.
-- `./fw deck-notes <talk> --init` seeds `speaker-notes.md` from the storyboard's 口說重點; `./fw deck-notes <talk>` writes the assembled notes into `deck.html`. It refuses — and writes nothing — when a section's number or label no longer matches its slide or a row names a term or question the unit glossary/Q&A lacks. `./fw build <talk>` runs the same check on a `speaker-notes.md` that `--init` created, so a note edited only in `deck.html` is caught before the next assembly overwrites it.
-- Notes are never typed into `deck.html`, because no gate can check them there and they drift toward restating the slide. A deck with no `speaker-notes.md` — the starter's `[講法：…]` placeholders, or a deck from before the command — is migrated with `--init` before any note changes. `./fw build` refuses a `talk.json` talk without the file and notes an older root deck on every build; `./fw deck-compile` prints the same note and stops when the recompiled slides no longer match the notes' labels.
+- Each point opens with a cited one-line version (`**一句話**` / `**簡答**`); the rest is the full explanation. The note shows only that first paragraph, because on stage there is time for a glance, not a paragraph; the presenter reads the full entries beforehand. Citation and language gates read the file directly, so it need not be appended to a submitted paper.
+- Points are extracted and numbered while the Model is written (a reading guide can start from the source summaries); numbers never change, and a new point takes the next number, because storyboards and slides refer to them. A point is written once and serves every slide that names it. A question the readings do not answer is answered as "the text does not address this", never with an invented answer, because the presenter will say it aloud.
+- The numbers sit on the slide itself, not in a list kept in slide order, so moving or inserting a slide cannot attach notes to the wrong slide. `./fw deck-compile` copies each row's 講者備註 into `data-notes`; a hand-written slide carries it directly.
+- `./fw deck-notes <talk>` assembles the notes into `deck.html`; `--init` creates the knowledge file from the template. It refuses — and writes nothing — on a content slide without `data-notes`, a token that is not a K/Q number, a number with no entry, an entry whose first paragraph has no citation, or an abbreviation shown on a slide without a 全名（縮寫） point among its numbers. `./fw build <talk>` runs the same check.
+- Notes are never typed into `deck.html`, because no gate can check them there and they drift toward restating the slide. A deck with no knowledge file — the starter's `[講者備註：…]` placeholders, or a deck from before the command — is migrated before any note changes. `./fw build` refuses a `talk.json` talk without the file and notes an older root deck on every build; `./fw deck-compile` prints the same note and stops on deck-notes' refusal. Decks on the older per-slide 講法 file plus `notes/glossary.md` and `notes/qa.md` still assemble.
 
 ## Citation Handling
 
@@ -206,7 +209,7 @@ are HTML-first; their assignment manuscript builds through the owning unit.
 ## Build and Preview
 
 ```bash
-./fw check-citations <unit>                    # Model + glossary/Q&A
+./fw check-citations <unit>                    # Model + knowledge points
 ./fw check-zh-variants <unit>
 ./fw build <talk>                              # deck gate; deck.html itself has no build step
 ./fw deck-refresh <talk> --dry-run
@@ -225,13 +228,14 @@ Opening, presenting and printing the HTML deck: `deck-svg` § Run & verify.
    Model; summaries are not included wholesale or rewritten for the talk.
    Open each reading's section with `### 作者與學術位置` (§ What a reading
    guide covers).
-1. Expand unit-level glossary and Q&A from knowledge the Model requires,
-   checking their factual content directly against sources. Cover every term
-   and abbreviation the slides and notes will use.
+1. Extract the knowledge points into `<unit>/speaker-notes.md` while writing
+   the Model, numbering them and checking their factual content directly
+   against sources. Cover every term and abbreviation the slides will use.
 1. Plan the talk with `deck-plan`: `<talk>/points.md`, then the storyboard;
    the author signs off both.
-1. Render the Views with `deck-svg` (or `deck-image`), write delivery notes,
-   assemble them with `./fw deck-notes <talk>`, then run the deck checks.
+1. Render the Views with `deck-svg` (or `deck-image`), each slide carrying
+   its row's numbers in `data-notes`; assemble the notes with
+   `./fw deck-notes <talk>`, then run the deck checks.
 1. If the class requires Pandoc-rendered references, mirror the final structure into `presentation.qmd` and export that fallback.
 
 Single- or two-source guides may skip the cross-reading map; the paper skeleton, author introduction, terms and discussion questions still apply.
@@ -241,7 +245,7 @@ Single- or two-source guides may skip the cross-reading map; the paper skeleton,
 1. Keep writing the assignment's required documents; they are the Model.
 1. Add an occasion with `talk-init`, declaring the relevant document(s), and
    identify audience and conditions in its storyboard premises.
-1. Expand shared glossary/Q&A only for knowledge the presenter may need.
+1. Add knowledge points to the shared `speaker-notes.md` only for what the presenter may need.
 1. Plan, render and verify the talk without changing the manuscript merely to
    suit its duration or layout.
 1. Tag the version used when the talk is delivered, because the manuscript may
@@ -250,12 +254,12 @@ Single- or two-source guides may skip the cross-reading map; the paper skeleton,
 ## Quality Checklist
 
 - [ ] Stable summaries identify their source/edition, open with 論文骨架 and 作者與學術位置, preserve argument and evidence with locators, and were reviewed against the original.
-- [ ] (Reading guide) Each reading's author is introduced from cited sources; every term and abbreviation on a slide or in a note has a glossary entry listed in that slide's 名詞與提問.
+- [ ] (Reading guide) Each reading's author is introduced from cited sources; every term and abbreviation on a slide has a K entry listed in that slide's 講者備註.
 - [ ] `talk.json` names the actual task-focused Model; no per-talk copy of the assignment manuscript exists.
-- [ ] `./fw check-citations <unit>` and `./fw check-zh-variants <unit>` pass, including glossary and Q&A.
+- [ ] `./fw check-citations <unit>` and `./fw check-zh-variants <unit>` pass, including the knowledge points.
 - [ ] `<talk>/points.md` and `storyboard.md` are signed off; every slide and note trace to the declared Model and add no factual claim.
 - [ ] Key claims have source support in `<unit>/refs/` (`source-kit`).
-- [ ] `<talk>/deck.html` exists; sections == speaker notes, none empty; every `<section>` has `data-label`; `./fw deck-notes <talk> --check` passes.
+- [ ] `<talk>/deck.html` exists; every `<section>` has `data-label` and `data-notes`; `./fw deck-notes <talk> --check` passes.
 - [ ] `./fw deck-refresh <talk> --dry-run` reports no stale asset and no missing tag, and the engine scripts load in the order `deck-svg` § Run & verify gives.
 - [ ] `./fw check-contrast <talk>` passes; `#debug` reports `minfont=ok`, `overflow=none` and `contrast=ok` on every slide.
 - [ ] The comprehension test (`deck-svg` § Run & verify) has run on the final slide text: an isolated reader given only `./fw deck-text <talk>` output can restate every content slide as who did what to whom.

@@ -342,18 +342,19 @@ def deck_gate(unit: Path, talk: Path, root: Path) -> None:
             if r.returncode:
                 problems.append("deck out of sync: " + (r.stdout + r.stderr).strip())
 
-    # Notes assembled from speaker-notes.md and the glossary/Q&A must match the
-    # deck, because the presenter reads deck.html on stage: a stale note or a
-    # reference to a missing entry is a gap found mid-talk. Only a file written
-    # for deck-notes (its header names the command) is checked: a unit may keep
-    # its own notes file and sync script from before the command existed.
+    # Notes assembled from the slides' data-notes and the unit's knowledge
+    # points (or from an older per-slide 講法 file) must match the deck,
+    # because the presenter reads deck.html on stage: a stale note or a number
+    # with no entry is a gap found mid-talk. Only a file written for
+    # deck-notes is checked: a unit may keep its own notes file and sync
+    # script from before the command existed.
     # Notes with no file at all are typed into deck.html, which no gate can
     # check; a talk.json talk was created under the deck-notes contract, so it
     # is refused, while a root deck from before the marker gets a note on every
     # build instead of a forced migration, because otherwise each later edit
     # keeps hand-typing notes without anyone being told.
-    source = notes_source(talk)
-    if source == "deck-notes":
+    source = notes_source(unit, talk)
+    if source in ("knowledge", "deck-notes"):
         r = subprocess.run([sys.executable, str(HERE / "deck-notes.py"), str(talk), "--check"],
                            capture_output=True, text=True)
         if r.returncode:

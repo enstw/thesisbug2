@@ -77,8 +77,9 @@ Three ways in:
 1. **A course talk's storyboard** — the talk was planned with
    **deck-plan** and the author signed off `<talk>/storyboard.md`. Each slide
    spec comes from one row: its 畫面內容 becomes the Page Content and its 版型
-   the prompt's layout line. The notes come from `speaker-notes.md` and the
-   unit-level glossary/Q&A the row names: run `./fw deck-notes <talk>` after every
+   the prompt's layout line. The notes are the knowledge points the row's
+   講者備註 names, from `<unit>/speaker-notes.md`: give each slide those numbers
+   as `data-notes` (the manifest's `"knowledge": "K3 K7 Q1"`) and run `./fw deck-notes <talk>` after every
    `build-deck.py` run, because the assembler rewrites `deck.html` with the
    manifest's notes (presentation protocol § Speaker notes). Add no copy the row lacks, because the
    storyboard selects only from the declared Model and every on-slide string must

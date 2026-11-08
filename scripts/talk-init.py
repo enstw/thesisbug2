@@ -7,8 +7,9 @@
 Creates ``<unit>/talks/<name>/`` with talk.json, points.md, storyboard.md,
 deck.html and its frozen assets.  Model paths in talk.json are relative to
 the unit, so the talk reads the assignment's existing manuscript instead of
-copying it.  The unit-level glossary and Q&A are created only when missing;
-they are shared by every talk attached to that assignment.
+copying it.  The unit-level speaker-notes.md (the knowledge points behind
+the slides) is created only when missing; it is shared by every talk
+attached to that assignment.
 """
 
 from __future__ import annotations
@@ -24,7 +25,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 FRAMEWORK = HERE.parent
 sys.path.insert(0, str(HERE))
-from _deck import deck_problems, talk_files  # noqa: E402
+from _deck import NOTES_FILE, deck_problems, talk_files  # noqa: E402
 from _paths import course_root, rel, resolve_unit  # noqa: E402
 
 SCAFFOLD = FRAMEWORK / "assets" / "templates" / "presentation" / "scaffold"
@@ -82,12 +83,9 @@ def main() -> None:
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(src, target)
 
-    notes = unit / "notes"
-    notes.mkdir(exist_ok=True)
-    for name in ("glossary.md", "qa.md"):
-        target = notes / name
-        if not target.exists():
-            shutil.copy2(SCAFFOLD / "notes" / name, target)
+    # The knowledge points are unit-level: every talk on the assignment shares them.
+    if not (unit / NOTES_FILE).exists():
+        shutil.copy2(SCAFFOLD / NOTES_FILE, unit / NOTES_FILE)
 
     values = {**work, "title": title}
     fill_placeholders(talk, values, os.path.relpath(FRAMEWORK, talk))

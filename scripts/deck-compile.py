@@ -139,6 +139,30 @@ def add_formula(rendered: str, cell: str) -> str:
     return head + line + sep + tail if sep else rendered
 
 
+NOTES_COLUMN = "講者備註"
+NOTE_SEPARATORS = re.compile(r"[、，,；;\s]+")
+
+
+def bind_notes(rendered: str, row: dict[str, str]) -> str:
+    """The 講者備註 column as the slide's data-notes, and 講 as its data-time.
+
+    The knowledge-point numbers go on the slide itself, not into a list kept
+    in slide order beside the deck, so a moved or inserted slide keeps its own
+    notes. Tokens are copied as written; deck-notes refuses any that is not a
+    K/Q number. A storyboard without the column (the older 名詞與提問 and
+    口說重點 pair) compiles exactly as before.
+    """
+    if NOTES_COLUMN not in row:
+        return rendered
+    cell = row[NOTES_COLUMN].strip()
+    tokens = [t for t in NOTE_SEPARATORS.split(cell) if t and t not in {"—", "-", "–"}]
+    attrs = f' data-notes="{html_lib.escape(" ".join(tokens) or "—")}"'
+    minutes = re.match(r"\s*(\d+(?:\.\d+)?)", row.get("講", ""))
+    if minutes:
+        attrs += f' data-time="{minutes.group(1)}"'
+    return re.sub(r"<section\b", lambda m: m.group(0) + attrs, rendered, count=1)
+
+
 def render_row(row: dict[str, str], idx: int, total: int,
                resolver: VisualRhythmResolver, talk: Path | None = None,
                steps: dict[str, str] | None = None) -> tuple[str | None, list[str]]:
@@ -205,6 +229,7 @@ def render_row(row: dict[str, str], idx: int, total: int,
     rendered = WARNING_RE.sub("", rendered)
     rendered = add_formula(rendered, row.get("公式", ""))
     rendered, motion_warnings = apply_motion(rendered, split_codes(row.get("動態", "")))
+    rendered = bind_notes(rendered, row)
     warnings.extend(f"投影片 #{slide_num}: {w}" for w in motion_warnings)
     return rendered, warnings
 
@@ -319,18 +344,22 @@ def main() -> int:
     else:
         print(f"{rel(deck_file, root)} is already current")
 
-    # Reassemble the notes, and say so when that fails or cannot happen: new or
-    # moved slides change the labels deck-notes checks, and a refusal swallowed
-    # here left decks whose notes nobody regenerated, so agents typed them into
-    # deck.html instead. A unit's own notes file keeps its own sync script.
-    source = notes_source(talk)
-    if source == "deck-notes":
+    # Reassemble the notes, and say so when that fails or cannot happen: a
+    # refusal swallowed here left decks whose notes nobody regenerated, so
+    # agents typed them into deck.html instead. Compiled slides carry the
+    # 講者備註 numbers in data-notes, so the notes move with their slide. A
+    # unit's own notes file keeps its own sync script.
+    source = notes_source(unit, talk)
+    if source in ("knowledge", "deck-notes"):
         r = subprocess.run([sys.executable, str(HERE / "deck-notes.py"), str(talk)],
                            capture_output=True, text=True)
         if r.returncode:
             print((r.stdout + r.stderr).strip(), file=sys.stderr)
-            print(f"speaker notes not updated: renumber or relabel the sections of {NOTES_FILE} to match "
-                  f"the compiled slides, then run ./fw deck-notes {rel(talk, root)}", file=sys.stderr)
+            fix = ("add the missing entries to the unit's speaker-notes.md or fix the storyboard's 講者備註 numbers"
+                   if source == "knowledge" else
+                   f"renumber or relabel the sections of {NOTES_FILE} to match the compiled slides")
+            print(f"speaker notes not updated: {fix}, then run ./fw deck-notes {rel(talk, root)}",
+                  file=sys.stderr)
             return 1
         print(r.stdout.strip())
     elif source == "none":

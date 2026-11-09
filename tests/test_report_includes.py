@@ -69,6 +69,17 @@ class ReportIncludeTests(unittest.TestCase):
         self.assertNotIn("@backup2020c\n", r.stdout.split("UNUSED ENTRIES", 1)[1],
                          "the unit glossary is checked directly without a report include")
 
+    def test_check_citations_skips_the_speaker_notes_template_examples(self):
+        # talk-init copies this scaffold unchanged; its example K1/Q1 sections cite
+        # [@key, …] and are titled with "[", which deck-notes already skips.
+        template = (REPO / "assets/templates/presentation/scaffold/speaker-notes.md").read_text(encoding="utf-8")
+        self.write("speaker-notes.md", template + "\n## K2 實際的知識點\n\n**一句話**：有出處 [@backup2020c, {9}]。\n")
+        r = self.run_fw("check-citations.py", "01-presentation-talk")
+        self.assertNotIn("BROKEN", r.stdout)
+        self.assertNotIn("@key", r.stdout)
+        self.assertNotIn("@backup2020c\n", r.stdout.split("UNUSED ENTRIES", 1)[-1],
+                         "a real knowledge point after the examples is still read")
+
     def test_check_zh_variants_reads_the_units_prose_but_not_sources_or_logs(self):
         self.write("notes/standalone.md", f"沒被收進 Model 的筆記{VARIANT}。\n")
         self.write("storyboard.md", f"| 1 | 分鏡{VARIANT} |\n")

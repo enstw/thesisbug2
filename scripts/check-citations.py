@@ -66,6 +66,10 @@ def find_cited_keys(unit: Path) -> dict[str, list[str]]:
         # Commented-out text is not part of the manuscript (scaffolds keep their
         # citation example in a comment).
         text = re.sub(r"<!--.*?-->", "", src.read_text(encoding="utf-8"), flags=re.S)
+        if src.name == "speaker-notes.md":
+            # Knowledge-point sections titled with "[" are the scaffold's examples
+            # (talk-init copies them in); deck-notes skips them, and so must this.
+            text = re.sub(r"(?m)^## [^\n]*\[[^\n]*\n(?:(?!## )[^\n]*\n?)*", "", text)
         for m in CITATION_RE.finditer(text):
             key = m.group(1).rstrip(".:")
             if key.startswith(CROSSREF_PREFIXES):

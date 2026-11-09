@@ -58,6 +58,11 @@ class SlotParserTests(unittest.TestCase):
         self.assertEqual(side_a.get("camp"), "全面對美結盟")
         self.assertEqual(side_a.get("points"), ["獲取最高階安全保證", "技術標準深度綁定"])
 
+    def test_parse_inline_dict_keeps_commas_inside_quoted_items(self):
+        # A thousands separator in a quoted list item is part of the item.
+        slots = parse_slot_payload('side_a: {camp: "甲方", points: ["約 1,234 件", \'甲, 乙\', 丙]}')
+        self.assertEqual(slots["side_a"]["points"], ["約 1,234 件", "甲, 乙", "丙"])
+
 
 class VisualRhythmResolverTests(unittest.TestCase):
     def test_determinism_with_same_seed(self):
@@ -180,6 +185,16 @@ class OverridableLabelTests(unittest.TestCase):
         html = self.render("L-FINALE-SUMMARY", "heading: h<br>points:<br>- a<br>points_align: left")
         self.assertIn('style="text-align:left"', html)
         self.assertNotIn("text-align", self.render("L-FINALE-SUMMARY", "heading: h<br>points:<br>- a"))
+
+    def test_confront_badge_is_decoration_not_slide_text(self):
+        # deck-notes requires a 全名（縮寫） point for every capitalised word the
+        # audience reads; the VS badge is decoration, so it must not count.
+        html = self.render("L-VS-CONFRONT", 'title: t<br>side_a: {camp: "甲", points: ["a"]}<br>side_b: {camp: "乙", points: ["b"]}')
+        self.assertIn('class="confront__badge" aria-hidden="true">VS<', html)
+        spec = importlib.util.spec_from_file_location("deck_text", REPO / "scripts/deck-text.py")
+        deck_text = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(deck_text)
+        self.assertNotIn("VS", deck_text.slide_texts(html)[0])
 
 
 class DeckCompilerIntegrationTests(unittest.TestCase):

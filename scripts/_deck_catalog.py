@@ -93,7 +93,13 @@ def parse_inline_dict(s: str) -> dict[str, Any]:
             if (v.startswith('"') and v.endswith('"')) or (v.startswith("'") and v.endswith("'")):
                 result[k] = v[1:-1]
             elif v.startswith("[") and v.endswith("]"):
-                items = [item.strip().strip("'\"") for item in v[1:-1].split(",") if item.strip()]
+                # Split on commas outside quotes: a quoted item may hold one
+                # ("約 1,234 件"), and splitting it there breaks the item in two.
+                items = []
+                for dq, sq, bare in re.findall(r'\s*(?:"((?:\\.|[^"\\])*)"|\'((?:\\.|[^\'\\])*)\'|([^,]+))\s*(?:,|$)', v[1:-1]):
+                    item = (dq or sq or bare).strip()
+                    if item:
+                        items.append(item)
                 result[k] = items
             else:
                 result[k] = v
@@ -539,7 +545,7 @@ def render_vs_confront(slots: dict[str, Any], variant: str, ctx: SlideContext) -
           </ul>
         </div>
         <div class="confront__vs rise d2">
-          <div class="confront__badge">VS</div>
+          <div class="confront__badge" aria-hidden="true">VS</div>
         </div>
         <div class="card confront__side rise d1">
           <span class="tag" style="color:var(--text)">{camp_b}</span>

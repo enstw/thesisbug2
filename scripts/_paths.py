@@ -234,6 +234,10 @@ INCLUDE_RE = re.compile(r"\{\{<\s*include\s+(\S+?)\s*>\}\}")
 # script, gpt-review/ keeps a second model's report as received.
 NOT_PROSE_NAMES = {"PROGRESS.md", "DECISIONS.md", "CHANGELOG.md"}
 NOT_PROSE_DIRS = {"refs", "gpt-review"}
+# Generated anywhere under a unit and never written by the author: a talk's derived
+# Views (`./fw deck-3d`, `./fw deck-slidev`) repeat the storyboard, which is already
+# checked at its source, and node_modules holds other projects' Markdown.
+DERIVED_DIRS = {"deck3d", "slidev", "node_modules"}
 
 
 def included_files(source: Path, unit: Path) -> list[Path]:
@@ -309,6 +313,7 @@ def prose_files(unit: Path) -> list[Path]:
     for md in sorted(unit.rglob("*.md")):
         parts = md.relative_to(unit).parts
         if (parts[0] in NOT_PROSE_DIRS or md.name in NOT_PROSE_NAMES
+                or DERIVED_DIRS.intersection(parts)
                 or any(p.startswith(("_", ".")) for p in parts)):
             continue
         if md.resolve() not in out:

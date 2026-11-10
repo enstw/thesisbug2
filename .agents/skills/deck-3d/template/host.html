@@ -1,0 +1,50 @@
+<!doctype html>
+<!-- 由 ./fw deck-3d 從 storyboard.md 產生；不要手改，改分鏡後重跑。 -->
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{TITLE}}</title>
+<style>
+  @font-face { font-family:'ENSFont'; src:url('../asset/ENSFont.woff2') format('woff2');
+    unicode-range:U+3000-303F,U+3040-309F,U+30A0-30FF,U+3400-4DBF,U+4E00-9FFF,U+F900-FAFF,U+FF00-FFEF; }
+  html, body { margin:0; height:100%; background:#0B1020; overflow:hidden; touch-action:none; user-select:none; }
+  text { font-family:'ENSFont','Helvetica Neue',system-ui,sans-serif; }
+
+  /* 舞台：1920×1080，等比貼合視窗（engine.js 的 refit）。用 fixed 而非 absolute：3D 面板會把文件的
+     可捲動範圍撐大，瀏覽器一旦捲動文件（實測會捲），absolute 的舞台就整個偏離畫面中心。 */
+  html { overflow:clip; }
+  #fit { position:fixed; left:50%; top:50%; width:1920px; height:1080px; }
+  #viewport { position:absolute; inset:0; perspective:1100px; perspective-origin:50% 50%; }
+  #dolly { position:absolute; inset:0; transform-style:preserve-3d; will-change:transform; }
+  #space { position:absolute; left:50%; top:50%; width:0; height:0; transform-style:preserve-3d;
+    transform-origin:0 0; will-change:transform; }
+  .panel { position:absolute; left:0; top:0; transform-origin:0 0; transform-style:flat; backface-visibility:hidden; }
+  .panel svg { display:block; width:100%; height:100%; overflow:visible; }
+  .panel.sidecard { cursor:pointer; }
+
+  /* 場景未抵站時是魂影；抵站（.active）逐行入場 */
+  .scene .fx { opacity:.12; transform:translateY(12px);
+    transition:opacity .45s cubic-bezier(.2,.7,.3,1), transform .45s cubic-bezier(.2,.7,.3,1); }
+  .scene.active .fx { opacity:1; transform:none; }
+  /* 全景站是地圖：島題封面與島的浮水印轉亮，內容場景維持魂影 */
+  body.overview .panel.cover .fx { opacity:1; transform:none; }
+  .panel.cover svg { transform-origin:50% 65%; transition:transform .6s ease; }
+  body.overview .panel.cover svg { transform:scale(3); }   /* 島名放大到全景距離仍讀得到 */
+  .panel.mark text { transition:opacity .6s ease; }
+  body.overview .panel.mark text { opacity:.5; }
+
+  #hud { position:fixed; right:14px; bottom:10px; color:rgba(232,230,224,.45);
+    font:12px/1.6 'ENSFont','Helvetica Neue',sans-serif; pointer-events:none; text-align:right; }
+  #hud .flash { color:rgba(247,147,26,.85); }
+  body.preview #hud { display:none; }
+</style>
+</head>
+<body>
+<div id="fit"><div id="viewport"><div id="dolly"><div id="space"></div></div></div></div>
+<div id="hud"></div>
+<script src="engine.js"></script>
+<script>const DECK = {{DECK}};</script>
+<script src="world.js"></script>
+</body>
+</html>

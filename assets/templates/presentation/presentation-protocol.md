@@ -20,6 +20,8 @@ a unit decision file.
 | View: live HTML slides (default) | `deck-svg` | `<talk>/deck.html` with each slide's `data-notes`, patterns, slide verification |
 | View: one image per slide | `deck-image` | page prompts, rendering, proofreading |
 | View: Beamer PDF | § Quarto Beamer Fallback below | root presentation unit's `presentation.qmd` |
+| Derived View: 3D fly-through | `deck-3d` | `<talk>/deck3d/`, generated from the storyboard and `deck.html`'s notes; never edited |
+| Derived View: Slidev project | `deck-slidev` | `<talk>/slidev/`, generated the same way; never edited |
 | Deck shell | `deck-runtime` | the `deck-stage` contract, navigation, presenter window, print |
 | Look | `house-style` | tokens, themes, contrast rules, font |
 | Figures | `diagram` | SVG, from PlantUML or written directly |
@@ -236,6 +238,10 @@ Opening, presenting and printing the HTML deck: `deck-svg` § Run & verify.
 1. Render the Views with `deck-svg` (or `deck-image`), each slide carrying
    its row's numbers in `data-notes`; assemble the notes with
    `./fw deck-notes <talk>`, then run the deck checks.
+1. Optional: generate a derived View from the same storyboard with
+   `./fw deck-3d <talk>` or `./fw deck-slidev <talk>`. It comes after the
+   notes are assembled, because it takes them from `deck.html`; its output
+   is never edited, and `deck.html` remains the deck the checks read.
 1. If the class requires Pandoc-rendered references, mirror the final structure into `presentation.qmd` and export that fallback.
 
 Single- or two-source guides may skip the cross-reading map; the paper skeleton, author introduction, terms and discussion questions still apply.

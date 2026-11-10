@@ -199,6 +199,8 @@ whether a shape fits — that is the author's review.
 | Live HTML slides (default) | `deck-svg` (or `./fw deck-compile`) | the deck is still being edited, or compiles deterministically from catalog layouts |
 | One image per slide | `deck-image` | the copy is locked and the talk is a showcase, because each later edit costs a page regeneration |
 | Beamer PDF | root presentation unit's `presentation.qmd` (protocol § Quarto Beamer Fallback) | the venue needs Pandoc-rendered references or LaTeX |
+| 3D fly-through (derived) | `deck-3d` (`./fw deck-3d`) | the talk wants a showpiece whose transitions carry the structure; generated beside `deck.html`, never instead of it |
+| Slidev project (derived) | `deck-slidev` (`./fw deck-slidev`) | the venue or presenter works in Slidev (presenter mode, click steps, its exports); generated beside `deck.html`, needs Node |
 
 When the storyboard uses layout catalog codes, run `./fw deck-compile <talk>`
 to compile `storyboard.md` directly into `deck.html`. Each View writes a slide

@@ -13,7 +13,6 @@ validates layout codes against the Layout Catalog, resolves visual rhythm
 from __future__ import annotations
 
 import argparse
-import hashlib
 import re
 import subprocess
 import sys
@@ -24,6 +23,7 @@ sys.path.insert(0, str(HERE))
 from _deck import NOTES_FILE, notes_source, unmanaged_notes  # noqa: E402
 from _deck_catalog import CATALOG, VisualRhythmResolver, get_layout, parse_slot_payload  # noqa: E402
 from _deck_motion import apply_motion, split_codes  # noqa: E402
+from _deck_outline import extract_seed, extract_storyboard_rows, row_eyebrow, row_title  # noqa: E402
 from _deck_steps import step_names, strip_html  # noqa: E402
 from _paths import course_root, rel, resolve_talk  # noqa: E402
 
@@ -83,46 +83,6 @@ def find_stage_open(html: str) -> tuple[int, int] | None:
     return locate_stage(html).stage_open
 
 
-def extract_seed(storyboard_text: str, default_seed: int = 42) -> int:
-    """Extract Seed from storyboard premises: - **Seed:** 42 or - Seed: 42."""
-    m = re.search(r"(?im)^[-*]\s*(?:\*\*)?Seed(?:\*\*)?\s*[:：]\s*(\w+)", storyboard_text)
-    if m:
-        val = m.group(1).strip()
-        if val.isdigit():
-            return int(val)
-        # If it's a string like "2026-autumn" or "r4821", hash it deterministically
-        return int(hashlib.md5(val.encode("utf-8")).hexdigest()[:8], 16)
-    return default_seed
-
-
-def extract_storyboard_rows(storyboard_text: str) -> list[dict[str, str]]:
-    """Parse rows under ## 投影片 table into list of row dicts."""
-    rows: list[dict[str, str]] = []
-    lines = storyboard_text.splitlines()
-    in_table = False
-    headers: list[str] = []
-
-    for line in lines:
-        stripped = line.strip()
-        if not stripped.startswith("|"):
-            continue
-        cols = [c.strip() for c in stripped.strip("|").split("|")]
-        if not cols:
-            continue
-        if cols[0] == "#":
-            headers = cols
-            in_table = True
-            continue
-        if in_table and cols[0] != ":---" and not cols[0].startswith("---"):
-            if cols[0].isdigit() and len(cols) >= 4:
-                row_dict = {}
-                for idx, h in enumerate(headers):
-                    if idx < len(cols):
-                        row_dict[h] = cols[idx]
-                rows.append(row_dict)
-    return rows
-
-
 def add_formula(rendered: str, cell: str) -> str:
     """The 公式 column as one `p.fx` line at the foot of the slide body, typeset by asset/katex.
 
@@ -171,7 +131,6 @@ def render_row(row: dict[str, str], idx: int, total: int,
     Shared with storyboard-review, which previews each row the way the deck will show it."""
     warnings: list[str] = []
     slide_num = int(row.get("#", idx))
-    shape_col = row.get("內容形狀", "")
     layout_col = row.get("版型", "").strip()
     content_col = row.get("畫面內容", "")
 
@@ -185,27 +144,10 @@ def render_row(row: dict[str, str], idx: int, total: int,
     # Parse slots from content column
     slots = parse_slot_payload(content_col)
 
-    # Infer title from shape/content if not provided in slot
-    if "title" not in slots:
-        # Check if there is a heading in content
-        first_line = content_col.split("<br>")[0].strip()
-        if first_line and not first_line.startswith(("-", "*", "cards:", "items:")):
-            slots["title"] = first_line.split(":")[-1].strip()
-        else:
-            slots["title"] = shape_col or f"投影片 {slide_num}"
-
-    # Resolve eyebrow: prefer explicit slot eyebrow, then label / data_label,
-    # then non-numeric shape name (strip leading numbers like "3 理論入門" -> "理論入門"),
-    # fallback to "研討進度".
-    resolved_eyebrow = (
-        slots.get("eyebrow")
-        or slots.get("label")
-        or slots.get("data_label")
-    )
-    if not resolved_eyebrow and shape_col:
-        resolved_eyebrow = re.sub(r"^\d+\s*", "", shape_col).strip()
-    if not resolved_eyebrow:
-        resolved_eyebrow = "研討進度"
+    # The title and the eyebrow fall back to the row's first line and its shape name;
+    # the derived Views read them through the same functions (`_deck_outline`).
+    slots.setdefault("title", row_title(row, slots, slide_num))
+    resolved_eyebrow = row_eyebrow(row, slots)
 
     # Resolve context and depth variant
     ctx, chosen_variant = resolver.resolve(

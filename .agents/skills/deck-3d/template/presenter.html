@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>講者視窗</title>
+<style>
+  @font-face { font-family:'ENSFont'; src:url('../asset/ENSFont.woff2') format('woff2');
+    unicode-range:U+3000-303F,U+3040-309F,U+30A0-30FF,U+3400-4DBF,U+4E00-9FFF,U+F900-FAFF,U+FF00-FFEF; }
+
+  :root{ --bg:#0B1020; --panel:#141a2e; --line:#26304b; --ink:#E8E6E0; --body:#C9CDD8;
+         --dim:#7d879c; --orange:#F7931A; }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; height:100%; background:var(--bg); color:var(--ink);
+    font-family:'ENSFont','Helvetica Neue',system-ui,sans-serif; overflow:hidden; }
+
+  .app{ height:100vh; display:grid; grid-template-rows:auto 1fr auto; }
+
+  /* ---- 工具列 ---- */
+  .bar{ display:flex; align-items:center; gap:14px; padding:10px 18px;
+    background:var(--panel); border-bottom:1px solid var(--line); }
+  .bar .name{ font-size:15px; font-weight:600; letter-spacing:.5px; }
+  .bar .name small{ color:var(--dim); font-weight:400; margin-left:8px; }
+  .bar .spacer{ flex:1; }
+  .pill{ font-size:12px; color:var(--dim); border:1px solid var(--line);
+    border-radius:999px; padding:3px 11px; }
+  .pill.on{ color:#7fe0a8; border-color:#2e5b42; }
+  .pill.off{ color:#e08a8a; border-color:#5b2e2e; }
+  button{ font-family:inherit; font-size:13px; color:var(--ink); background:#1d2640;
+    border:1px solid var(--line); border-radius:8px; padding:7px 14px; cursor:pointer; }
+  button:hover{ background:#27314f; }
+  button.primary{ background:var(--orange); border-color:var(--orange); color:#1a1206; font-weight:600; }
+  button.primary:hover{ filter:brightness(1.08); }
+
+  /* ---- 舞台：左大（目前）／右欄（下一站＋講者備註） ---- */
+  .stage{ display:grid; grid-template-columns:1.7fr 1fr; gap:16px; padding:16px; min-height:0; }
+  .col{ display:flex; flex-direction:column; min-height:0; }
+  .side{ display:grid; grid-template-rows:auto 1fr; gap:16px; min-height:0; }
+  .cap{ font-size:12px; color:var(--dim); letter-spacing:2px; margin:0 0 7px 2px; }
+  .cap b{ color:var(--orange); font-weight:600; letter-spacing:0; }
+
+  /* ---- 預覽：平面 SVG 縮圖（非 3D iframe）。完全沒有 perspective／preserve-3d／will-change，
+         所以不會產生 GPU 合成圖層 → 不再有黑塊溢出蓋住 UI。16:9 一律縮入可用空間、不溢出。 ---- */
+  .fitbox{ container-type:size; overflow:hidden; display:flex; align-items:center; justify-content:center; }
+  .col.current .fitbox{ flex:1; min-height:0; }                 /* 目前：填滿左欄剩餘高度 */
+  .side .fitbox{ height:clamp(110px, 22vh, 240px); }            /* 下一站：限高，不擠壓講者備註 */
+  .pv{ position:relative; width:min(100cqw, calc(100cqh * 16 / 9)); aspect-ratio:16/9;
+    background:#0B1020; border:1px solid var(--line); border-radius:10px; overflow:hidden; cursor:pointer; }
+  .pv > svg{ display:block; width:100%; height:100%; }          /* viewBox＝內容框，meet 置中 */
+  .pv .ph{ position:absolute; inset:0; display:grid; place-items:center; padding:14px;
+    color:var(--dim); font-size:15px; letter-spacing:1px; text-align:center; }
+  .pv .endtag{ position:absolute; inset:0; display:none; place-items:center;
+    background:rgba(11,16,32,.82); color:var(--dim); font-size:15px; letter-spacing:1px; }
+  .pv.ended .endtag{ display:grid; }
+
+  /* ---- 講者備註（講法、名詞、提問；保留換行） ---- */
+  .notes{ min-height:0; display:flex; flex-direction:column; }
+  .notes .box{ flex:1; min-height:0; overflow:auto; background:var(--panel);
+    border:1px solid var(--line); border-radius:10px; padding:18px 20px;
+    font-size:26px; line-height:1.7; color:var(--ink); white-space:pre-wrap; }
+  .notes .box.empty{ color:var(--dim); font-size:20px; }
+
+  /* ---- 控制列 ---- */
+  .ctl{ display:flex; align-items:center; gap:16px; padding:12px 18px;
+    background:var(--panel); border-top:1px solid var(--line); }
+  .ctl .nav{ font-size:14px; min-width:0; }
+  .ctl .counter{ font-size:20px; font-weight:600; font-variant-numeric:tabular-nums; }
+  .ctl .label{ color:var(--body); margin-left:10px; font-size:14px;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .ctl .spacer{ flex:1; }
+  .ctl button{ font-size:15px; padding:9px 20px; }
+  .ctl .hint{ font-size:11px; color:var(--dim); }
+
+  /* 隱藏的資料來源 deck（只供 manifest + slides）。display:none＝完全不渲染、不產生任何合成圖層，
+     徹底杜絕 3D 黑塊；deck 的 JS 照常跑，slide SVG 由 measure 版 contentBox 產生、不需版面量測。 */
+  #dataSrc{ display:none; }
+
+  /* ---- 列印投影片：一站一頁、橫向滿版。樣式由列印與螢幕預覽（html.proof）共用 ---- */
+  #handout{ display:none; }
+  .slide{ position:relative; box-sizing:border-box; width:100vw; height:100vh; background:#0B1020;
+    display:flex; align-items:center; justify-content:center; overflow:hidden;
+    -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  .slide .svgwrap{ width:92vw; height:86vh; }        /* 對應 deck 取景 FILL_W .92／FILL_H .86 */
+  .slide .svgwrap svg{ width:100%; height:100%; }     /* viewBox＝內容框，meet 置中 */
+  .slide .pageno{ position:absolute; right:9mm; bottom:7mm; color:#54607a;
+    font-size:10pt; font-variant-numeric:tabular-nums; }
+  /* 螢幕預覽：presenter.html?proof —— 列印前先逐頁看過（捲動瀏覽） */
+  html.proof{ overflow:auto; }
+  html.proof .app{ display:none; }
+  html.proof #handout{ display:block; }
+  html.proof .slide{ border-bottom:1px solid #26304b; }
+  @media print{
+    @page{ size:landscape; margin:0; }
+    html,body{ height:auto; overflow:visible; background:#0B1020;
+      -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    .app{ display:none; }
+    #handout{ display:block; }
+    .slide{ page-break-after:always; break-after:page; }
+    .slide:last-child{ page-break-after:auto; break-after:auto; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="bar">
+    <div class="name">講者視窗 <small id="deckName"></small></div>
+    <span id="showState" class="pill off">簡報視窗：未開啟</span>
+    <div class="spacer"></div>
+    <button id="openBtn" class="primary">開啟簡報視窗 ⧉</button>
+    <button id="printBtn">列印投影片 🖨</button>
+  </header>
+
+  <main class="stage">
+    <section class="col current">
+      <p class="cap">目前這一站</p>
+      <div class="fitbox">
+        <div class="pv" id="curPv"><div class="ph">載入中…</div></div>
+      </div>
+    </section>
+
+    <aside class="side">
+      <section class="col">
+        <p class="cap">下一站</p>
+        <div class="fitbox">
+          <div class="pv" id="nextPv"><div class="ph"></div><div class="endtag">（簡報結束）</div></div>
+        </div>
+      </section>
+      <section class="col notes">
+        <p class="cap"><b>講者備註</b>　不上畫面</p>
+        <div class="box empty" id="notes">載入中…</div>
+      </section>
+    </aside>
+  </main>
+
+  <footer class="ctl">
+    <button id="prevBtn">◀ 上一站</button>
+    <span class="nav"><span class="counter" id="counter">— / —</span>
+      <span class="label" id="label"></span></span>
+    <div class="spacer"></div>
+    <span class="hint">← → / 空白 / PgUp PgDn 翻頁　·　點預覽＝下一站　·　簡報視窗按 F 全螢幕</span>
+    <button id="nextBtn">下一站 ▶</button>
+  </footer>
+</div>
+
+<section id="handout"></section>
+<iframe id="dataSrc" src="index.html?role=preview" title="資料來源（隱藏）"></iframe>
+
+<script>
+'use strict';
+/* 講者視窗。預覽是「平面 SVG 縮圖」——非 3D iframe：deck 的 perspective/preserve-3d/will-change
+   在 GPU 上會冒出合成黑塊溢出蓋住 UI，故預覽改用 deck 提供的 slides（與列印同一份內容取景 SVG）平鋪。
+   一個隱藏的 deck 實例（#dataSrc）只負責供 manifest（站別／講者備註）＋ slides（SVG）；真正的觀眾簡報窗
+   仍是 window.open 出來的完整 3D deck，不受影響。所有文案皆向 deck 取得，本檔不重抄。 */
+
+const dataSrc   = document.getElementById('dataSrc');
+const curPv     = document.getElementById('curPv');
+const nextPv    = document.getElementById('nextPv');
+const notesEl   = document.getElementById('notes');
+const counterEl = document.getElementById('counter');
+const labelEl   = document.getElementById('label');
+const showState = document.getElementById('showState');
+
+let route = [];          // [{id,label,note}]，由 deck manifest 提供
+let total = 0;
+let cur = 0;
+let slideById = {};      // id -> <svg> 標記（由 deck slides 提供；列印與預覽共用）
+let presWin = null;      // 正式簡報窗
+let syncShowPending = false;
+
+if (new URLSearchParams(location.search).has('proof')) document.documentElement.classList.add('proof');
+
+/* ?debug：把遙控軌跡印到主控台，並把旗標傳播到資料來源與簡報窗 */
+const DBG = new URLSearchParams(location.search).has('debug');
+function dlog() { if (DBG) try { console.log('[pres]', Array.prototype.join.call(arguments, ' ')); } catch (_) {} }
+if (DBG) dataSrc.src = dataSrc.src.replace('?role=preview', '?role=preview&debug');
+
+const send = (win, msg) => { try { win && win.postMessage(msg, '*'); } catch (_) {} };
+const cmd  = (win, c, id) => send(win, { deck:'cmd', cmd:c, id });
+
+/* ---------- 預覽：把目前／下一站的 slide SVG 平鋪進 .pv（無 3D、無合成圖層） ---------- */
+function fillSlot(pv, stop) {
+  const endtag = pv.querySelector('.endtag');
+  Array.prototype.slice.call(pv.childNodes).forEach(n => { if (n !== endtag) pv.removeChild(n); });
+  if (!stop) return;
+  const svg = slideById[stop.id];
+  if (svg) {
+    const tmp = document.createElement('div'); tmp.innerHTML = svg;
+    const node = tmp.firstElementChild;                 // <svg>（viewBox＝內容框）
+    if (node) { pv.insertBefore(node, endtag); return; }
+  }
+  const ph = document.createElement('div'); ph.className = 'ph';   // 無對應 slide（如全景／終點）→ 文字佔位
+  ph.textContent = (stop.label || '').replace(/^[^・]*・/, '') || '（全景）';
+  pv.insertBefore(ph, endtag);
+}
+function renderPreviews() {
+  if (!route.length) return;
+  dlog('render cur=' + cur, '->', route[cur] && route[cur].id);
+  fillSlot(curPv, route[cur]);
+  const nx = route[cur + 1];
+  nextPv.classList.toggle('ended', !nx);
+  fillSlot(nextPv, nx);
+}
+
+function paintMeta() {
+  if (!route.length) return;
+  counterEl.textContent = (cur + 1) + ' / ' + total;
+  labelEl.textContent = route[cur].label || '';
+  const note = route[cur].note || '';
+  notesEl.textContent = note || '（本站沒有講者備註）';
+  notesEl.classList.toggle('empty', !note);
+}
+
+/* 跳到第 n 站。fromShow＝此次更新源自簡報窗自身（它被點/按了），則不要回頭再命令它，避免迴圈。 */
+function go(n, fromShow) {
+  dlog('go n=' + n, 'fromShow=' + !!fromShow, 'cur(before)=' + cur);
+  cur = Math.max(0, Math.min(total - 1, n));
+  renderPreviews();
+  paintMeta();
+  if (presWin && !presWin.closed && !fromShow) cmd(presWin, 'goto', route[cur].id);
+}
+const next = () => go(cur + 1);
+const prev = () => go(cur - 1);
+
+/* 深連結：#<場景 id>（如 #s2-2）或 #<站號>（如 #9）續講；無則從頭 */
+function startIndex() {
+  const h = decodeURIComponent(location.hash.slice(1));
+  if (!h) return 0;
+  const i = route.findIndex(r => r.id === h);
+  if (i >= 0) return i;
+  if (/^\d+$/.test(h)) return Math.max(0, Math.min(total - 1, +h - 1));
+  return 0;
+}
+
+/* ---------- 通訊：資料來源（manifest/slides）＋ 簡報窗（state） ---------- */
+addEventListener('message', e => {
+  const d = e.data; if (!d || d.deck == null) return;
+  if (d.deck === 'manifest') {
+    route = d.route || []; total = route.length;
+    // 簡報名稱取自資料來源 deck 的 <title>（同源才讀得到；讀不到就留白）
+    try { document.getElementById('deckName').textContent = dataSrc.contentDocument.title || ''; } catch (_) {}
+    go(startIndex());
+    return;
+  }
+  if (d.deck === 'slides') {
+    slideById = {};
+    (d.slides || []).forEach(s => { slideById[s.id] = s.svg; });
+    buildHandout(d.slides || []);
+    renderPreviews();   // slides 到齊 → 用真正的 SVG 重繪預覽
+    return;
+  }
+  if (d.deck === 'state') {
+    dlog('recv state role=' + d.role, 'id=' + d.id, 'cur=' + cur);
+    if (d.role === 'preview') return;          // 資料來源的回報不驅動游標
+    if (syncShowPending) {                      // 開窗後先以瞬移把簡報窗對到目前站
+      syncShowPending = false;
+      send(presWin, { deck:'cmd', cmd:'goto', id:route[cur].id, instant:true });
+      return;
+    }
+    const i = route.findIndex(r => r.id === d.id);
+    if (i >= 0 && i !== cur) go(i, true);       // 只在簡報窗真的移到別站時跟隨（防回授）
+  }
+});
+
+/* 隱藏資料來源載入後：要 manifest（站別／講者備註）＋ slides（預覽／列印用 SVG），只需一次 */
+let asked = false;
+dataSrc.addEventListener('load', () => {
+  if (asked) return; asked = true;
+  send(dataSrc.contentWindow, { deck:'manifest?' });
+  send(dataSrc.contentWindow, { deck:'slides?' });
+});
+
+/* ---------- 簡報窗 ---------- */
+function openShow() {
+  if (presWin && !presWin.closed) { presWin.focus(); return; }
+  const at = route[cur] ? '#' + route[cur].id : '';   // 直接深連結到目前站，開窗即定位、免大幅運鏡
+  presWin = window.open('index.html' + (DBG ? '?debug' : '') + at, 'deckShow');
+  syncShowPending = true;
+}
+function watchShow() {
+  const open = presWin && !presWin.closed;
+  showState.textContent = '簡報視窗：' + (open ? '已開啟' : (presWin ? '已關閉' : '未開啟'));
+  showState.className = 'pill ' + (open ? 'on' : 'off');
+}
+setInterval(watchShow, 800);
+
+/* ---------- 列印投影片：一站一頁、橫向滿版（與預覽同一份 slide SVG） ---------- */
+function buildHandout(slides) {
+  const h = document.getElementById('handout');
+  h.innerHTML = slides.map((s, i) =>
+    '<div class="slide"><div class="svgwrap">' + s.svg + '</div>' +
+    '<div class="pageno">' + (i + 1) + ' / ' + slides.length + '</div></div>'
+  ).join('');
+  if (document.documentElement.classList.contains('proof')) {
+    const k = decodeURIComponent(location.hash.slice(1));
+    let i = slides.findIndex(s => s.id === k);
+    if (i < 0 && /^\d+$/.test(k)) i = Math.max(0, Math.min(slides.length - 1, +k - 1));
+    if (i > 0 && h.children[i]) h.children[i].scrollIntoView();
+  }
+}
+function doPrint() {
+  if (!Object.keys(slideById).length) { send(dataSrc.contentWindow, { deck:'slides?' }); setTimeout(() => window.print(), 500); }
+  else window.print();
+}
+
+/* ---------- 控制 ---------- */
+document.getElementById('openBtn').addEventListener('click', openShow);
+document.getElementById('printBtn').addEventListener('click', doPrint);
+document.getElementById('prevBtn').addEventListener('click', prev);
+document.getElementById('nextBtn').addEventListener('click', next);
+curPv.addEventListener('click', next);     // 點預覽＝下一站（純 div，不再有 iframe 搶焦點問題）
+nextPv.addEventListener('click', next);
+
+addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); next(); }
+  else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); prev(); }
+  else if (e.key === 'Home') go(0);
+  else if (e.key === 'End') go(total - 1);
+});
+
+watchShow();
+</script>
+</body>
+</html>

@@ -4,7 +4,7 @@
 
 AI-agent framework for Traditional Chinese academic coursework — one repo per course, shared skills, audited sources.
 
-> **Status: in use.** It has been used in formal university coursework for over a year, counting the private first-generation template; this repository, the second generation, since September 2026. The architecture in [`docs/DESIGN.md`](docs/DESIGN.md) is settled, 15 shared agent skills are in `.agents/skills/`, and `scripts/` has the `fw` dispatcher, `unit-init`, `build`, and the checking gates, with the Quarto templates in `assets/templates/`. Optional capabilities such as image generation and external review depend on the tools available to the agent. The [roadmap](#roadmap) shows what exists.
+> **Status: in use.** It has been used in formal university coursework since March 2026: the private first-generation template until September 2026, and this repository, the second generation, since then. The architecture in [`docs/DESIGN.md`](docs/DESIGN.md) is settled, 15 shared agent skills are in `.agents/skills/`, and `scripts/` has the `fw` dispatcher, `unit-init`, `build`, and the checking gates, with the Quarto templates in `assets/templates/`. Optional capabilities such as image generation and external review depend on the tools available to the agent. The [roadmap](#roadmap) shows what exists.
 
 ## What it is
 
@@ -145,7 +145,7 @@ A new source lands in the unit that fetched it. When a second unit wants to cite
 - [x] `unit-init` and `build` (two-tier bibliography, APA-zh 中文／西文 grouping by `langid`)
 - [x] `install.sh` / `course-init`: one command from nothing to a private course repo with the framework mounted
 - [x] `refs where` / `refs promote`, `refs-snapshot` (push and pull not yet exercised against a real release)
-- [x] Used in real courses — over a year of formal coursework, counting the private first generation
+- [x] Used in real courses — formal coursework since March 2026, counting the private first generation
 
 ## Contributing
 

@@ -108,6 +108,28 @@ def parse_inline_dict(s: str) -> dict[str, Any]:
     return {"raw": s}
 
 
+# A record key is a slot name, lower-case like every slot in the catalog, so a tag such as
+# `[H1: 假說]` stays a tag.
+_RECORD_KEY = r"[a-z_][a-z0-9_]*"
+_RECORD_NEXT = re.compile(rf",\s*(?={_RECORD_KEY}\s*[:：])")
+_RECORD_PAIR = re.compile(rf"({_RECORD_KEY})\s*[:：]\s*(.+)$")
+
+
+def parse_bullet_record(inner: str) -> dict[str, str]:
+    """`label: 早期矽谷, pct: 20, desc: …` (a bullet that is only a bracket) as a record.
+
+    Splits at a comma only where the next key starts, so a value keeps its own commas.
+    Returns {} when any part is not `key: value`, which leaves the bracket a tag.
+    """
+    record: dict[str, str] = {}
+    for part in _RECORD_NEXT.split(inner):
+        m = _RECORD_PAIR.match(part.strip())
+        if not m:
+            return {}
+        record[m.group(1)] = m.group(2).strip().strip("\"'")
+    return record
+
+
 def parse_slot_payload(raw_text: str) -> dict[str, Any]:
     """Parse the structured micro-syntax in storyboard '畫面內容' into slot dict.
 
@@ -117,6 +139,7 @@ def parse_slot_payload(raw_text: str) -> dict[str, Any]:
       - [tag] head: body
       - head | body
       - [tag] point
+      - [key: value, key: value]
     """
     text = raw_text.replace("<br>", "\n").replace("<br/>", "\n").replace("<br />", "\n")
     lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
@@ -138,15 +161,18 @@ def parse_slot_payload(raw_text: str) -> dict[str, Any]:
             # take literal lines (`title_lines`, `sub_lines`): a title line such
             # as 「霸權之後：」 would otherwise lose its colon to the head/body split.
             item: dict[str, Any] = {"text": line[1:].strip()}
-            if tag:
-                item["tag"] = tag
-            if part2:
+            record = parse_bullet_record(tag) if tag and not part1 and not part2 else {}
+            if record:
+                # The spectrum's markers are written this way; read as a tag, the whole
+                # record became one label and every marker lost its position.
+                item.update({"head": "", "body": "", **record})
+            else:
+                if tag:
+                    item["tag"] = tag
                 item["head"] = part1
                 item["body"] = part2
-            else:
-                item["head"] = part1
-                item["body"] = ""
-                item["point"] = part1
+                if not part2:
+                    item["point"] = part1
 
             target_key = current_list_key or "items"
             if target_key not in slots or not isinstance(slots[target_key], list):

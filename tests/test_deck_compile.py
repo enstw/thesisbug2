@@ -64,6 +64,20 @@ class SlotParserTests(unittest.TestCase):
         self.assertEqual(slots["side_a"]["points"], ["約 1,234 件", "甲, 乙", "丙"])
 
 
+    def test_bracket_of_key_values_is_a_record(self):
+        # The spectrum's markers: without this each became one tag, and the slide showed
+        # three empty marks stacked at 50%.
+        slots = parse_slot_payload(
+            "markers:<br>- [label: 山泉水, pct: 20, desc: 軟水, 回甘快]<br>- [label: 自來水, pct: 80, desc: 需先靜置]")
+        self.assertEqual(slots["markers"][0], {"text": "[label: 山泉水, pct: 20, desc: 軟水, 回甘快]", "head": "",
+                                               "body": "", "label": "山泉水", "pct": "20", "desc": "軟水, 回甘快"})
+        self.assertEqual(slots["markers"][1]["pct"], "80")
+
+    def test_bracket_that_is_not_all_key_values_stays_a_tag(self):
+        slots = parse_slot_payload("cards:<br>- [H1: 假說]<br>- [第一泡, 30 秒]")
+        self.assertEqual([c["tag"] for c in slots["cards"]], ["H1: 假說", "第一泡, 30 秒"])
+
+
 class VisualRhythmResolverTests(unittest.TestCase):
     def test_determinism_with_same_seed(self):
         res1 = VisualRhythmResolver(seed=42)

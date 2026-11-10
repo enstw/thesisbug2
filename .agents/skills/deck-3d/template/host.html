@@ -19,7 +19,10 @@
   #dolly { position:absolute; inset:0; transform-style:preserve-3d; will-change:transform; }
   #space { position:absolute; left:50%; top:50%; width:0; height:0; transform-style:preserve-3d;
     transform-origin:0 0; will-change:transform; }
-  .panel { position:absolute; left:0; top:0; transform-origin:0 0; transform-style:flat; backface-visibility:hidden; }
+  /* #dolly 蓋滿畫面、自己不收點擊：鏡頭退到球外（全景站）時面板在它的平面之後，會被它擋掉 */
+  #dolly { pointer-events:none; }
+  .panel { position:absolute; left:0; top:0; transform-origin:0 0; transform-style:flat; backface-visibility:hidden;
+    pointer-events:auto; }
   .panel svg { display:block; width:100%; height:100%; overflow:visible; }
   .panel.sidecard { cursor:pointer; }
 
@@ -34,6 +37,10 @@
   .panel.mapped > svg:first-child { transition:opacity .5s ease; }
   body.overview .panel svg.map { opacity:1; }
   body.overview .panel.mapped > svg:first-child { opacity:0; }
+  /* 地圖上點一格就飛去那一站：只有格子與標籤（.hit）收點擊，面板其餘部分讓點擊穿過去 */
+  body.overview .panel { pointer-events:none; }
+  body.overview:not(.preview) .panel .hit { pointer-events:auto; cursor:pointer; }
+  body.overview:not(.preview) .panel:not(.here) .plate:hover { fill-opacity:.32; }
   body.overview .panel.here .plate { fill-opacity:1; }
   body.overview .panel.here svg.tile text { fill:#0B1020; }
   body.overview .panel.here svg.label text { fill:var(--accent); }

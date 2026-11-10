@@ -43,6 +43,7 @@ network dependency; the font is read from `<talk>/asset/`.
 | click, `→`, space | next stop on the route |
 | `←` | previous stop |
 | `Esc` | the overview map; `→` returns to the stop it was opened from |
+| click on the overview map | fly to that scene, island title or the cover, and continue the route from there |
 | `1`–`9` | jump to that island's title |
 | `F` | fullscreen |
 

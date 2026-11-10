@@ -260,7 +260,7 @@ function mapSvg(id, cls) {
 function buildTile(id, tag, title, accent) {
   const p = PANELS[id], w = p.w, h = p.h, lx = 70, maxW = w - 2*lx;
   const svg = mapSvg(id, 'tile');
-  el('rect', { class:'plate', x:16, y:16, width:w-32, height:h-32, rx:44, fill:accent, 'fill-opacity':.1,
+  el('rect', { class:'plate hit', x:16, y:16, width:w-32, height:h-32, rx:44, fill:accent, 'fill-opacity':.1,
                stroke:accent, 'stroke-opacity':.55, 'stroke-width':6 }, svg);
   if (tag) txt(svg, tag, lx, 132, 84, accent);
   const top = tag ? 172 : 60, room = h - top - 56;
@@ -279,7 +279,8 @@ function buildTile(id, tag, title, accent) {
 }
 /* 地圖標籤：島名、簡報標題這類置中的幾行。items 由上而下，每項是一行字 {t, F, fill, gap}
    或一條短線 {rule:[寬, 高], fill, gap}（gap＝與上一項的間距）。labelBox 量出整疊原本的
-   寬高；buildLabel 把整疊以面板正中為中心放大 s 倍畫出來，畫出去可以超過面板。 */
+   寬高；buildLabel 把整疊以面板正中為中心放大 s 倍畫出來，畫出去可以超過面板。
+   整疊墊一塊透明的 .hit：地圖上點得到的範圍是整塊，不只是筆畫。 */
 function labelBox(items) {
   let w = 1, h = 0;
   for (const it of items) {
@@ -291,9 +292,10 @@ function labelBox(items) {
   return { w, h };
 }
 function buildLabel(id, items, s) {
-  const p = PANELS[id], h = labelBox(items).h;
+  const p = PANELS[id], box = labelBox(items), h = box.h;
   const g = el('g', { transform:`translate(${p.w/2},${p.h/2}) scale(${s.toFixed(3)}) translate(0,${(-h/2).toFixed(1)})` },
                mapSvg(id, 'label'));
+  el('rect', { class:'hit', x:-box.w/2 - 30, y:-30, width:box.w + 60, height:h + 60, fill:'transparent' }, g);
   for (const it of items) {
     if (it.rule) el('rect', { x:-it.rule[0]/2, y:it.top, width:it.rule[0], height:it.rule[1], fill:it.fill }, g);
     else txt(g, it.t, 0, it.top + it.F*.88, it.F, it.fill, 'middle');
@@ -532,6 +534,8 @@ function goto_(id, instant) {
     const here = detourFrom >= 0 ? ROUTE[detourFrom] : '';
     for (const k in PANELS) PANELS[k].div.classList.toggle('here', k === here);
     document.body.classList.add('overview');
+  } else if (document.body.classList.contains('overview')) {   // 離開地圖：反白改標要去的那一站
+    for (const k in PANELS) PANELS[k].div.classList.toggle('here', k === id);
   }
   deactivate();                   // 離站退魂影 → 再訪重播入場
   flyTo(w, () => arrive(w), instant);
@@ -651,9 +655,12 @@ function boot() {
   refit();
   addEventListener('resize', refit);
 
-  /* ---------- 輸入：點擊＝下一站；點支線小景＝進支線 ---------- */
+  /* ---------- 輸入：點擊＝下一站；點支線小景＝進支線；在地圖上點一格＝飛去那一站 ---------- */
   document.addEventListener('click', e => {
     if (ROLE === 'preview') return;   // 預覽窗不互動（推進由講者視窗遙控）
+    // 地圖上只有 .hit 收得到點擊（樣式在 host）；點在空白處照舊是下一站＝回到原站
+    const hit = flatNow && e.target.closest && e.target.closest('.hit');
+    if (hit) { userActed = true; gotoId(hit.closest('.panel').id.replace(/^p-/, '')); return; }
     const side = e.target.closest && e.target.closest('.panel.sidecard');
     if (side) { detour(side.id.replace(/^p-/, '')); return; }
     advance();

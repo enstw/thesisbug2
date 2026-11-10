@@ -253,8 +253,8 @@ WORLD.forEach((isl, i) => {
    flat＝面板攤平成地圖。鏡頭正對地圖，退到整張地圖（含標題區）剛好填到畫面的
    FILL_W × FILL_H 為止（planFlat 的 k）：地圖多大就退多遠，不是固定距離。 */
 const HUB_TZ = tzFor(RW, FLAT.k);
-wp('hub', '全景', { yaw: 0, pitch: 0, tz: HUB_TZ, flat: 1 });
-wp('end', '全景', { yaw: 0, pitch: 0, tz: HUB_TZ, flat: 1, visit: WORLD.length - 1 });
+wp('hub', '全景', { yaw: 0, pitch: 0, tz: HUB_TZ, flat: 1, flash: '點一格前往' });
+wp('end', '全景', { yaw: 0, pitch: 0, tz: HUB_TZ, flat: 1, flash: '點一格前往', visit: WORLD.length - 1 });
 ROUTE.push('end');
 
 boot();

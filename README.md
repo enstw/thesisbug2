@@ -6,6 +6,18 @@ AI-agent framework for Traditional Chinese academic coursework — one repo per 
 
 > **Status: in use.** It has been used in formal university coursework since March 2026: the private first-generation template until September 2026, and this repository, the second generation, since then. The architecture in [`docs/DESIGN.md`](docs/DESIGN.md) is settled, 17 shared agent skills are in `.agents/skills/`, and `scripts/` has the `fw` dispatcher, `unit-init`, `build`, and the checking gates, with the Quarto templates in `assets/templates/`. Optional capabilities such as image generation and external review depend on the tools available to the agent. The [roadmap](#history-and-roadmap) shows what exists.
 
+## Quick start
+
+On macOS or Linux, with an AI coding agent already installed:
+
+1. Install the tools in [Requirements](#requirements) and run `gh auth login`.
+1. Create a course: `bash <(curl -fsSL https://raw.githubusercontent.com/enstw/thesisbug2/main/install.sh)`. It asks for the course name and a slug, and ends by printing `done — <path>`.
+1. `cd` into the path it printed.
+1. Start your agent there and tell it what you need, for example "this is the syllabus, fill in COURSE.md" or "start a paper unit on …". It reads `AGENTS.md` first and follows the framework from there.
+1. Or start a unit yourself: `./fw unit-init --type paper --name final --title "…"`, which also builds the first PDF.
+
+[Install](#install) has the details, the options, and what to do when a step fails.
+
 ## What it is
 
 thesisbug2 is the working environment an AI coding agent (Claude Code, Codex, Antigravity) needs to help write graded academic work in Traditional Chinese. It is a set of files an agent reads and commands it runs, not an application: Quarto/XeLaTeX templates, agent skills written as plain `SKILL.md` procedures, and Python gates behind one dispatcher, `./fw`.
@@ -165,13 +177,22 @@ Seventeen skills live in `.agents/skills/<name>/SKILL.md`. Each is a procedure w
 
 ### Requirements
 
-| Tool | Why | macOS |
-| :--- | :--- | :--- |
-| git, [GitHub CLI](https://cli.github.com/) (`gh auth login` done) | course repos are private GitHub repositories | `brew install git gh` |
-| [Quarto](https://quarto.org/) + TinyTeX | PDF builds through XeLaTeX | `brew install quarto && quarto install tinytex` |
-| librsvg | embeds SVG figures in PDF output | `brew install librsvg` |
-| [uv](https://docs.astral.sh/uv/) | runs the Python scripts and their dependencies without a manual venv | `brew install uv` |
-| An agent that can read files and run shell commands | follows `AGENTS.md` and the shared `SKILL.md` procedures; the CLI commands also work without an agent | use your preferred agent |
+| Tool | Why | macOS | Debian / Ubuntu |
+| :--- | :--- | :--- | :--- |
+| git, [GitHub CLI](https://cli.github.com/) (`gh auth login` done) | course repos are private GitHub repositories | `brew install git gh` | `sudo apt install git gh` |
+| [Quarto](https://quarto.org/) + TinyTeX | PDF builds through XeLaTeX | `brew install quarto && quarto install tinytex` | install the `.deb` from [quarto.org](https://quarto.org/docs/get-started/), then `quarto install tinytex` |
+| librsvg | embeds SVG figures in PDF output | `brew install librsvg` | `sudo apt install librsvg2-bin` |
+| [uv](https://docs.astral.sh/uv/) | runs the Python scripts and their dependencies without a manual venv | `brew install uv` | `curl -LsSf https://astral.sh/uv/install.sh \| sh` |
+| An agent that can read files and run shell commands | follows `AGENTS.md` and the shared `SKILL.md` procedures; the CLI commands also work without an agent | use your preferred agent | use your preferred agent |
+
+On a machine where git has never been used, set your identity first, because the installer makes the course's first commit and git refuses to commit without one:
+
+```bash
+git config --global user.name "Your Name"
+git config --global user.email "you@example.com"
+```
+
+Only git, Python 3 and the GitHub CLI are needed to create a course. The installer lists whichever of Quarto, uv and librsvg are missing and carries on; install them before the first `./fw build`.
 
 macOS and Linux only. Course repos rely on symlinks committed to git, which Windows handles only in developer mode, so Windows is not supported.
 
@@ -192,7 +213,13 @@ It asks for the course details, then does the rest:
 1. **Mounts the framework** — this repository as a shallow git submodule at `.framework/`, with `submodule.recurse` on so a plain `git pull` keeps it at the version the course pins.
 1. **Sets up the agent directives** — `AGENTS.md` (pointing agents at the framework's guide, `COURSE.md`, and `STATUS.md`), `CLAUDE.md` and `GEMINI.md` pointers, and `.claude/skills` + `.agents/skills` linked to the framework's skills, plus `COURSE.md`, `STATUS.md`, `./fw`, `library/`, `notes/`, `units/`.
 
-The framework includes fonts, so the first download can take several minutes. Git progress is shown as it runs; an HTTP transfer that stalls for 60 seconds fails with an error. If a download fails, inspect and move the partial course directory aside before retrying with the same slug; the installer preserves it and refuses to overwrite it.
+The framework includes fonts, so the first download can take several minutes. Git progress is shown as it runs; an HTTP transfer that stalls for 60 seconds fails with an error. When it succeeds, the last lines are `done — <course path>`, the GitHub URL, and the next steps.
+
+If the framework download fails, the installer stops with `framework download failed` and leaves the partial course directory in place; it refuses to overwrite a directory that exists. Nothing has been pushed to GitHub at that point. Look at what is in it, move it aside, and run the installer again with the same slug:
+
+```bash
+mv ~/homework/<slug> ~/homework/<slug>.failed
+```
 
 Every question has a flag, so an agent or a script can run it without prompts:
 
@@ -218,7 +245,13 @@ A flag beats the file, and the file beats the built-in default; in a terminal it
 
 `--no-github` creates the course locally only; `--base-path <dir>` puts it somewhere other than the configured base path (`~/homework` when nothing is configured); the course directory itself is always created by the installer and named after the slug, so directory, GitHub repo, and every path in the course agree; `--help` lists the rest. Already have the framework cloned? `scripts/course-init.py` is the same program.
 
+### Work with your agent
+
+Start your agent in the course directory. It reads `AGENTS.md`, runs `./fw update`, and then reads `COURSE.md` and `STATUS.md`, so it knows the course before you ask for anything. On a new course, first give it the syllabus (a PDF or a link) so it can fill the `[待完成]` slots in `COURSE.md`; every later unit and review reads the instructor, citation style and grading from that file. After that, say what you want in plain words ("start the midterm paper", "find sources on …", "plan slides from the paper"); the agent picks the skill. You do not need to know the skill names or the `./fw` commands.
+
 ### Start a unit
+
+An agent does this when you ask for a new assignment; the commands are here for doing it by hand.
 
 ```bash
 cd ~/homework/1142-asia-pacific-security

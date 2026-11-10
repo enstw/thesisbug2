@@ -2,15 +2,31 @@
 
 # thesisbug2
 
-AI-agent framework for Traditional Chinese academic coursework — one repo per course, shared skills, audited sources.
+AI-agent framework for Traditional Chinese academic coursework — one repo per course, shared skills, audited sources, and slides planned from the paper.
 
-> **Status: in use.** It has been used in formal university coursework since March 2026: the private first-generation template until September 2026, and this repository, the second generation, since then. The architecture in [`docs/DESIGN.md`](docs/DESIGN.md) is settled, 17 shared agent skills are in `.agents/skills/`, and `scripts/` has the `fw` dispatcher, `unit-init`, `build`, and the checking gates, with the Quarto templates in `assets/templates/`. Optional capabilities such as image generation and external review depend on the tools available to the agent. The [roadmap](#roadmap) shows what exists.
+> **Status: in use.** It has been used in formal university coursework since March 2026: the private first-generation template until September 2026, and this repository, the second generation, since then. The architecture in [`docs/DESIGN.md`](docs/DESIGN.md) is settled, 17 shared agent skills are in `.agents/skills/`, and `scripts/` has the `fw` dispatcher, `unit-init`, `build`, and the checking gates, with the Quarto templates in `assets/templates/`. Optional capabilities such as image generation and external review depend on the tools available to the agent. The [roadmap](#history-and-roadmap) shows what exists.
 
 ## What it is
 
-thesisbug2 is the working environment an AI coding agent (Claude Code, Codex, Antigravity) needs to help write graded academic work in Traditional Chinese: Quarto/XeLaTeX templates for papers, journal articles, theses, homework, and slide decks; agent skills for choosing a topic, acquiring and auditing sources, checking citations, terminology, and argument flow, and getting an external review; and gates that fail the build when a citation is not backed by a verified local full text.
+thesisbug2 is the working environment an AI coding agent (Claude Code, Codex, Antigravity) needs to help write graded academic work in Traditional Chinese. It is a set of files an agent reads and commands it runs, not an application: Quarto/XeLaTeX templates, agent skills written as plain `SKILL.md` procedures, and Python gates behind one dispatcher, `./fw`.
 
-It is the second generation of a private template that modelled each piece of coursework as a git branch of the template itself. That design meant cherry-picking every framework fix into every live branch, left successive assignments of one course unrelated to each other, and mixed framework files with coursework. thesisbug2 splits the two:
+It works with an agent that can read files and run shell commands in a git repository. A chat window cannot use it, because the framework's guarantees come from files the agent must open and checks that must pass, not from what a model remembers.
+
+## What it solves
+
+| Problem when writing with AI | What the framework does about it |
+| :--- | :--- |
+| **Layout eats the time.** Cover page, table of contents, citation style, Chinese and Western references in separate groups, CJK fonts. | The manuscript is Markdown (`.qmd`). `./fw build` turns it into the PDF through Quarto and XeLaTeX with a template per work type (homework, paper, journal article, thesis) and a bundled font. Nobody formats a reference by hand. |
+| **The model invents references.** A fluent citation to a paper that does not exist, or a real paper that does not say what the sentence claims. | A citation must resolve to an entry in `references.bib` with a local full text. The agent records two judgments per source in an append-only log: is this file the cited work itself, and does it back the claim. Page locators are checked against page markers in the transcript. [Details below](#sources-and-citations). |
+| **Slides drift from the paper.** A deck written separately says things the paper does not. | A talk is planned from the manuscript: points, then a storyboard the author signs off, then slides. Every slide traces back to a cited sentence. [Details below](#slides-one-storyboard-several-views). |
+| **Mainland usage and Simplified characters creep in.** | `fix-terms` proposes Taiwan academic terms; `./fw check-zh-variants` finds Simplified and variant code points in the source files. |
+| **An agent's large edit breaks something quietly.** | `safe-edit`: every batch is a list of exact-match replacements that either all apply or none do, followed by the readability, variant, length and citation gates. |
+| **One model has blind spots it repeats.** | `gpt-review` sends the chapter to a different model family as an anonymous referee; `flow-check` has a reader with no context mark where the argument jumps. |
+| **Work moves between machines and agents.** | Everything durable is a file in git: course context, unit progress, decisions with their reasons. No agent's private memory is relied on. |
+
+## How a course is organised
+
+thesisbug2 is the second generation of a private template that modelled each piece of coursework as a git branch of the template itself. That design meant cherry-picking every framework fix into every live branch, left successive assignments of one course unrelated to each other, and mixed framework files with coursework. thesisbug2 splits the two:
 
 ```mermaid
 flowchart LR
@@ -27,6 +43,124 @@ flowchart LR
 - **One repository per course.** Every assignment is a *unit* directory under `units/`. Units of the same course share a source `library/`, so a source fetched and audited for the midterm is ready for the final.
 - **The framework version is pinned per course.** A unit handed in last semester still rebuilds to the same PDF.
 
+```
+<course>/
+├── AGENTS.md          # course context; points at .framework/docs/AGENT-GUIDE.md
+├── COURSE.md          # instructor, citation style, requirements, schedule
+├── STATUS.md          # one line per unit
+├── .framework/        # this repository, as a submodule
+├── library/           # references.bib + refs/ shared by two or more units
+├── notes/             # lecture notes, transcripts
+└── units/
+    ├── 01-homework-<topic>/
+    ├── 02-presentation-<topic>/
+    └── 03-paper-<topic>/      # WORK.json, PROGRESS.md, paper.qmd, references.bib, refs/, talks/
+```
+
+A new source lands in the unit that fetched it. When a second unit wants to cite it, `./fw refs promote <key>` moves it, with its audit history, into `library/`. The full rules are in [`docs/DESIGN.md`](docs/DESIGN.md) § Sources.
+
+## From topic to PDF
+
+```mermaid
+flowchart LR
+    T["topic-scout<br>candidates, search plan,<br>decision"]
+    S["source-kit<br>fetch, transcribe,<br>summarise, audit"]
+    W["write the .qmd<br>safe-edit batches"]
+    R["review<br>fix-terms, flow-check,<br>gpt-review, cite-check"]
+    B["./fw build<br>PDF"]
+    P["deck-plan<br>points, storyboard"]
+    V["slides<br>deck.html and other Views"]
+    T --> S --> W --> R --> B
+    R -- "findings" --> W
+    W -- "the manuscript is the talk's Model" --> P --> V
+```
+
+The author decides; the agent drafts, fetches and checks. Topic, research question, hypotheses and the storyboard are decisions recorded with their reasons in the unit's `DECISIONS.md`, and a core decision changes only on the author's instruction. Skills that review (`fix-terms`, `flow-check`, `gpt-review`) propose and never rewrite: an accepted finding becomes a `safe-edit` batch.
+
+### Sources and citations
+
+The rule that prevents invented references is that nothing is cited from memory. For each citation key the framework keeps:
+
+- the entry in `references.bib`;
+- the full text under `refs/`: a Markdown transcript with page markers, tracked in git, and the original PDF, kept out of git in a release snapshot pinned by checksum (`./fw refs-snapshot`);
+- an append-only audit log, `refs/audit/<key>.jsonl`, with the agent's or author's verdicts.
+
+`./fw check-bib <unit>` reads those and reports which level the cited set has reached:
+
+| Level | Meaning |
+| :--- | :--- |
+| **L1** has local text | the source has a transcript |
+| **L2** genuine identity | the newest `identity` verdict says the file is the cited work itself, not a review of it, a stub, or the wrong file |
+| **L3** locators backed | every `[@key, p. N]` resolves against the transcript's page markers |
+| **L4** claims supported | the newest `support` verdict for this unit says the passage backs the claim |
+
+A unit sets the level it requires in `WORK.json`, and `./fw build` refuses to build below it. The required level is raised as sources are audited, so a source nobody has read cannot come back in later. `./fw check-citations` is the mechanical gate (every cited key resolves, no key is defined twice, no entry is incomplete), and `./fw score-bib` shows whether the sources are the right kind to carry the claims resting on them. The model is in [`docs/bib-lifecycle.md`](docs/bib-lifecycle.md).
+
+A model can still misjudge a passage. What the framework guarantees is that every judgment is written down next to the text it was made from, where the author can check it.
+
+## Slides: one storyboard, several Views
+
+A talk is organised as Model, Controller and View. The **Model** is the manuscript or reading guide the talk presents. The **Controller** is `deck-plan`: `points.md` selects what this audience sees, and `storyboard.md` has one row per slide, naming the point it draws on, a layout from a catalog of 17, and how the slide reveals. The author signs off the storyboard. The **Views** render it, and none of them plans or adds a claim.
+
+```mermaid
+flowchart LR
+    M["Model<br>manuscript"] --> P["points.md"] --> S["storyboard.md<br>signed off"]
+    S --> C["./fw deck-compile<br>./fw deck-notes"] --> D["deck.html<br>the gated deck"]
+    S --> I["deck-image"]
+    S --> B["Beamer PDF"]
+    S --> T["./fw deck-3d"]
+    S --> V["./fw deck-slidev"]
+    D -- "speaker notes" --> T
+    D -- "speaker notes" --> V
+```
+
+The previews below are one storyboard row of an invented talk about brewing tea, rendered by each engine. The row, and how each preview was made, are in [`docs/engines/`](docs/engines/README.md).
+
+| deck-svg | deck-svg, lively mode |
+| :---: | :---: |
+| ![The row as a live HTML slide with three cards and a closing line](docs/engines/deck-svg.png) | ![The same slide revealing its cards one key press at a time](docs/engines/deck-svg-lively.gif) |
+| The default. Live HTML and SVG compiled from the row by `./fw deck-compile`; opens offline by double-click, no build step, prints to PDF. This is the deck the gates read. | The same file with `M` pressed: each key press reveals one beat, with the effect the storyboard's motion code names. An option of the deck, not a second deck. |
+
+| deck-image | deck-3d |
+| :---: | :---: |
+| ![The row as one generated watercolour image](docs/engines/deck-image.jpg) | ![The camera flying between scenes on the inside of a sphere](docs/engines/deck-3d.gif) |
+| One full-bleed image per slide, generated by Codex, captured from HTML, or supplied. For a showcase talk whose copy is locked, because each later edit regenerates a page. | A fly-through: scenes sit on the inside of a sphere and the camera travels between them. Good at transitions and at showing structure, weak at dense pages, which it splits into several scenes. |
+
+| deck-slidev | Beamer |
+| :---: | :---: |
+| ![The row as a Slidev slide](docs/engines/deck-slidev.png) | ![The row as a Beamer frame with a section bar on top](docs/engines/beamer.png) |
+| A [Slidev](https://sli.dev/) project: Markdown slides on Vue with click steps, presenter mode, and PNG or PDF export. Needs Node and a package install. | The Quarto fallback, for a venue that needs LaTeX output or references rendered by Pandoc. The bar on top links to every section. |
+
+`deck-3d` and `deck-slidev` are **derived Views**: `./fw deck-3d <talk>` and `./fw deck-slidev <talk>` generate them from the signed-off storyboard and the speaker notes in `deck.html`, and their output is never edited by hand. A wording change goes to the storyboard and every View is regenerated, so two Views cannot disagree. Drawings on an `L-CANVAS` row stay in `deck.html`; the derived Views print a warning naming the row.
+
+All HTML Views share one shell (`deck-runtime`): keyboard navigation, a presenter window with notes on `P`, and 1920×1080 print. Speaker notes are the presenter's backup knowledge (terms, facts, likely questions, each with its page), written once per unit and assembled into the deck by `./fw deck-notes`.
+
+## Skills
+
+Seventeen skills live in `.agents/skills/<name>/SKILL.md`. Each is a procedure with its reasons, readable by any agent.
+
+| Stage | Skill | What it does |
+| :--- | :--- | :--- |
+| Topic | `topic-scout` | Turns an interest into 2–5 comparable candidate topics, a bilingual search plan, a first literature scan, and a recorded decision. |
+| Sources | `source-kit` | Fetches and stores full texts, writes a stable per-source summary, audits identity and support, and drives the L1–L4 ratchet. |
+| | `yt2sub` | Transcribes a YouTube video or a media file: captions first, local Whisper as the fallback. |
+| Writing | `safe-edit` | Batch edits as exact-match payloads through `./fw apply-edits`, then the gates. |
+| | `count-zh` | Counts Chinese characters the way a 字數 limit means it. |
+| | `diagram` | Figures as SVG, from PlantUML (`./fw plantuml2svg`) or written directly; the text source is committed. |
+| | `house-style` | The shared look and the content-integrity rules: font, colour tokens, XeLaTeX preamble, how quotations and disputed claims are handled. |
+| Review | `fix-terms` | Taiwan academic terminology and cross-strait usage; scans and proposes. |
+| | `flow-check` | Coherence across paragraphs and chapters: reverse outline, naming the connective, a cold read by a reader with no context, cross-chapter terms, seams at late insertions. |
+| | `cite-check` | Citation form and key consistency through `./fw check-citations`; the last, mechanical pass. |
+| | `gpt-review` | An external referee from a different model family: review, hostile challenge, or consultation; findings returned verbatim. |
+| Slides | `deck-plan` | The Controller: `points.md` and the storyboard, reviewed as a page (`./fw storyboard-review`). |
+| | `deck-svg` | Live HTML and SVG slides, the default View, with the optional lively mode. |
+| | `deck-image` | One image per slide. |
+| | `deck-3d` | The 3D fly-through, derived from the storyboard. |
+| | `deck-slidev` | The Slidev project, derived from the storyboard. |
+| | `deck-runtime` | The shell every HTML deck runs in: navigation, presenter window, print. |
+
+`./fw help` lists the commands behind them. The agent's reading order and the rules shared by all skills are in [`docs/AGENT-GUIDE.md`](docs/AGENT-GUIDE.md).
+
 ## Install
 
 ### Requirements
@@ -40,6 +174,8 @@ flowchart LR
 | An agent that can read files and run shell commands | follows `AGENTS.md` and the shared `SKILL.md` procedures; the CLI commands also work without an agent | use your preferred agent |
 
 macOS and Linux only. Course repos rely on symlinks committed to git, which Windows handles only in developer mode, so Windows is not supported.
+
+Optional, each needed by one View or skill only: Node with a package manager for `deck-slidev`; Codex for generated images in `deck-image`; a Chromium for Slidev export and for checking decks in a browser.
 
 ### Create a course
 
@@ -92,6 +228,8 @@ cd ~/homework/1142-asia-pacific-security
 
 Types: `preparation`, `homework`, `paper`, `journal`, `thesis`, `presentation` (`--variant thesis|reading-guide`). `unit-init` runs one build so you know the unit renders before you start writing.
 
+A talk about a unit's manuscript lives inside the unit: `./fw talk-init <unit> --name <occasion> --model <file>` creates `<unit>/talks/<occasion>/` with the points and storyboard scaffolds.
+
 Course units can explicitly try the [JSON workflow experiment](docs/workflow.md): versioned tasks and decisions, bounded queries, generated status views, and handoff checks through `./fw`. It uses the Python standard library with no jq dependency; existing Markdown units keep their current workflow until migrated.
 
 ### Update the framework inside a course
@@ -101,6 +239,8 @@ Course units can explicitly try the [JSON workflow experiment](docs/workflow.md)
 ```
 
 Agents run this at the start of every course session, then re-read the updated framework guide. The local commit contains only the framework pin; unrelated staged coursework stays staged, and nothing is pushed. A failed update is reported while existing work is preserved. Earlier course commits and milestone tags still record their original framework versions.
+
+An HTML deck carries its engine and look inside the talk so it opens offline; `./fw deck-refresh <talk>` brings those copies up to date after an update.
 
 ### Clone a course on another machine
 
@@ -116,25 +256,9 @@ This one works with plain git today: the submodule brings the framework back at 
 
 The host agent is interchangeable, and shared procedures do not assume its home-directory skill installation. Browser access, PDF extraction, and a second model for review use available host capabilities. **Image generation is the explicit exception: it uses Codex**, currently the maintainer's stable generation backend. Use Codex's native image tool when available, or the `genimage-img2` integration's Codex wrapper from another host; a missing Codex path is reported rather than silently switching image providers. Supplied images and HTML capture do not require AI generation. Each workflow reports unfinished checks instead of treating them as passed. The Claude-only terminal recipe is an [optional integration note](docs/integrations/claude-code-self-inject.md), outside shared skill discovery.
 
-## Course repository layout
+## History and roadmap
 
-```
-<course>/
-├── AGENTS.md          # course context; points at .framework/docs/AGENT-GUIDE.md
-├── COURSE.md          # instructor, citation style, requirements, schedule
-├── STATUS.md          # one line per unit
-├── .framework/        # this repository, as a submodule
-├── library/           # references.bib + refs/ shared by two or more units
-├── notes/             # lecture notes, transcripts
-└── units/
-    ├── 01-homework-<topic>/
-    ├── 02-presentation-<topic>/
-    └── 03-paper-<topic>/      # WORK.json, PROGRESS.md, paper.qmd, references.bib, refs/
-```
-
-A new source lands in the unit that fetched it. When a second unit wants to cite it, `refs promote <key>` moves it, with its audit history, into `library/`. The full rules are in [`docs/DESIGN.md`](docs/DESIGN.md) § Sources.
-
-## Roadmap
+The first generation began as a template for one assignment, grew automated paper formatting and then slides, and reached its limit when one course needed several related assignments. The second generation, this repository, takes the course as its unit. Slides went the other way for a while: the first generation had several engines, each with its own way of writing a talk, and the second kept one planning workflow and one gated deck. The 3D and Slidev engines returned in November 2026 as derived Views of that one storyboard.
 
 - [x] Architecture written down — [`docs/DESIGN.md`](docs/DESIGN.md)
 - [x] Design reviewed and settled
@@ -146,6 +270,8 @@ A new source lands in the unit that fetched it. When a second unit wants to cite
 - [x] `install.sh` / `course-init`: one command from nothing to a private course repo with the framework mounted
 - [x] `refs where` / `refs promote`, `refs-snapshot` (push and pull not yet exercised against a real release)
 - [x] Used in real courses — formal coursework since March 2026, counting the private first generation
+- [x] Presentation workflow: Layout Catalog and `deck-compile`, lively mode, speaker notes as knowledge points, storyboard review page
+- [x] Derived Views: `deck-3d` and `deck-slidev`
 
 ## Contributing
 
@@ -153,4 +279,4 @@ Issues and pull requests are welcome. The architecture and its reasons are in [`
 
 ## License
 
-MIT — see [`LICENSE`](LICENSE), with two exceptions that keep their own licenses: the bundled ENS Font is under the SIL Open Font License 1.1 ([`OFL.txt`](.agents/skills/house-style/assets/fonts/OFL.txt) beside the font files), and citation style files, once ported, remain CC-BY-SA as stated in each file's header.
+MIT — see [`LICENSE`](LICENSE), with these exceptions that keep their own licenses: the bundled ENS Font is under the SIL Open Font License 1.1 ([`OFL.txt`](.agents/skills/house-style/assets/fonts/OFL.txt) beside the font files); the citation style files (`assets/*.csl`) remain CC-BY-SA as stated in each file's header; and the libraries the HTML decks carry keep theirs — KaTeX is MIT, and GSAP is under its own no-charge [standard license](https://gsap.com/standard-license), which is not MIT.

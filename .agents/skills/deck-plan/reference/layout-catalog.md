@@ -111,7 +111,7 @@
 - **槽位規格**：`title`, `issue` *(選填)*, `side_a` `{camp, points}`, `side_b` `{camp, points}`, `ask_or_verdict`
 - **畫面內容範例**：
   ```text
-  title: 避險還是制衡？台灣戰略抉擇<br>issue: 面对台海局勢升溫，小型行為者的最優戰略為何？<br>side_a: {camp: "全面對美結盟", points: ["獲取最高階安全承諾", "技術標準深度綁定"]}<br>side_b: {camp: "雙重避險策略", points: ["保留市場多元迴旋空間", "避免過早承擔邊緣戰略風險"]}<br>ask_or_verdict: 當安全保證與經濟利益不可兼得時，政策底線在哪裡？
+  title: 避險還是制衡？台灣戰略抉擇<br>issue: 面對台海局勢升溫，小型行為者的最優戰略為何？<br>side_a: {camp: "全面對美結盟", points: ["獲取最高階安全承諾", "技術標準深度綁定"]}<br>side_b: {camp: "雙重避險策略", points: ["保留市場多元迴旋空間", "避免過早承擔邊緣戰略風險"]}<br>ask_or_verdict: 當安全保證與經濟利益不可兼得時，政策底線在哪裡？
   ```
 
 ### 8. `L-MATRIX-DEEPDIVE`（2×2 矩陣＋焦點象限引出）

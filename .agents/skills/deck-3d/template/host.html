@@ -27,12 +27,16 @@
   .scene .fx { opacity:.12; transform:translateY(12px);
     transition:opacity .45s cubic-bezier(.2,.7,.3,1), transform .45s cubic-bezier(.2,.7,.3,1); }
   .scene.active .fx { opacity:1; transform:none; }
-  /* 全景站是地圖：島題封面與島的浮水印轉亮，內容場景維持魂影 */
-  body.overview .panel.cover .fx { opacity:1; transform:none; }
-  .panel.cover svg { transform-origin:50% 65%; transition:transform .6s ease; }
-  body.overview .panel.cover svg { transform:scale(3); }   /* 島名放大到全景距離仍讀得到 */
-  .panel.mark text { transition:opacity .6s ease; }
-  body.overview .panel.mark text { opacity:.5; }
+  /* 全景站是地圖（world.js 把面板攤平）：面板原本的內容換成地圖專用的那一張（.map）——
+     場景是只有編號與標題的格（.tile），島名與簡報標題是放大的標籤（.label），都由 engine.js 畫；
+     繞路前所在的那一站反白（.here） */
+  .panel svg.map { position:absolute; left:0; top:0; opacity:0; transition:opacity .5s ease; }
+  .panel.mapped > svg:first-child { transition:opacity .5s ease; }
+  body.overview .panel svg.map { opacity:1; }
+  body.overview .panel.mapped > svg:first-child { opacity:0; }
+  body.overview .panel.here .plate { fill-opacity:1; }
+  body.overview .panel.here svg.tile text { fill:#0B1020; }
+  body.overview .panel.here svg.label text { fill:var(--accent); }
 
   #hud { position:fixed; right:14px; bottom:10px; color:rgba(232,230,224,.45);
     font:12px/1.6 'ENSFont','Helvetica Neue',sans-serif; pointer-events:none; text-align:right; }

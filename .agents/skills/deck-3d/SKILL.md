@@ -42,9 +42,16 @@ network dependency; the font is read from `<talk>/asset/`.
 | :--- | :--- |
 | click, `→`, space | next stop on the route |
 | `←` | previous stop |
-| `Esc` | the overview of every island |
+| `Esc` | the overview map; `→` returns to the stop it was opened from |
 | `1`–`9` | jump to that island's title |
 | `F` | fullscreen |
+
+The **overview** is also the last stop on the route. It is a flat map, not a
+view of the sphere: the deck title on top, each island's name above a grid of
+its scenes in reading order, every scene as a tile with its row number and
+title. The tile of the stop it was opened from is filled in. The map picks the
+number of rows that lets it fill the screen, so a long talk gets smaller tiles
+on one screen and never a second page.
 
 `presenter.html` is the presenter window: the current scene, the next stop and
 the speaker note, driving the audience window it opens.

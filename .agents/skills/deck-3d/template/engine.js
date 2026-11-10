@@ -103,7 +103,33 @@ function txt(parent, str, x, y, F, fill, anchor) {
  * ============================================================ */
 const space = document.getElementById('space');
 const dolly = document.getElementById('dolly');
-const PANELS = {};   // id → {div, yaw, pitch, r, w, h}
+const PANELS = {};   // id → {div, yaw, pitch, r, w, h, flat, isFlat}
+
+/* 面板有兩種擺法：球面（yaw/pitch/r）與全景站的平面地圖（flat＝{x, y, z}，由內容端指定）。
+   兩種擺法寫成同一串變形函式，瀏覽器才會逐項內插——面板從球面「攤平」到地圖上，
+   而不是走矩陣分解的怪路徑。沒有 flat 的面板在全景站留在球面原位。 */
+function panelTf(p, flat) {
+  const f = flat && p.flat;
+  return `translate3d(${f ? f.x : 0}px,${f ? f.y : 0}px,0px) rotateY(${f ? 0 : -p.yaw}deg) ` +
+         `rotateX(${f ? 0 : -p.pitch}deg) translateZ(${f ? -f.z : -p.r}px)` +
+         (p.roll ? ` rotate(${p.roll}deg)` : '') + ' translate(-50%,-50%)';
+}
+let flatNow = false;   // 目前（或飛行目的地）是否為平面地圖；各面板實際擺在哪一種是 p.isFlat
+function setLayout(p, flat) { p.isFlat = flat; p.div.style.transform = panelTf(p, flat); }
+// 不經飛行直接換擺法（瞬移、抵站校正）；飛行中的換位在 updatePanels
+function layoutPanels(flat) {
+  flatNow = flat;
+  for (const id in PANELS) if (PANELS[id].isFlat !== flat) setLayout(PANELS[id], flat);
+}
+// 抵站：飛行中留在原擺法的面板（見 updatePanels）此時歸位。強制重排讓歸位不帶過場
+function settlePanels() {
+  let moved = false;
+  for (const id in PANELS) {
+    const p = PANELS[id];
+    if (p.isFlat !== flatNow) { p.div.style.transition = 'none'; setLayout(p, flatNow); moved = true; }
+  }
+  if (moved) void space.offsetWidth;
+}
 
 function panel(id, w, h, yaw, pitch, r, opts) {
   opts = opts || {};
@@ -113,15 +139,15 @@ function panel(id, w, h, yaw, pitch, r, opts) {
   if (opts.island) d.dataset.island = opts.island;
   d.style.width = w + 'px';
   d.style.height = h + 'px';
-  d.style.transform = `rotateY(${-yaw}deg) rotateX(${-pitch}deg) translateZ(${-r}px)` +
-                      (opts.roll ? ` rotate(${opts.roll}deg)` : '') + ' translate(-50%,-50%)';
+  const p = { div:d, yaw, pitch, r, w, h, roll:opts.roll || 0, flat:null, isFlat:false };
+  d.style.transform = panelTf(p, false);
   space.appendChild(d);
   const svg = document.createElementNS(SVGNS, 'svg');
   svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
   d.appendChild(svg);
   const baseOp = opts.opacity != null ? +opts.opacity : 1;
   d.style.opacity = baseOp;
-  PANELS[id] = { div:d, svg, yaw, pitch, r, w, h, baseOp, visited:false, cover:!!opts.cover };
+  PANELS[id] = Object.assign(p, { svg, baseOp, visited:false, cover:!!opts.cover });
   return svg;
 }
 
@@ -217,6 +243,63 @@ function buildCover(i, parent, w, h) {
   return g;
 }
 
+/* ---------- 通用 renderer：地圖格與地圖標籤（全景站用） ----------
+   全景站的鏡頭離得遠，場景本身的字（30–46px）縮到只剩幾個像素。所以面板另帶一張
+   全景站專用的 svg（.map）：全景站顯示它、隱藏面板原本的內容（樣式在 host）。
+   它是面板裡的第二張 svg：取景（contentBox）、抵站校正、列印（slideMarkup）與自檢
+   都只讀第一張，所以地圖怎麼畫都不影響抵站的畫面。 */
+function mapSvg(id, cls) {
+  const p = PANELS[id], svg = document.createElementNS(SVGNS, 'svg');
+  svg.setAttribute('viewBox', `0 0 ${p.w} ${p.h}`);
+  svg.setAttribute('class', 'map ' + cls);
+  p.div.appendChild(svg);
+  p.div.classList.add('mapped');
+  return svg;
+}
+// 地圖格：一個場景＝一格，編號＋標題，字級取排得下的最大者
+function buildTile(id, tag, title, accent) {
+  const p = PANELS[id], w = p.w, h = p.h, lx = 70, maxW = w - 2*lx;
+  const svg = mapSvg(id, 'tile');
+  el('rect', { class:'plate', x:16, y:16, width:w-32, height:h-32, rx:44, fill:accent, 'fill-opacity':.1,
+               stroke:accent, 'stroke-opacity':.55, 'stroke-width':6 }, svg);
+  if (tag) txt(svg, tag, lx, 132, 84, accent);
+  const top = tag ? 172 : 60, room = h - top - 56;
+  let F = 0, lines = [];
+  for (F of [176, 150, 128, 110, 96]) { lines = wrap(title, maxW, F); if (lines.length * F*1.25 <= room) break; }
+  const max = Math.max(1, Math.floor(room / (F*1.25)));
+  if (lines.length > max) {   // 最小字級仍排不下：截到排得下的行數
+    const tail = Array.from(lines[max-1]);
+    while (tail.length && measure(tail.join('') + '…', F) > maxW) tail.pop();
+    lines = lines.slice(0, max-1).concat(tail.join('') + '…');
+  }
+  const wide = Math.max(...lines.map(ln => measure(ln, F)));
+  if (wide > maxW) F *= maxW / wide;   // 斷不開的長字（英文識別字）比格子寬：這一格縮字
+  let y = top + (room - lines.length * F*1.25)/2 + F*.95;
+  for (const ln of lines) { txt(svg, ln, lx, y, F, C.ink); y += F*1.25; }
+}
+/* 地圖標籤：島名、簡報標題這類置中的幾行。items 由上而下，每項是一行字 {t, F, fill, gap}
+   或一條短線 {rule:[寬, 高], fill, gap}（gap＝與上一項的間距）。labelBox 量出整疊原本的
+   寬高；buildLabel 把整疊以面板正中為中心放大 s 倍畫出來，畫出去可以超過面板。 */
+function labelBox(items) {
+  let w = 1, h = 0;
+  for (const it of items) {
+    h += it.gap || 0;
+    it.top = h;
+    h += it.rule ? it.rule[1] : it.F;
+    w = Math.max(w, it.rule ? it.rule[0] : measure(it.t, it.F));
+  }
+  return { w, h };
+}
+function buildLabel(id, items, s) {
+  const p = PANELS[id], h = labelBox(items).h;
+  const g = el('g', { transform:`translate(${p.w/2},${p.h/2}) scale(${s.toFixed(3)}) translate(0,${(-h/2).toFixed(1)})` },
+               mapSvg(id, 'label'));
+  for (const it of items) {
+    if (it.rule) el('rect', { x:-it.rule[0]/2, y:it.top, width:it.rule[0], height:it.rule[1], fill:it.fill }, g);
+    else txt(g, it.t, 0, it.top + it.F*.88, it.F, it.fill, 'middle');
+  }
+}
+
 /* ============================================================
  * Waypoints：{yaw, pitch, tz}＝旋轉對準＋推軌
  * tz 由「目標面板半徑＋期望放大率 k」推得：tz = r + PERSP·(1 − 1/k)
@@ -306,19 +389,41 @@ function fadeAt(p, c, pd) {
 }
 // 面板可見性與透明度：只在每段飛行頭尾各算一次（不逐幀），淡出交給 CSS transition；
 // 全隱形（opacity≈0）的面板直接 visibility:hidden，省下合成成本。
+// 進出全景站的飛行還要換擺法（球面 ↔ 地圖）。飛行頭尾都在鏡頭前方的面板，位置跟著飛行
+// 一起變；球面那一端在鏡頭後方的面板不能跟著飛（途中穿過視點，perspective 會炸出殘影），
+// 只在地圖那一端露面：進地圖時先就位、飛行後段才淡入；出地圖時在前段淡出、抵站才歸位。
 function updatePanels(states, dur) {
   const end = states[states.length - 1];
+  const late = [];   // 進地圖時後段才淡入的面板：[style, opacity]
   for (const id in PANELS) {
-    const p = PANELS[id];
+    const p = PANELS[id], st = p.div.style;
     const pd = dirOf(p.yaw, p.pitch);
-    const dim = (p.visited && id !== focusId) ? .45 : 1;   // 對準中的場景不受「已訪」調暗
-    // 島封面大字不該在內容場景背景搶亮——非對準時壓暗；球外全景是地圖，島名要讀得到，不壓
+    // 對準中的場景不受「已訪」調暗；球外全景是地圖，整張都要讀得到，也不調暗
+    const dim = (p.visited && id !== focusId && end.tz > 0) ? .45 : 1;
+    // 島封面大字不該在內容場景背景搶亮——非對準時壓暗；全景站的島名要讀得到，不壓
     const cdim = (p.cover && id !== focusId && end.tz > 0) ? .28 : 1;
     const op = p.baseOp * dim * cdim * fadeAt(p, end, pd);
-    const hidden = op < .01 || states.some(s => behindAt(p, s, pd));
-    p.div.style.transition = dur ? `opacity ${dur}ms ease` : '';
-    p.div.style.visibility = hidden ? 'hidden' : '';
-    p.div.style.opacity = op.toFixed(3);
+    const behind = states.some(s => behindAt(p, s, pd));
+    const move = dur && p.isFlat !== flatNow;
+    if (move && behind && flatNow) {
+      st.transition = 'none'; st.opacity = 0; setLayout(p, true);
+      late.push([st, op]);
+    } else if (move && behind) {
+      st.transition = `opacity ${dur*.4}ms ease, visibility 0s linear ${dur*.4}ms`;
+      st.visibility = 'hidden'; st.opacity = 0;
+    } else {
+      st.transition = dur ? `opacity ${dur}ms ease, transform ${dur}ms cubic-bezier(.65,0,.35,1)` : '';
+      st.visibility = (op < .01 || behind) ? 'hidden' : '';
+      st.opacity = op.toFixed(3);
+      if (move) setLayout(p, flatNow);
+    }
+  }
+  if (late.length) {
+    void space.offsetWidth;   // 強制重排：「先就位、透明」生效後才開始淡入
+    for (const [st, op] of late) {
+      st.transition = `opacity ${dur*.4}ms ease ${dur*.6}ms, visibility 0s linear ${dur*.6}ms`;
+      st.visibility = ''; st.opacity = op.toFixed(3);
+    }
   }
 }
 function flyTo(target, onArrive, instant) {
@@ -330,6 +435,7 @@ function flyTo(target, onArrive, instant) {
     space.style.transform = spaceTf(cam);
     dolly.style.transform = 'translateZ(0px)';
     updatePanels([cam], 0);
+    layoutPanels(!!target.flat);
     if (onArrive) onArrive();
     return;
   }
@@ -338,6 +444,7 @@ function flyTo(target, onArrive, instant) {
   const dur = Math.max(700, Math.min(1600, 600 + dA*9 + dT*.12));
   const dip = Math.min(dA, 110) * 16;   // 大轉角→途中後撤（px）
   const mid = { yaw:(from.yaw+cam.yaw)/2, pitch:(from.pitch+cam.pitch)/2, tz:Math.min(from.tz, cam.tz) - dip };
+  flatNow = !!target.flat;
   updatePanels([from, mid, cam], dur);
   // 整段飛行交給合成器（Web Animations）：主執行緒在抵達前不再碰樣式
   const anims = [];
@@ -353,6 +460,7 @@ function flyTo(target, onArrive, instant) {
     dolly.style.transform = 'translateZ(0px)';
     anims.forEach(a => { try { a.cancel(); } catch (_) {} });
     flight = null;
+    settlePanels();
     updatePanels([cam], 400);
     if (onArrive) onArrive();
   };
@@ -392,12 +500,15 @@ function deactivate() {
   }
 }
 function arrive(w) {
+  if (!w.flat) {   // 離開全景站：飛行途中仍是地圖的樣子，抵站才換回場景
+    document.body.classList.remove('overview');
+    for (const k in PANELS) PANELS[k].div.classList.remove('here');
+  }
   if (w.card) {
     const n = document.getElementById(w.id);
     if (n) { n.classList.add('active'); activeScene = n; }
   }
   document.body.dataset.active = activeScene ? activeScene.id : 'none';   // headless-readable 目前作用場景
-  document.body.classList.toggle('overview', !w.card);   // 全景站：島名與浮水印轉亮（樣式在 host）
   if ('visit' in w) {
     for (const id in PANELS) if (PANELS[id].div.dataset.island === String(w.visit+1)) PANELS[id].visited = true;
     updatePanels([cam], 400);
@@ -415,6 +526,13 @@ function goto_(id, instant) {
   pendingId = id;
   const w = WP[id];
   focusId = w.card ? id : null;   // 對準的場景＝焦點，免受已訪調暗
+  // 全景站是地圖：起飛時就換成地圖的樣子（樣式在 host），並標出繞路前所在的那一站；
+  // 離開時相反，地圖的樣子留到抵站（arrive）——反白的那一格一路放大成要去的場景
+  if (w.flat) {
+    const here = detourFrom >= 0 ? ROUTE[detourFrom] : '';
+    for (const k in PANELS) PANELS[k].div.classList.toggle('here', k === here);
+    document.body.classList.add('overview');
+  }
   deactivate();                   // 離站退魂影 → 再訪重播入場
   flyTo(w, () => arrive(w), instant);
 }
@@ -450,13 +568,18 @@ function refit() {
    且只在載入與字型就緒後各跑一次；視窗縮放是等比，置中比例不變，無需重算。 */
 function calibrateFraming() {
   const sTf = space.style.transform, dTf = dolly.style.transform, vh = innerHeight;
+  const wasFlat = flatNow, wasOverview = document.body.classList.contains('overview');
   dolly.style.transform = 'translateZ(0px)';
   // 量測只需幾何（不透明度不影響 getBoundingClientRect），故**不碰不透明度**——否則強制 opacity:1
   // 再移除會讓每個場景 1→.12 跑一次轉場＝背景全體「亮起又淡下」的動畫。這裡只去掉 12px 入場位移
   // 並關轉場以量到「就位」位置；場景全程維持預設魂影（.12）。
   const rest = document.createElement('style');
-  rest.textContent = '.scene .fx{transform:none!important;transition:none!important}';
+  const FROZEN = '.panel,.panel svg{transition:none!important}';   // 面板與封面的變形也不准跑轉場
+  rest.textContent = '.scene .fx{transform:none!important;transition:none!important}' + FROZEN;
   document.head.appendChild(rest);
+  // 取景是球面上的事：停在全景站時（例如以 #hub 開啟）先暫時捲回球面、卸下地圖樣式再量
+  document.body.classList.remove('overview');
+  layoutPanels(false);
   for (const id in WP) {
     const w = WP[id]; if (!w.card) continue;
     const p = PANELS[id], g = p.svg.querySelector('.scene'); if (!g) continue;
@@ -471,7 +594,9 @@ function calibrateFraming() {
     }
   }
   // 卸下 transform 覆寫但仍關轉場 → 強制重排讓入場位移瞬間回到自然狀態（無動畫）→ 再還原轉場
-  rest.textContent = '.scene .fx{transition:none!important}';
+  layoutPanels(wasFlat);
+  document.body.classList.toggle('overview', wasOverview);
+  rest.textContent = '.scene .fx{transition:none!important}' + FROZEN;
   void document.body.getBoundingClientRect();
   rest.remove();
   space.style.transform = sTf; dolly.style.transform = dTf;

@@ -123,6 +123,37 @@ const PITCHES = (() => {
   return half.slice().reverse().concat(half.map(p => -p));
 })();
 
+/* ---------- 全景站的平面地圖 ----------
+   從球外看球面，正面的島遠、兩側的島近而且斜，超過約 ±120° 的島背對鏡頭、根本看不到；
+   字又跟著距離縮到幾個像素。所以全景站不看球，而是把面板攤平成一張地圖（引擎的
+   panelTf／updatePanels）：最上面是簡報標題，各島由左到右，島名在上、場景在下排成格。
+   鏡頭正對地圖，退到整張地圖剛好填滿畫面為止。
+   地圖有自己的欄列，不跟球面：球面為了讓鏡頭飛得短，把場景排成又寬又矮的一帶、
+   在島內逐欄蛇行；地圖是拿來讀的，所以島內的格照閱讀順序由左到右、由上到下，
+   列數取「整張地圖在 16:9 畫面上放得最大」的那一個（planFlat）。
+   欄距比場景寬（1280）多留 80：球面上相鄰的場景靠前後錯開分辨，平面上要靠間隔。 */
+const FLAT_COL = 1360, FLAT_ROW = 860, FLAT_GAP = 700, HEAD_GAP = 260, ISL_BAND = 560;
+// head＝標題區原本的寬高。回傳列數 rows、各島欄數 cols、地圖寬高 w/h、鏡頭放大率 k、
+// 標題區的倍率與高度 headS/headH、島名那一帶的高度 band
+function planFlat(head) {
+  const band = WORLD.some(isl => isl.name) ? ISL_BAND : 0;
+  let best = null;
+  for (let rows = 1; rows <= 16; rows++) {
+    const cols = WORLD.map(isl => Math.max(1, Math.ceil(isl.scenes.length / rows)));
+    const w = cols.reduce((a, c) => a + c * FLAT_COL, 0) + (cols.length - 1) * FLAT_GAP - (FLAT_COL - VIEW_W);
+    // 標題放大到與島名相稱，但不超過地圖的七成寬
+    const headS = Math.min(4.4, w * .7 / head.w), headH = head.h * headS;
+    const h = headH + HEAD_GAP + band + rows * FLAT_ROW - (FLAT_ROW - VIEW_H);
+    const k = Math.min(1920 * FILL_W / w, 1080 * FILL_H / h);
+    if (!best || k > best.k * 1.001) best = { rows, cols, w, h, k, headS, headH, band };
+  }
+  return best;
+}
+let FLAT = null;   // 標題景量出標題區的大小後才定案
+// 面板在地圖上的位置：x 由地圖中線算起、y 由地圖上緣算起；z 是深度，島名略前、
+// 浮水印略後，同平面的面板才不會互相穿插
+const flatAt = (id, x, y, dz) => { PANELS[id].flat = { x, y: y - FLAT.h / 2, z: RW + (dz || 0) }; };
+
 const NOTES = {};
 const ROUTE = ['s0'];
 
@@ -145,21 +176,34 @@ const ROUTE = ['s0'];
   y += 20;
   for (const ln of metas) { y += 40; txt(g, ln, CX, y, 26, C.dim, 'middle'); }
   txt(g, '點擊任意處前進 ▸', CX, y + 76, 26, 'rgba(232,230,224,.4)', 'middle');
+  // 地圖的標題區：標題、副題、署名。量出它的大小，地圖的欄列才能定案
+  const head = [
+    ...lines.map((t, i) => ({ t, F, fill: C.ink, gap: i ? F * .18 : 0 })),
+    { rule: [380, 5], fill: C.orange, gap: 40 },
+    ...subs.map((t, i) => ({ t, F: 38, fill: C.orange, gap: i ? 16 : 30 })),
+    ...metas.map((t, i) => ({ t, F: 26, fill: C.dim, gap: i ? 14 : 24 })),
+  ];
+  FLAT = planFlat(labelBox(head));
+  buildLabel('s0', head, FLAT.headS);
+  PANELS.s0.div.style.setProperty('--accent', C.orange);
+  flatAt('s0', 0, FLAT.headH / 2);
   frameWp('s0', c.title);
   NOTES.s0 = c.note || '';
 })();
 
 /* ---------- 各島：浮水印、島題封面、場景；主線在島內逐欄蛇行 ---------- */
-let yawAt = -LAYOUT.span / 2;
+let yawAt = -LAYOUT.span / 2, xAt = -(FLAT.w + FLAT_COL - VIEW_W) / 2;
+const GRID_Y = FLAT.headH + HEAD_GAP + FLAT.band;   // 地圖上第一列格子的上緣
 WORLD.forEach((isl, i) => {
   const n = String(i + 1), accent = C.islands[i], cols = LAYOUT.cols[i], rows = LAYOUT.rows;
-  const Y = yawAt + cols * LAYOUT.step / 2;
+  const fcols = FLAT.cols[i];
+  const Y = yawAt + cols * LAYOUT.step / 2, X = xAt + fcols * FLAT_COL / 2;
   const stops = [];
 
   if (ISLANDS[i].icon) {
     const wm = panel('wm' + n, 1200, 1200, Y, 0, RW * 1.45, { island: n });
-    txt(wm, ISLANDS[i].icon, 600, 900, 900, '#223052', 'middle').setAttribute('opacity', .05);   // 屬性而非行內樣式：全景站的樣式才蓋得過
-    PANELS['wm' + n].div.classList.add('mark');
+    txt(wm, ISLANDS[i].icon, 600, 900, 900, '#223052', 'middle').setAttribute('opacity', .05);
+    flatAt('wm' + n, X, (GRID_Y + FLAT.h) / 2, 60);
   }
 
   if (isl.name) {   // 沒有島名＝第一個章節頁之前的開場場景，不設封面站
@@ -170,6 +214,15 @@ WORLD.forEach((isl, i) => {
     const g = buildCover(i, panel(id, W, H, Y, 0, RW, { island: n, cover: 1 }), W, H);
     subs.forEach((ln, j) => txt(g, ln, W / 2, nameEnd + 80 + j * 50, 34, C.body, 'middle').classList.add('fx'));
     PANELS[id].div.classList.add('cover');
+    PANELS[id].div.style.setProperty('--accent', accent);
+    // 地圖上的島名：在這一島的格子上方，放大到島的寬度或那一帶的高度（先到者為準）
+    const tag = [
+      { rule: [110, 8], fill: accent },
+      ...names.map((t, j) => ({ t, F: 86, fill: C.ink, gap: j ? 24 : 44 })),
+      ...subs.map((t, j) => ({ t, F: 34, fill: C.body, gap: j ? 16 : 40 })),
+    ], box = labelBox(tag);
+    buildLabel(id, tag, Math.min((fcols * FLAT_COL - 200) / box.w, (FLAT.band - 130) / box.h));
+    flatAt(id, X, GRID_Y - FLAT.band / 2 - 20, -30);
     frameWp(id, isl.label || isl.name);
     NOTES[id] = isl.note || '';
     stops.push(id);
@@ -181,6 +234,10 @@ WORLD.forEach((isl, i) => {
     const svg = panel(id, VIEW_W, VIEW_H, yawAt + (col + .5) * LAYOUT.step, PITCHES[row],
                       RW * ((col + row) % 2 ? 1.08 : 1), { island: n });
     (def.duo ? buildDuoScene : buildScene)(Object.assign({}, def, { id }), svg, accent);
+    // 地圖格：站名「編號・標題」拆成編號與標題（沒有「・」就整個當標題）
+    const cut = def.label.indexOf('・');
+    buildTile(id, cut < 0 ? '' : def.label.slice(0, cut), def.label.slice(cut + 1), accent);
+    flatAt(id, xAt + (j % fcols + .5) * FLAT_COL, GRID_Y + VIEW_H / 2 + Math.floor(j / fcols) * FLAT_ROW);
     frameWp(id, def.label);
     NOTES[id] = def.note || '';
     stops.push(id);
@@ -189,14 +246,15 @@ WORLD.forEach((isl, i) => {
   if (i > 0 && stops.length) WP[stops[0]].visit = i - 1;   // 進下一島＝上一島標為已訪（調暗）
   ROUTE.push(...stops);
   yawAt += cols * LAYOUT.step + LAYOUT.gap;
+  xAt += fcols * FLAT_COL + FLAT_GAP;
 });
 
 /* ---------- 全景：Esc 隨時回來；主線最後一站也是它 ----------
-   退到球外，距離隨半徑等比放大：兩側的島（偏航近 ±90°）離鏡頭比正面的近、投影較大，
-   退得不夠遠就會出畫面。 */
-const HUB_TZ = -4200 * ZOOM;
-wp('hub', '全景', { yaw: 0, pitch: 0, tz: HUB_TZ });
-wp('end', '全景', { yaw: 0, pitch: 0, tz: HUB_TZ, visit: WORLD.length - 1 });
+   flat＝面板攤平成地圖。鏡頭正對地圖，退到整張地圖（含標題區）剛好填到畫面的
+   FILL_W × FILL_H 為止（planFlat 的 k）：地圖多大就退多遠，不是固定距離。 */
+const HUB_TZ = tzFor(RW, FLAT.k);
+wp('hub', '全景', { yaw: 0, pitch: 0, tz: HUB_TZ, flat: 1 });
+wp('end', '全景', { yaw: 0, pitch: 0, tz: HUB_TZ, flat: 1, visit: WORLD.length - 1 });
 ROUTE.push('end');
 
 boot();

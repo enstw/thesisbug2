@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="{{LANG}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="generator" content="thesisbug2 ./fw reader — regenerate from the transcript, do not edit">
+<title>{{TITLE}}</title>
+<style>
+{{FONTS}}
+
+:root {
+  --bg: #f7f4ee; --card: #fffdf8;
+  --text: #22201c; --body: #34312b; --muted: #6f685b; --hair: rgba(40,30,10,.13);
+  --accent: #9a5b12; --accent-soft: rgba(154,91,18,.10);
+  --pg: #2b6a6e; --pg-soft: rgba(43,106,110,.10);
+  --shadow: 0 10px 30px rgba(40,30,10,.14);
+  --sans: 'ENS Font', "PingFang TC", "Noto Sans CJK TC", "Noto Sans TC", "Microsoft JhengHei", system-ui, sans-serif;
+  --serif: "Songti TC", "Noto Serif CJK TC", "Noto Serif TC", "PMingLiU", Georgia, serif;
+  --read: var(--sans);
+  --fs: 19px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #14161b; --card: #1d2028;
+    --text: #eef0f4; --body: #cdd2dc; --muted: #959cab; --hair: rgba(255,255,255,.11);
+    --accent: #e7ad46; --accent-soft: rgba(231,173,70,.14);
+    --pg: #5fc9c0; --pg-soft: rgba(95,201,192,.12);
+    --shadow: 0 14px 40px rgba(0,0,0,.5);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #14161b; --card: #1d2028;
+  --text: #eef0f4; --body: #cdd2dc; --muted: #959cab; --hair: rgba(255,255,255,.11);
+  --accent: #e7ad46; --accent-soft: rgba(231,173,70,.14);
+  --pg: #5fc9c0; --pg-soft: rgba(95,201,192,.12);
+  --shadow: 0 14px 40px rgba(0,0,0,.5);
+  color-scheme: dark;
+}
+:root[data-font="serif"] { --read: var(--serif); }
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 72px; -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--bg); color: var(--body); font-family: var(--sans); }
+a { color: inherit; }
+
+.bar { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; gap: 12px;
+  padding: 10px 16px; background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-bottom: 1px solid var(--hair); }
+.bar .t { flex: 1; min-width: 0; font-size: 14px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bar .where { font-variant-numeric: tabular-nums; color: var(--pg); font-size: 14px; white-space: nowrap; }
+.ctl { display: flex; gap: 4px; }
+.ctl button { font: inherit; font-size: 14px; min-width: 34px; height: 32px; padding: 0 8px; border-radius: 8px;
+  border: 1px solid var(--hair); background: var(--card); color: var(--text); cursor: pointer; }
+.ctl button:hover { border-color: var(--accent); }
+.ctl button:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.progress { position: absolute; left: 0; bottom: -1px; height: 2px; background: var(--accent); width: 0; }
+
+.wrap { display: grid; grid-template-columns: minmax(0, 1fr); max-width: 1180px; margin: 0 auto; padding: 0 16px; }
+nav.toc { display: none; }
+@media (min-width: 1100px) {
+  .wrap:not(.notoc) { grid-template-columns: 250px minmax(0, 1fr); gap: 56px; }
+  .wrap:not(.notoc) nav.toc { display: block; position: sticky; top: 72px; align-self: start; max-height: calc(100vh - 90px);
+    overflow: auto; padding: 32px 0 24px; font-size: 14px; }
+}
+nav.toc h2 { font-size: 12px; letter-spacing: .12em; color: var(--muted); font-weight: 600; margin: 0 0 10px; }
+nav.toc ol { list-style: none; margin: 0; padding: 0; }
+nav.toc li a { display: block; padding: 5px 10px; border-left: 2px solid var(--hair); text-decoration: none; color: var(--muted); line-height: 1.45; }
+nav.toc li.l3 a { padding-left: 22px; }
+nav.toc li.l4 a { padding-left: 34px; font-size: 13px; }
+nav.toc li a:hover { color: var(--text); }
+nav.toc li a.on { color: var(--accent); border-left-color: var(--accent); }
+
+main { max-width: 40em; width: 100%; font-size: var(--fs); padding: 40px 0 120px; margin: 0 auto; }
+@media (min-width: 1100px) { .wrap:not(.notoc) main { margin: 0; } }
+
+header.head { margin-bottom: 2.2em; padding-bottom: 1.6em; border-bottom: 1px solid var(--hair); }
+.kicker { font-size: .68em; letter-spacing: .08em; color: var(--accent); font-weight: 600; margin: 0 0 .8em; font-variant-numeric: tabular-nums; }
+h1 { font-size: 1.85em; line-height: 1.3; color: var(--text); margin: 0 0 .5em; font-weight: 700; text-wrap: balance; }
+.src { font-size: .8em; color: var(--muted); line-height: 1.7; margin: 0; }
+details.provenance { margin-top: 1em; font-size: .74em; color: var(--muted); }
+details.provenance summary { cursor: pointer; }
+details.provenance p { margin: .6em 0 0; line-height: 1.75; white-space: pre-line; }
+
+main p, main h2, main h3, main h4, main h5, main h6, main li, main blockquote, main td, main th { font-family: var(--read); }
+main p { line-height: 1.95; margin: 0 0 1.1em; text-align: start; line-break: strict; letter-spacing: .02em; overflow-wrap: break-word; }
+main h2 { font-size: 1.3em; color: var(--text); margin: 2.2em 0 .9em; line-height: 1.4; font-weight: 700; }
+main h3 { font-size: 1.12em; color: var(--text); margin: 1.9em 0 .7em; font-weight: 700; }
+main h4, main h5, main h6 { font-size: 1em; color: var(--accent); margin: 1.6em 0 .5em; font-weight: 700; }
+main ul, main ol { padding-left: 1.6em; margin: 0 0 1.1em; }
+main li { line-height: 1.9; margin: .2em 0; }
+main blockquote { margin: 0 0 1.6em; padding: .9em 1.2em; border-left: 3px solid var(--accent); background: var(--accent-soft); border-radius: 0 10px 10px 0; }
+main blockquote p { margin: 0 0 .5em; color: var(--text); }
+main blockquote p:last-child { margin: 0; }
+main blockquote p + p:last-child { font-size: .85em; color: var(--muted); }
+main hr { border: 0; border-top: 1px solid var(--hair); margin: 2em 0; }
+main pre { overflow: auto; padding: 1em; background: var(--card); border: 1px solid var(--hair); border-radius: 8px; font-size: .8em; }
+.tablewrap { overflow-x: auto; margin: 0 0 1.4em; }
+main table { border-collapse: collapse; font-size: .86em; min-width: 100%; }
+main th, main td { border-bottom: 1px solid var(--hair); padding: .5em .7em; text-align: left; vertical-align: top; line-height: 1.7; }
+main th { color: var(--text); }
+
+a.fn { font-size: .62em; vertical-align: super; line-height: 0; text-decoration: none; color: var(--accent);
+  font-weight: 700; padding: 0 .12em; font-family: var(--sans); }
+a.fn:hover { text-decoration: underline; }
+.pg { display: inline-block; font-family: var(--sans); font-size: .62em; line-height: 1; vertical-align: .15em;
+  padding: .28em .5em; margin: 0 .25em; border-radius: 999px; color: var(--pg); background: var(--pg-soft);
+  font-variant-numeric: tabular-nums; letter-spacing: 0; }
+.pgbreak { display: flex; align-items: center; gap: .8em; margin: 1.4em 0; color: var(--pg); font-size: .66em; font-variant-numeric: tabular-nums; }
+.pgbreak::before, .pgbreak::after { content: ""; flex: 1; height: 1px; background: var(--hair); }
+.pgbreak span { padding: .25em .7em; border-radius: 999px; background: var(--pg-soft); }
+
+section.notes { margin-top: 3.5em; padding-top: 1.5em; border-top: 1px solid var(--hair); font-size: .82em; }
+section.notes h2 { font-family: var(--sans); font-size: 1.2em; margin: 0 0 1em; }
+section.notes ol { list-style: none; padding: 0; margin: 0; }
+section.notes li { position: relative; padding: .6em 0 .6em 3.6em; line-height: 1.75; border-bottom: 1px dashed var(--hair); overflow-wrap: anywhere; font-family: var(--sans); }
+section.notes li::before { content: attr(data-label); position: absolute; left: 0; top: .6em; width: 2.6em; text-align: right;
+  color: var(--accent); font-weight: 700; font-variant-numeric: tabular-nums; }
+section.notes li:target { background: var(--accent-soft); }
+.fnpg { float: right; margin-left: .8em; font-size: .85em; color: var(--pg); font-variant-numeric: tabular-nums; }
+.back { text-decoration: none; color: var(--muted); margin-left: .2em; }
+
+#pop { position: fixed; z-index: 40; max-width: min(420px, calc(100vw - 32px)); padding: 12px 14px; border-radius: 10px;
+  background: var(--card); color: var(--body); border: 1px solid var(--hair); box-shadow: var(--shadow);
+  font-size: 15px; line-height: 1.7; display: none; overflow-wrap: anywhere; }
+#pop b { color: var(--accent); margin-right: .4em; }
+#pop .fnpg, #pop .back { display: none; }
+
+@media print {
+  .bar, nav.toc, #pop { display: none !important; }
+  body { background: #fff; color: #000; }
+  .wrap { display: block; }
+  main { max-width: none; padding: 0; font-size: 11.5pt; }
+}
+</style>
+</head>
+<body>
+<div class="bar">
+  <div class="t">{{TITLE}}</div>
+  <div class="where" id="where" aria-live="polite">{{FIRST_PAGE}}</div>
+  <div class="ctl">
+    <button id="fsDown" title="字體縮小（-）" aria-label="字體縮小">A−</button>
+    <button id="fsUp" title="字體放大（+）" aria-label="字體放大">A＋</button>
+    <button id="font" title="切換明體／黑體（f）" aria-label="切換字型">明</button>
+    <button id="theme" title="切換深淺色（d）" aria-label="切換深淺色">◐</button>
+  </div>
+  <div class="progress" id="progress"></div>
+</div>
+
+<div class="wrap{{TOC_CLASS}}">
+  <nav class="toc" aria-label="目次">
+    <h2>目次</h2>
+    <ol id="tocList">
+{{TOC}}
+    </ol>
+  </nav>
+
+  <main>
+    <header class="head">
+      <p class="kicker">{{KEY}}</p>
+      <h1>{{TITLE_HTML}}</h1>
+      <p class="src">{{CITE}}</p>
+      {{PROVENANCE}}
+    </header>
+
+{{BODY}}
+
+{{NOTES}}
+  </main>
+</div>
+
+<div id="pop" role="tooltip"></div>
+
+<script>
+(function () {
+  var root = document.documentElement;
+  function store(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } }
+  var wrap = document.querySelector('.wrap');
+  if (wrap.className.indexOf('empty') >= 0) wrap.classList.add('notoc');
+
+  var fs = parseFloat(store('reader-fs')) || 19;
+  function setFs(v) { fs = Math.max(14, Math.min(34, v)); root.style.setProperty('--fs', fs + 'px'); store('reader-fs', fs); }
+  setFs(fs);
+  document.getElementById('fsUp').onclick = function () { setFs(fs + 2); };
+  document.getElementById('fsDown').onclick = function () { setFs(fs - 2); };
+
+  var fontBtn = document.getElementById('font');
+  function setFont(f) { root.dataset.font = f; fontBtn.textContent = f === 'serif' ? '黑' : '明'; store('reader-font', f); }
+  setFont(store('reader-font') || 'sans');
+  fontBtn.onclick = function () { setFont(root.dataset.font === 'serif' ? 'sans' : 'serif'); };
+
+  var themeBtn = document.getElementById('theme'), saved = store('reader-theme');
+  if (saved) root.dataset.theme = saved;
+  themeBtn.onclick = function () {
+    var dark = root.dataset.theme ? root.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+    root.dataset.theme = dark ? 'light' : 'dark'; store('reader-theme', root.dataset.theme);
+  };
+
+  document.addEventListener('keydown', function (e) {
+    if (e.metaKey || e.ctrlKey || e.altKey || /input|textarea/i.test(e.target.tagName)) return;
+    if (e.key === '+' || e.key === '=') setFs(fs + 2);
+    else if (e.key === '-') setFs(fs - 2);
+    else if (e.key === 'f') fontBtn.click();
+    else if (e.key === 'd') themeBtn.click();
+    else if (e.key === 'Escape') hide();
+  });
+
+  // Footnote preview: hover on a pointer device, tap on touch; the link itself
+  // still jumps to the note, so the notes list works without script too.
+  var pop = document.getElementById('pop'), openFor = null;
+  function show(a) {
+    var li = document.getElementById(a.dataset.fn); if (!li) return;
+    pop.innerHTML = '<b>註 ' + li.dataset.label.replace(/[<>&]/g, '') + '</b>' + li.innerHTML;
+    pop.style.display = 'block';
+    var r = a.getBoundingClientRect(), pw = pop.offsetWidth, ph = pop.offsetHeight;
+    var left = Math.max(16, Math.min(r.left - pw / 2, innerWidth - pw - 16));
+    var top = r.bottom + 8; if (top + ph > innerHeight - 8) top = r.top - ph - 8;
+    pop.style.left = left + 'px'; pop.style.top = Math.max(8, top) + 'px'; openFor = a;
+  }
+  function hide() { pop.style.display = 'none'; openFor = null; }
+  var hover = matchMedia('(hover: hover)').matches;
+  document.querySelectorAll('main a.fn').forEach(function (a) {
+    if (hover) { a.addEventListener('mouseenter', function () { show(a); }); a.addEventListener('mouseleave', hide); }
+    a.addEventListener('click', function (e) {
+      if (!hover) { e.preventDefault(); if (openFor === a) hide(); else show(a); }
+    });
+  });
+  document.addEventListener('click', function (e) { if (!hover && openFor && !e.target.closest('a.fn,#pop')) hide(); });
+  addEventListener('scroll', function () { if (openFor && hover) hide(); }, { passive: true });
+
+  var marks = Array.prototype.slice.call(document.querySelectorAll('main .pg[id], main .pgbreak[id]'));
+  var heads = Array.prototype.slice.call(document.querySelectorAll('main h2[id], main h3[id], main h4[id]'));
+  var where = document.getElementById('where'), prog = document.getElementById('progress');
+  var links = {}; document.querySelectorAll('#tocList a').forEach(function (a) { links[a.getAttribute('href').slice(1)] = a; });
+  var notesTop = document.querySelector('section.notes'), first = where.textContent, ticking = false;
+  function update() {
+    ticking = false;
+    var y = 90, pg = first, h = null;
+    for (var i = 0; i < marks.length; i++) { if (marks[i].getBoundingClientRect().top < y) pg = 'p. ' + marks[i].id.slice(1); else break; }
+    for (var j = 0; j < heads.length; j++) { if (heads[j].getBoundingClientRect().top < y + 40) h = heads[j].id; else break; }
+    where.textContent = notesTop && notesTop.getBoundingClientRect().top < y ? '註釋' : pg;
+    for (var k in links) links[k].classList.toggle('on', k === h);
+    var max = document.documentElement.scrollHeight - innerHeight;
+    prog.style.width = (max > 0 ? scrollY / max * 100 : 0) + '%';
+  }
+  addEventListener('scroll', function () { if (!ticking) { ticking = true; requestAnimationFrame(update); } }, { passive: true });
+  addEventListener('resize', update);
+  update();
+})();
+</script>
+</body>
+</html>

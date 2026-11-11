@@ -4,7 +4,7 @@
 
 AI-agent framework for Traditional Chinese academic coursework — one repo per course, shared skills, audited sources, and slides planned from the paper.
 
-> **Status: in use.** It has been used in formal university coursework since March 2026: the private first-generation template until September 2026, and this repository, the second generation, since then. The architecture in [`docs/DESIGN.md`](docs/DESIGN.md) is settled, 17 shared agent skills are in `.agents/skills/`, and `scripts/` has the `fw` dispatcher, `unit-init`, `build`, and the checking gates, with the Quarto templates in `assets/templates/`. Optional capabilities such as image generation and external review depend on the tools available to the agent. The [roadmap](#history-and-roadmap) shows what exists.
+> **Status: in use.** It has been used in formal university coursework since March 2026: the private first-generation template until September 2026, and this repository, the second generation, since then. The architecture in [`docs/DESIGN.md`](docs/DESIGN.md) is settled, 18 shared agent skills are in `.agents/skills/`, and `scripts/` has the `fw` dispatcher, `unit-init`, `build`, and the checking gates, with the Quarto templates in `assets/templates/`. Optional capabilities such as image generation and external review depend on the tools available to the agent. The [roadmap](#history-and-roadmap) shows what exists.
 
 ## Quick start
 
@@ -149,12 +149,13 @@ All HTML Views share one shell (`deck-runtime`): keyboard navigation, a presente
 
 ## Skills
 
-Seventeen skills live in `.agents/skills/<name>/SKILL.md`. Each is a procedure with its reasons, readable by any agent.
+Eighteen skills live in `.agents/skills/<name>/SKILL.md`. Each is a procedure with its reasons, readable by any agent.
 
 | Stage | Skill | What it does |
 | :--- | :--- | :--- |
 | Topic | `topic-scout` | Turns an interest into 2–5 comparable candidate topics, a bilingual search plan, a first literature scan, and a recorded decision. |
 | Sources | `source-kit` | Fetches and stores full texts, writes a stable per-source summary, audits identity and support, and drives the L1–L4 ratchet. |
+| | `reader` | Renders a source transcript as an offline reading page: printed-page chips, paragraphs rejoined across page breaks, footnote previews, adjustable type and dark mode (`./fw reader`). |
 | | `yt2sub` | Transcribes a YouTube video or a media file: captions first, local Whisper as the fallback. |
 | Writing | `safe-edit` | Batch edits as exact-match payloads through `./fw apply-edits`, then the gates. |
 | | `count-zh` | Counts Chinese characters the way a 字數 limit means it. |

@@ -3,6 +3,7 @@
 import importlib.util
 import json
 from pathlib import Path
+import subprocess
 import tempfile
 import unittest
 import unittest.mock
@@ -18,12 +19,30 @@ class PandocEnvTests(unittest.TestCase):
     """pandoc hangs at start-up under a 39-bit address space unless its heap reservation is capped."""
 
     def test_reservation_is_capped_when_the_author_sets_nothing(self):
-        with unittest.mock.patch.dict("os.environ", clear=True):
+        with unittest.mock.patch.dict("os.environ", clear=True), \
+                unittest.mock.patch.object(build, "pandoc_takes_cap", return_value=True):
             self.assertEqual(build.pandoc_env()["GHCRTS"], "-xr64G")
 
     def test_the_authors_own_ghcrts_wins(self):
         with unittest.mock.patch.dict("os.environ", {"GHCRTS": "-xr16G"}):
             self.assertEqual(build.pandoc_env()["GHCRTS"], "-xr16G")
+
+    def test_no_cap_for_a_pandoc_built_before_ghc_9_10(self):
+        # Quarto 1.9's pandoc (GHC 9.8.4) will not start at all with -xr in GHCRTS.
+        with unittest.mock.patch.dict("os.environ", clear=True), \
+                unittest.mock.patch.object(build, "pandoc_takes_cap", return_value=False):
+            self.assertNotIn("GHCRTS", build.pandoc_env())
+
+    def test_probe_reads_the_refusal(self):
+        refused = subprocess.CompletedProcess([], 1, "", "pandoc: unknown RTS option: -xr64G\n")
+        with unittest.mock.patch.object(build, "_takes_cap", None), \
+                unittest.mock.patch.object(build.subprocess, "run", return_value=refused) as run:
+            self.assertFalse(build.pandoc_takes_cap())
+            self.assertEqual(run.call_args.kwargs["env"]["GHCRTS"], "-xr64G")
+        accepted = subprocess.CompletedProcess([], 0, "pandoc 3.9\n", "")
+        with unittest.mock.patch.object(build, "_takes_cap", None), \
+                unittest.mock.patch.object(build.subprocess, "run", return_value=accepted):
+            self.assertTrue(build.pandoc_takes_cap())
 
 
 class BuildFormatTests(unittest.TestCase):

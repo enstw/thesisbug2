@@ -61,12 +61,40 @@ ZH_LANGIDS = {"chinese", "zh", "zh-tw", "zh-hant", "zh-hans", "zh-cn", "tchinese
 # and the retry never ends: pandoc spins in mmap/munmap before reading any input,
 # at random (placement is randomised), so a build that calls it a dozen times
 # hangs almost surely. 64 GB fits any address space and is still far beyond any
-# heap pandoc needs. -xr exists since GHC 9.10.1. An author's own GHCRTS wins.
+# heap pandoc needs. -xr exists since GHC 9.10.1, and a pandoc built with an
+# older GHC refuses to start on it ("unknown RTS option") — Quarto 1.9's own
+# pandoc 3.8.3 is built with GHC 9.8.4 — so the cap is set only when the pandoc
+# this build runs accepts it. An author's own GHCRTS wins.
 GHCRTS = "-xr64G"
+_takes_cap: bool | None = None
+
+
+def pandoc_takes_cap() -> bool:
+    """Whether the pandoc the build runs (Quarto's first) starts with GHCRTS set.
+
+    Asked once per run with the cap already set, so the probe itself cannot hang
+    on a machine that needs it; an older GHC rejects the option while parsing its
+    flags, before it reserves any heap. With no pandoc at all the answer is True,
+    since nothing will refuse it.
+    """
+    global _takes_cap
+    if _takes_cap is None:
+        _takes_cap = True
+        for cmd in (["quarto", "pandoc"], ["pandoc"]):
+            try:
+                r = subprocess.run([*cmd, "--version"], capture_output=True, text=True,
+                                   timeout=60, env={**os.environ, "GHCRTS": GHCRTS})
+            except (OSError, subprocess.TimeoutExpired):
+                continue
+            _takes_cap = "unknown RTS option" not in r.stderr
+            break
+    return _takes_cap
 
 
 def pandoc_env() -> dict[str, str]:
     """Environment for running pandoc or quarto (which runs pandoc)."""
+    if "GHCRTS" in os.environ or not pandoc_takes_cap():
+        return dict(os.environ)
     return {"GHCRTS": GHCRTS, **os.environ}
 
 

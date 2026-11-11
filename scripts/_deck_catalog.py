@@ -1044,7 +1044,7 @@ def _qr_figure(slots: dict[str, Any], ctx: SlideContext, size: int, style: str, 
         tag = tag[:4] + f' width="{size}" height="{size}"' + tag[4:]
         art = art[:root.start()] + tag + art[root.end():]
     label = esc(slots.get("qr_label") or "")
-    label_html = f'<p class="muted" style="font-size:34px;margin:8px 0 0">{label}</p>' if label else ""
+    label_html = f'<p class="muted" style="font-size:calc(34px * var(--deck-font-scale, 1));margin:8px 0 0">{label}</p>' if label else ""
     cls = f"qr {rise}".strip()
     return (f'<div class="{cls}" style="{style};width:max-content;text-align:center">'
             f'<div style="width:{size}px;height:{size}px;margin:0 auto">{art}</div>{label_html}</div>')

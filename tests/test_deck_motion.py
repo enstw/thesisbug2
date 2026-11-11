@@ -252,6 +252,30 @@ class EnginePackagingTests(unittest.TestCase):
         self.assertNotIn("opacity", keep)
         self.assertIn("restoreInline(it), null, at + it.dur", src, "draw must restore the author's dashes when it ends")
 
+    def test_engine_auto_steps_by_default(self):
+        # Beats play by themselves every 0.3 s unless the deck says otherwise, because one press per
+        # card tied the presenter to the keyboard. The chain must start only after the entrance
+        # transition (a step during it would cut it short) and a manual step must re-time it.
+        src = (self.ASSET / "deck-motion.js").read_text(encoding="utf-8")
+        self.assertIn("const AUTO_STEP = parseFloat(AUTO_ATTR) > 0 ? parseFloat(AUTO_ATTR) : .3;", src)
+        self.assertIn("let auto = AUTO_ATTR !== 'off'", src)
+        finish = src[src.index("function finishTransition()"):src.index("// ---- GSDevTools")]
+        self.assertIn("autoQueue();", finish, "the auto chain must start when the entrance transition ends")
+        self.assertIn("if (mode !== 'transition') autoQueue();", src)
+        step = src[src.index("addEventListener('deckstep'"):src.index("addEventListener('slidechange'")]
+        self.assertIn("announce(); autoQueue(); e.preventDefault();", step, "a manual step must re-time the chain")
+        self.assertIn("autoStop(); undoBeat(S.beat);", step, "stepping back must stop the chain")
+        head = src.split("(() => {")[0]
+        for words in ("每 0.3 秒", "A 切換", "data-deck-auto"):
+            self.assertIn(words, head, f"header comment must document {words}")
+
+    def test_console_forwards_the_auto_key(self):
+        # The presenter often drives from the console window; A must reach the engine there too.
+        con = (REPO / ".agents/skills/deck-runtime/template/asset/presenter-stage.js").read_text(encoding="utf-8")
+        self.assertIn("if(k==='a'||k==='A'){if(window.opener&&!window.opener.closed){window.opener.postMessage({deckAutoKey:true},'*');}", con)
+        src = (self.ASSET / "deck-motion.js").read_text(encoding="utf-8")
+        self.assertIn("if (e.data && e.data.deckAutoKey) setAuto(!auto);", src)
+
     def test_engine_documents_every_fx(self):
         src = (self.ASSET / "deck-motion.js").read_text(encoding="utf-8")
         fxs = re.findall(r"^\s{4}(\w+): \(tl, it, at\)", src, re.M)

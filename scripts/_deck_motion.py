@@ -27,9 +27,9 @@ import re
 # The same wording serves an author or agent choosing by hand; a test keeps page-type names out.
 VARIATIONS: dict[str, dict] = {
     "M-STEP": dict(name="逐拍出現", compile=True, applies="*",
-                   what="標題與導語隨頁出現；之後每按一次出現一組（一張卡、一個節點或一層），每組上浮 0.6 秒；收束框是最後一拍。按鍵次數＝組數＋1",
+                   what="標題與導語隨頁出現；之後每 0.3 秒自動出現一組（一張卡、一個節點或一層；逐按模式下每按一次一組），每組上浮 0.6 秒；收束框是最後一拍。逐按時按鍵次數＝組數＋1",
                    pros="台下只看得到講到的那一格；動作最小，任何版型都能用",
-                   cons="組越多按越多次；頁上只有一組或沒有組時，和 M-NONE 幾乎看不出差別"),
+                   cons="組越多，整頁出齊越久（自動）或按越多次（逐按）；頁上只有一組或沒有組時，和 M-NONE 幾乎看不出差別"),
     "M-POP": dict(name="彈入", compile=True, applies="*",
                   what="同 M-STEP 的拍序，但每組從 82% 縮放彈到 100%（0.6 秒），不是上浮",
                   pros="有邊框或底色的方塊（卡、節點、階層）出現時更有份量",
@@ -88,7 +88,7 @@ VARIATIONS: dict[str, dict] = {
                    cons="頁上有好幾組內容時，台下會先把全部讀完，不會跟著講者"),
 }
 
-# Most restrained first: fewer key presses, smaller movement. The picker falls back to the more
+# Most restrained first: fewer beats (key presses in per-press mode), smaller movement. The picker falls back to the more
 # restrained of Jev's top two when the race is close, and prints that it did; an author choosing
 # by hand applies the same tie-break.
 RESTRAINT = ["M-NONE", "M-STEP", "M-LINES", "M-COUNT", "M-TYPE", "M-POP", "M-CHARS", "M-SCRAMBLE", "M-PUSH", "M-ZOOM",

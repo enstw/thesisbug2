@@ -131,7 +131,7 @@ The previews below are one storyboard row of an invented talk about brewing tea,
 | deck-svg | deck-svg, lively mode |
 | :---: | :---: |
 | ![The row as a live HTML slide with three cards and a closing line](docs/engines/deck-svg.png) | ![The same slide revealing its cards one key press at a time](docs/engines/deck-svg-lively.gif) |
-| The default. Live HTML and SVG compiled from the row by `./fw deck-compile`; opens offline by double-click, no build step, prints to PDF. This is the deck the gates read. | The same file with `M` pressed: each key press reveals one beat, with the effect the storyboard's motion code names. An option of the deck, not a second deck. |
+| The default. Live HTML and SVG compiled from the row by `./fw deck-compile`; opens offline by double-click, no build step, prints to PDF. This is the deck the gates read. | The same file in lively mode: each beat appears on its own, 0.3 s apart (`A` switches to one beat per key press), with the effect the storyboard's motion code names; `M` turns it off. An option of the deck, not a second deck. |
 
 | deck-image | deck-3d |
 | :---: | :---: |

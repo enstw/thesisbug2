@@ -35,7 +35,7 @@ engine    deck-svg       asset/deck.css + deck-font-controls.js + deck-theme-con
 | `template/asset/deck-theme-controls.js` | Live colour: `c`/Shift+C cycle the fixed themes in `tokens.css`, `g`/Shift+G generate or step back through seeded palettes; `#theme=<id>` or `#theme=r<seed>` loads one. Remembered per deck and synced across its windows like the font size. Needs house-style's `deck-theme-rules.js` + `deck-palette.js` loaded before it. | No. |
 | `template/asset/deck-check.js` | The `deck.html#debug` self-check (type floor, overflow, rendered contrast, § Run & verify); does nothing without `#debug`. | No. |
 | `template/asset/gsap.min.js` | GSAP 3.15 core + Flip, DrawSVG, Text, SplitText, MorphSVG, MotionPath, ScrambleText, GSDevTools in one local file (free "no charge" licence, not MIT), so the lively mode works from `file://`. Update by concatenating the nine `dist/*.min.js` of a newer release (header comment says how). |
-| `template/asset/deck-motion.js` | The optional lively mode on GSAP (§ Motion and print): elements marked `data-beat` reveal one press at a time with an effect, `data-id` glides an element from where it sat on an earlier slide, `data-enter` picks the slide's entrance, `data-along` rides an SVG path, `data-morph` morphs a path, `data-relayout` re-flows a container with Flip; `M` turns it off. |
+| `template/asset/deck-motion.js` | The optional lively mode on GSAP (§ Motion and print): elements marked `data-beat` reveal one beat at a time with an effect — by themselves every 0.3 s by default, or one per key press after `A` — `data-id` glides an element from where it sat on an earlier slide, `data-enter` picks the slide's entrance, `data-along` rides an SVG path, `data-morph` morphs a path, `data-relayout` re-flows a container with Flip; `M` turns it off. |
 | `reference/slide-patterns.md` | Content shape → pattern (read **first**: the storyboard row names the shape), then the component cheat-sheet. | No. |
 
 ## Scaffolding a new deck
@@ -282,9 +282,17 @@ tofu; subsetting it to shrink a final file is optional (house-style § Font).
 
 ### Lively mode (optional): beats, continuity, transitions
 
-`asset/deck-motion.js` turns a slide into a sequence of **beats** the presenter
-plays one key press at a time, the way the narrated-video lab revealed a scene
-sentence by sentence (framework `docs/dynamic-deck-lab-2026-10-14.md`). It runs
+`asset/deck-motion.js` turns a slide into a sequence of **beats**, the way the
+narrated-video lab revealed a scene sentence by sentence (framework
+`docs/dynamic-deck-lab-2026-10-14.md`). By default the beats **play by
+themselves, one every 0.3 s** once the slide's entrance ends, because a
+presenter who has to press for every card is tied to the keyboard instead of
+watching the room; `A` switches to one beat per key press for a talk timed to
+the narration (remembered per deck, forwarded by the presenter console), `→`
+during auto-play plays the next beat early and restarts the 0.3 s count from
+it, and `←` steps back and stops the auto-play for that slide. A deck sets its
+own interval with `<html data-deck-auto="0.5">` or starts in per-press mode
+with `data-deck-auto="off"`; `[`/`]` scale the interval with the speed. It runs
 on GSAP 3.15 (`asset/gsap.min.js`, a local bundle of the core and eight
 plugins, 233 KB, loaded right before it; free "no charge" licence, not MIT),
 chosen after a bake-off and a per-engine showcase because its plugins give
@@ -339,7 +347,8 @@ narrated video.
   whole-deck font size; `c`/Shift+C = next/previous fixed theme; `g`/Shift+G =
   new seeded palette / previous one (toast 「隨機 #4821」; `#theme=r4821`
   reloads it); `M` = lively mode on/off when the deck has beats (§ Motion
-  and print). All of these also work from the presenter console; Cmd/Ctrl +/−
+  and print); `A` = automatic beats (every 0.3 s, the default) ↔ one beat per
+  key press. All of these also work from the presenter console; Cmd/Ctrl +/−
   stays browser zoom. In the console, `O` opens a grid of every slide to jump
   to a far one. Print uses the active theme.
 - **Self-check:** open `deck.html#debug` and step through every slide.

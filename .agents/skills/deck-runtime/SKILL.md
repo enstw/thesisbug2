@@ -67,7 +67,9 @@ A deck the engines produce must satisfy what `deck-stage.js` expects:
   without the runtime knowing what a beat is. Jumps (`goTo`, digits, Home/End,
   R) do not ask. The console relays an engine's `deckbeat` event (`detail.beat`,
   `beats`) as 第 n/m 拍 beside the page number and forwards `M` as
-  `{deckMotionKey: true}`; a deck without the engine ignores both. The engine
+  `{deckMotionKey: true}` and `A` (the engine's automatic beats on/off) as
+  `{deckAutoKey: true}`; a deck without the engine ignores them. The runtime
+  must not bind `A`: the engine reads it to switch auto-play. The engine
   also takes `Shift+←`/`Shift+→` (play a beat backwards / replay it), `[`/`]`
   (speed) and `D` (its scrubber) in the capture phase, so the runtime must not
   bind those keys.

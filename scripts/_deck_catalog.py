@@ -425,12 +425,15 @@ def render_finale_summary(slots: dict[str, Any], variant: str, ctx: SlideContext
         align = ' style="text-align:left"' if str(slots.get("points_align") or "").strip().lower() == "left" else ""
         pts_html = f'<ul class="clean lead-size rise d2 mt"{align}>{li_items}</ul>'
 
+    qr_html = _qr_figure(slots, ctx, size=240, style="margin:32px auto 0", rise="rise d3")
+
     return f"""  <section class="slide finale" data-label="{dlabel}">
     <div class="railtop"></div>
     <div class="content">
       <h2 class="rise">{heading}</h2>
       <p class="onesentence rise d1">{onesentence}</p>
       {pts_html}
+      {qr_html}
     </div>
   </section>"""
 
@@ -579,6 +582,7 @@ def render_split_anchor(slots: dict[str, Any], variant: str, ctx: SlideContext) 
           </div>""")
 
     cite_html = f'<div class="muted mt" style="font-size:32px">出處：{cite}</div>' if cite else ""
+    qr_html = _qr_figure(slots, ctx, size=220, style="margin:24px 0 0")
 
     return f"""  <section class="slide" style="--chapter:{ctx.accent}" data-label="{dlabel}">
 {_render_topbar(ctx)}
@@ -590,6 +594,7 @@ def render_split_anchor(slots: dict[str, Any], variant: str, ctx: SlideContext) 
             {anchor}
           </blockquote>
           {cite_html}
+          {qr_html}
         </div>
         <div class="split-anchor__list">
 {''.join(items_html)}
@@ -1010,6 +1015,41 @@ def _canvas_svg(rel_path: str, base: Path | None) -> tuple[str, str]:
     return text, ""
 
 
+def _qr_figure(slots: dict[str, Any], ctx: SlideContext, size: int, style: str, rise: str = "") -> str:
+    """A QR code (`qr: <SVG path relative to the talk>`) with an optional `qr_label` under it.
+
+    Closing and link slides carry a QR code so the audience can open a URL from their seats.
+    `rise` gives it its own entrance (and, through deck-motion, its own beat); leave it empty
+    when the code sits inside a block that already rises, so it arrives with that block.
+    A div and a p, not figure/figcaption, because deck-motion only gives beats to those tags.
+    The SVG is inlined like L-CANVAS `svg:` and pinned to `size` pixels square; a root with only
+    width/height gets a viewBox first, because resizing an SVG without one crops it instead of
+    scaling it. Generate the SVG with its own white quiet zone, so it scans on a dark theme too.
+    """
+    rel = slots.get("qr")
+    if not rel:
+        return ""
+    art, note = _canvas_svg(str(rel), ctx.base)
+    if not art:
+        return note
+    root = re.search(r"<svg\b[^>]*>", art)
+    if root:
+        tag = root.group(0)
+        if not re.search(r"\sviewBox\s*=", tag):
+            w = re.search(r'\swidth\s*=\s*"([\d.]+)', tag)
+            h = re.search(r'\sheight\s*=\s*"([\d.]+)', tag)
+            if w and h:
+                tag = tag[:4] + f' viewBox="0 0 {w.group(1)} {h.group(1)}"' + tag[4:]
+        tag = re.sub(r'\s(width|height)\s*=\s*"[^"]*"', "", tag)
+        tag = tag[:4] + f' width="{size}" height="{size}"' + tag[4:]
+        art = art[:root.start()] + tag + art[root.end():]
+    label = esc(slots.get("qr_label") or "")
+    label_html = f'<p class="muted" style="font-size:34px;margin:8px 0 0">{label}</p>' if label else ""
+    cls = f"qr {rise}".strip()
+    return (f'<div class="{cls}" style="{style};width:max-content;text-align:center">'
+            f'<div style="width:{size}px;height:{size}px;margin:0 auto">{art}</div>{label_html}</div>')
+
+
 def render_canvas(slots: dict[str, Any], variant: str, ctx: SlideContext) -> str:
     """The standard frame (top bar with page number, title, optional lead and closing box)
     around one drawing area that fills the rest of the slide.
@@ -1080,7 +1120,7 @@ CATALOG: dict[str, LayoutDefinition] = {
         required_slots=["heading"],
         allowed_variants=["default"],
         render_func=render_finale_summary,
-        optional_slots=["onesentence", "points", "verdict"],
+        optional_slots=["onesentence", "points", "verdict", "points_align", "qr", "qr_label"],
     ),
 
     # 2. Parallel Expansion & Synthesis
@@ -1118,7 +1158,7 @@ CATALOG: dict[str, LayoutDefinition] = {
         required_slots=["title", "items"],
         allowed_variants=["quote-style", "card-list"],
         render_func=render_split_anchor,
-        optional_slots=["anchor_statement", "anchor", "cite", "footer_cite"],
+        optional_slots=["anchor_statement", "anchor", "cite", "footer_cite", "qr", "qr_label"],
     ),
 
     # 3. Relational, Contrast & Typology

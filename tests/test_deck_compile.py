@@ -200,6 +200,32 @@ class OverridableLabelTests(unittest.TestCase):
         self.assertIn('style="text-align:left"', html)
         self.assertNotIn("text-align", self.render("L-FINALE-SUMMARY", "heading: h<br>points:<br>- a"))
 
+    def test_qr_code_on_finale_and_split_anchor(self):
+        # Segno writes width/height and no viewBox; resizing such an SVG would crop it.
+        tmp = Path(tempfile.mkdtemp(prefix="thesisbug2-test-qr-"))
+        self.addCleanup(shutil.rmtree, tmp, True)
+        (tmp / "qr.svg").write_text('<?xml version="1.0"?>\n<svg xmlns="http://www.w3.org/2000/svg" '
+                                    'width="540" height="540"><path d="M0 0h45v45h-45z"/></svg>', encoding="utf-8")
+        ctx = SlideContext(slide_num=1, total_slides=1, accent="var(--c1)", eyebrow="e", data_label="d",
+                           variant="", base=tmp)
+        for layout, text in (("L-FINALE-SUMMARY", "heading: h<br>points:<br>- a"),
+                             ("L-SPLIT-ANCHOR", "title: t<br>anchor: a<br>items:<br>- x: y<br>- z: w")):
+            defn = get_layout(layout)
+            html = defn.render_func(parse_slot_payload(text + "<br>qr: qr.svg<br>qr_label: github.com/x/y"),
+                                    defn.allowed_variants[0], ctx)
+            root = html.split("<svg", 1)[1].split(">", 1)[0]
+            self.assertIn('viewBox="0 0 540 540"', root)
+            self.assertNotIn('"540"', root.replace('viewBox="0 0 540 540"', ""))
+            # The finale's code is its own last beat; split-anchor's arrives with the anchor column.
+            self.assertIn('class="qr rise d3"' if layout == "L-FINALE-SUMMARY" else 'class="qr"', html)
+            self.assertIn("github.com/x/y</p>", html)
+            self.assertNotIn("<?xml", html)
+            self.assertNotIn("<figure", html)
+        missing = get_layout("L-FINALE-SUMMARY").render_func(parse_slot_payload("heading: h<br>qr: none.svg"),
+                                                             "default", ctx)
+        self.assertIn("deck-compile warning: svg: 找不到 none.svg", missing)
+        self.assertNotIn('class="qr', self.render("L-FINALE-SUMMARY", "heading: h"))
+
     def test_confront_badge_is_decoration_not_slide_text(self):
         # deck-notes requires a 全名（縮寫） point for every capitalised word the
         # audience reads; the VS badge is decoration, so it must not count.

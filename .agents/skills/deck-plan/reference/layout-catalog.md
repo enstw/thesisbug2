@@ -52,6 +52,7 @@
   - `onesentence` *(選填)*：一句話核心總結
   - `points` *(選填)*：條列核心收穫或提問
   - `points_align` *(選填)*：寫 `left` 讓條列靠左（大標仍置中），因為較長的條列換行後置中排列不好讀
+  - `qr`、`qr_label` *(選填)*：見下方「QR code」；放在條列下方置中，問答時留在這頁，台下才有時間掃
 - **畫面內容範例**：
   ```text
   heading: 結論：韌性與效率的權衡<br>onesentence: 地緣經濟碎片化正以安全之名重構全球生產網絡。<br>points:<br>- 區域化生產必然推升資本與營運邊際成本<br>- 台灣需以技術無可替代性維繫戰略矽盾
@@ -95,7 +96,8 @@
 ### 6. `L-SPLIT-ANCHOR`（1:2 概念錨點式）
 - **使用情境**：左側大字粗體核心金句／命題（Anchor），右側垂直列出 2~3 個具體支持條目。
 - **深度變體**：`quote-style`（大引號強對比）、`card-list`（卡片序列）。
-- **槽位規格**：`title`, `anchor_statement` *(必填)*, `items` *(2~3 項)*, `footer_cite` *(選填)*
+- **槽位規格**：`title`, `anchor_statement` *(必填)*, `items` *(2~3 項)*, `footer_cite` *(選填)*, `qr`、`qr_label` *(選填，放在左欄出處下方)*
+- **QR code**（本版型與 `L-FINALE-SUMMARY` 共用）：`qr: <相對 talk 的 SVG 路徑>` 把 QR code 嵌進投影片，`qr_label` 是印在下方的網址或說明（34px），讓台下用手機打開投影片提到的網址。SVG 用程式產生並自帶白色留白（例如 `uvx segno --scale 12 --border 4 --error h --output asset/qr.svg <網址>`），深色主題上才掃得到；`deck-compile` 把它固定成正方形，只有 width／height 的 SVG 會先補 viewBox，避免縮放時被裁掉。產生後先解碼一次，確認網址正確。3D 與 Slidev 的 View 只帶走 `qr_label` 的文字。
 - **畫面內容範例**：
   ```text
   title: 相互依存的武器化結構<br>anchor: 誰掌控了網絡的樞紐節點，誰就擁有非對稱的結構性權力。<br>footer_cite: Farrell & Newman (2019)<br>items:<br>- 全球結算管道: 環球銀行金融電信協會 (SWIFT)<br>- 技術核心節點: 極紫外光曝光機 (EUV) 專利網<br>- 關鍵雲端中樞: 跨國海底電纜與超大規模資料中心

@@ -31,9 +31,9 @@ class Markers(unittest.TestCase):
         self.assertEqual([b[1] for b in doc.blocks if b[0] == "pg"], [919, 920, 921])
 
     def test_cjk_paragraph_cut_by_a_break_is_rejoined_with_chip(self):
-        html = render("**[Page 5 start]**\n\n戰略研究的四\n\n**[Page 5 end, Page 6 start]**\n\n個境界。\n")
-        self.assertIn('戰略研究的四<span class="pg" id="p6"', html)
-        self.assertIn("</span>個境界。", html)
+        html = render("**[Page 5 start]**\n\n河岸的柳樹長出了新\n\n**[Page 5 end, Page 6 start]**\n\n芽。\n")
+        self.assertIn('河岸的柳樹長出了新<span class="pg" id="p6"', html)
+        self.assertIn("</span>芽。", html)
         self.assertEqual(html.count("<p>"), 1)
 
     def test_sentence_end_keeps_paragraphs_apart(self):

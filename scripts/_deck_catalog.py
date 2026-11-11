@@ -581,7 +581,7 @@ def render_split_anchor(slots: dict[str, Any], variant: str, ctx: SlideContext) 
             <p>{body}</p>
           </div>""")
 
-    cite_html = f'<div class="muted mt" style="font-size:32px">出處：{cite}</div>' if cite else ""
+    cite_html = f'<div class="muted mt">出處：{cite}</div>' if cite else ""
     qr_html = _qr_figure(slots, ctx, size=220, style="margin:24px 0 0")
 
     return f"""  <section class="slide" style="--chapter:{ctx.accent}" data-label="{dlabel}">
@@ -947,7 +947,7 @@ def render_stat_hero(slots: dict[str, Any], variant: str, ctx: SlideContext) -> 
         <div class="stat-hero__stat rise d1">
           <div class="stat-hero__num">{num}</div>
           <div class="lead" style="font-weight:700;margin-top:12px">{lbl}</div>
-          <p class="muted mt" style="font-size:32px">{context}</p>
+          <p class="muted mt">{context}</p>
         </div>
         <div class="stat-hero__body">
 {''.join(imp_html)}

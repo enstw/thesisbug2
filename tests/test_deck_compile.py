@@ -115,6 +115,21 @@ class VisualRhythmResolverTests(unittest.TestCase):
             self.assertEqual(defn.id, lid)
 
 
+class LayoutFloorTests(unittest.TestCase):
+    """What a layout prints itself must meet the 34px floor."""
+
+    def test_layouts_print_nothing_below_the_34px_floor(self):
+        # deck-check flags these at projection time; catching them here keeps a layout from shipping them
+        import re
+        css = (REPO / ".agents/skills/deck-svg/template/asset/deck.css").read_text(encoding="utf-8")
+        for rule in re.findall(r"([^{}]+)\{([^{}]*)\}", css):
+            selector, body = rule
+            for size in re.findall(r"font-size:\s*(?:calc\()?(\d+)px", body):
+                if int(size) < 34:
+                    self.assertRegex(selector, r"hero__hint|confront__badge", f"{selector.strip()} sets {size}px")
+        catalog = (REPO / "scripts/_deck_catalog.py").read_text(encoding="utf-8")
+        self.assertEqual([n for n in re.findall(r"font-size:\s*(\d+)px", catalog) if int(n) < 34], [])
+
 class OverridableLabelTests(unittest.TestCase):
     """Fixed box labels (定論, 焦點象限特寫, 實證發現) can be renamed or dropped per slide."""
 

@@ -360,6 +360,9 @@
     background: linear-gradient(180deg, color-mix(in srgb, var(--chapter) 12%, var(--ink-3)), var(--ink-2));
     border-color: color-mix(in srgb, var(--chapter) 40%, var(--hair));
   }
+  /* the tint lifts the card toward the accent, so an accent-coloured tag on it loses contrast
+     (4.3:1 on projector-dark); pulling the tag toward --text restores it in light and dark themes */
+  .card--tint-elevated .tag { color: color-mix(in srgb, var(--chapter) 78%, var(--text)); }
   .card--side-border { border-left: 8px solid var(--chapter); border-top: 1px solid var(--hair); }
 
   /* 2x2 grid & 4-card variations: compact card density to fit within 1080px */
@@ -380,7 +383,7 @@
     margin: 0;
   }
   .card--grid-2x2 .tag, .card--numbered-1-4 .tag {
-    font-size: calc(30px * var(--deck-font-scale, 1));
+    font-size: calc(34px * var(--deck-font-scale, 1));
     margin-bottom: 6px;
   }
 
@@ -421,7 +424,7 @@
     margin: 0;
   }
   .bento .card:not(.bento__hero) .tag {
-    font-size: calc(30px * var(--deck-font-scale, 1));
+    font-size: calc(34px * var(--deck-font-scale, 1));
     margin-bottom: 6px;
   }
 

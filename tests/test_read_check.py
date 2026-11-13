@@ -78,6 +78,13 @@ class GlossaryTests(unittest.TestCase):
         self.assertEqual([(t["term"], t["names"], t["gloss"]) for t in terms],
                          [("甲詞", ["甲詞"], "alpha"), ("乙／丙", ["乙", "丙"], "")])
 
+    def test_definition_is_the_rest_of_the_block_as_the_reader_sees_it(self):
+        terms = read_check.glossary_terms(
+            "**甲詞（alpha）**：甲詞指**某種**安排[@smith2020, p. 3]，\n分兩行寫。\n\n下一段不是定義。\n\n"
+            "- **乙**: 第一條。\n- **丙**: 第二條。\n")
+        self.assertEqual([(t["head"], t["definition"]) for t in terms],
+                         [("甲詞（alpha）", "甲詞指某種安排[註]，分兩行寫。"), ("乙", "第一條。"), ("丙", "第二條。")])
+
 
 class AnswerParsingTests(unittest.TestCase):
     def test_array_is_found_inside_a_runners_banner(self):
@@ -148,6 +155,48 @@ class CommandTests(unittest.TestCase):
             self.assertIn("| 同構接合 | 同構接合 | a、b | 1 | 4 | 2 |", report)
             self.assertIn("| 同構接合 | isomorphic coupling | 4 | a、b |", report)
             self.assertIn("| 受許可／無許可 | permissioned / permissionless | 0 |  |", report)
+
+    def test_glossary_goes_to_every_reader_and_is_recorded(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp).resolve()
+            unit = root / "units" / "01-paper-x"
+            (unit / "chapters").mkdir(parents=True)
+            (unit / "WORK.json").write_text("{}", encoding="utf-8")
+            (unit / "chapters" / "01.qmd").write_text(CHAPTER, encoding="utf-8")
+            (unit / "glossary.md").write_text(
+                "**同構接合（isomorphic coupling）**：兩個結構以同一方式相接[@smith2020, p. 3]。\n", encoding="utf-8")
+            out = root / "rc"
+
+            r = self.run_fw(root, "prompts", "units/01-paper-x", "--out", str(out), "--glossary", "glossary.md")
+            self.assertEqual(r.returncode, 0, r.stderr)
+            meta = json.loads((out / "paras.json").read_text(encoding="utf-8"))
+            self.assertEqual([g["term"] for g in meta["glossary"]], ["同構接合"])
+            for pid in ("p0001", "p0002"):
+                prompt = (out / "prompts" / f"{pid}.md").read_text(encoding="utf-8")
+                self.assertIn("- 同構接合（isomorphic coupling）：兩個結構以同一方式相接[註]。", prompt)
+                self.assertIn("以及論文前面的名詞定義", prompt)
+            # The glossary is background: it comes before the paragraph, which stays last.
+            self.assertLess(prompt.index("isomorphic coupling"), prompt.index(meta["paragraphs"][1]["text"]))
+
+            (out / "picks" / "a").mkdir(parents=True)
+            (out / "picks" / "a" / "p0001.json").write_text('["同構接合", "同構接合比較"]', encoding="utf-8")
+            # collect falls back to the glossary the readers were given.
+            r = self.run_fw(root, "collect", str(out))
+            self.assertEqual(r.returncode, 0, r.stderr)
+            report = (out / "report.md").read_text(encoding="utf-8")
+            self.assertIn("- 讀者拿到的名詞定義：1 條（同構接合）", report)
+            self.assertIn("讀者讀過定義仍然挑出的條目", report)
+            self.assertIn("| 同構接合 | isomorphic coupling | 3 | a |", report)
+
+            r = self.run_fw(root, "prompts", "units/01-paper-x", "--out", str(root / "plain"))
+            self.assertEqual(r.returncode, 0, r.stderr)
+            prompt = (root / "plain" / "prompts" / "p0001.md").read_text(encoding="utf-8")
+            self.assertIn("你手上只有這一段，沒有論文其他部分。", prompt)
+            self.assertNotIn("名詞定義", prompt)
+            (root / "plain" / "picks" / "a").mkdir(parents=True)
+            (root / "plain" / "picks" / "a" / "p0001.json").write_text("[]", encoding="utf-8")
+            r = self.run_fw(root, "collect", str(root / "plain"))
+            self.assertIn("- 讀者沒有拿到名詞定義", (root / "plain" / "report.md").read_text(encoding="utf-8"))
 
     def test_sample_keeps_every_file_and_is_repeatable(self):
         paras = [{"file": f, "line": i, "text": f"{f}{i}"} for f in ("a", "b", "c") for i in range(10)]

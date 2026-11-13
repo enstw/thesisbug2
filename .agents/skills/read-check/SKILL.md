@@ -2,9 +2,9 @@
 name: read-check
 description: >
   Paragraph-level cold read for manuscripts written with AI help: isolated
-  readers, each given one paragraph and nothing else, pick the fragments that
-  are hard to read, so the manuscript's own coined terms and over-compressed
-  phrasing surface. Use for /check_read, when the author says the text 讀起來
+  readers, each given one paragraph and at most the author-approved glossary,
+  pick the fragments that are hard to read, so the manuscript's own coined
+  terms and over-compressed phrasing surface. Use for /check_read, when the author says the text 讀起來
   像 AI / AI 味 / 難讀 / 自造詞 / 太濃縮, before a rewrite pass, and to accept one.
   ./fw read-check writes the prompts and builds the report; the readers only
   pick, and nothing is rewritten.
@@ -40,7 +40,7 @@ Two findings fix the design:
 
 | Role | Sees | Does |
 | :--- | :--- | :--- |
-| Reader (isolated) | one paragraph | picks hard fragments, verbatim; nothing else |
+| Reader (isolated) | one paragraph, plus the reviewed glossary's definitions | picks hard fragments, verbatim; nothing else |
 | Author | the glossary, then the report | approves the glossary; decides what each picked fragment becomes |
 | Rewriter (has context) | manuscript, sources, decisions | rewrites what the author accepted, through safe-edit |
 
@@ -73,6 +73,19 @@ before any reader runs and before anything is rewritten:
 - **Every entry is defined where the term first appears**, and the list stays
   short: each entry is something the reader has to learn.
 
+**The reviewed glossary goes to the readers too** (`prompts --glossary`):
+every prompt carries the entries with their definitions as the manuscript
+prints them, and tells the reader not to pick those terms. The person the
+manuscript is for reads the definitions section before any later paragraph, so
+a reader without it picks approved terms and the author has to sort them out
+of the worklist; with it, the picks that remain are either words outside the
+glossary or an entry whose definition did not make it readable. A compound
+built on an entry is still picked, because the definition does not cover it.
+Give the readers only a glossary the author has reviewed: an unreviewed list
+tells them to skip exactly the coinages an agent wrote into it. Without a
+glossary the readers see the paragraph alone, which is the right run for a
+manuscript that defines nothing, and for measuring what the definitions buy.
+
 Ordinary vocabulary cannot be listed, so the readers below are what detects a
 term that is neither ordinary nor approved.
 
@@ -84,8 +97,13 @@ term that is neither ordinary nor approved.
 
    ```bash
    ./fw read-check prompts <unit> --out <unit>/gpt-review/<yyyy-mm-dd>-read-check \
-       --reader "<who the manuscript is for>" [--sample 20] [--files 03-theory.qmd]
+       --reader "<who the manuscript is for>" --glossary <file> \
+       [--sample 20] [--files 03-theory.qmd]
    ```
+
+   `--glossary` names the file holding the reviewed definitions (an entry is a
+   block opening with `**term（original）**：`; the block's remaining text is its
+   definition). Leave it out when the manuscript has no reviewed glossary yet.
 
    `--reader` names the real audience from `COURSE.md` (for example
    「台灣的政治學／國際關係教授」), because what counts as an established term
@@ -95,7 +113,9 @@ term that is neither ordinary nor approved.
 1. **Hand each prompt to an isolated reader and save its answer as it came**
    to `<out>/picks/<reader-name>/<id>.json`. Isolation is the invariant: a
    reader gets one prompt file and nothing else — no other paragraph, no unit
-   files, no conversation. Use a fresh-context subagent per paragraph, or an
+   files, no conversation. The glossary reaches the reader only inside that
+   prompt, never as a file to open, because a reader that can open the
+   manuscript's files is no longer isolated. Use a fresh-context subagent per paragraph, or an
    external model through whatever review integration the host has (select and
    record the model as gpt-review § Step 0 does), started outside the course
    directory so it cannot open the manuscript. Do not batch paragraphs into one
@@ -107,9 +127,10 @@ term that is neither ordinary nor approved.
    after the model and effort. With no isolated reader available, leave the
    prompts in place and report the check as pending; a same-context reread is
    never this check.
-1. **Build the report:** `./fw read-check collect <out> --glossary <file>`
-   (the file holding the definitions: an entry is a block opening with
-   `**term（original）**：`). Fragments that do not
+1. **Build the report:** `./fw read-check collect <out>`. It marks picked
+   fragments against the glossary the readers were given and says so at the
+   top; `--glossary <file>` names one when the readers had none or the
+   glossary has changed since. Fragments that do not
    occur verbatim in their paragraph are dropped and counted, and an answer
    that is not a JSON array of strings is listed to be asked again.
    `report.md` opens with the fragments ranked by how many readers picked them
@@ -119,8 +140,9 @@ term that is neither ordinary nor approved.
    詞彙表 column names the entry that covers a fragment; a blank means the
    fragment is not an approved term, and a compound built on an approved name
    counts as a new term. A second table lists the entries the readers still
-   picked: check first that each is defined where it first appears, then
-   whether the field really uses it.
+   picked. When they had the definitions, check first whether the definition
+   itself is readable; when they did not, whether the term is defined where it
+   first appears. Then check whether the field really uses it.
 1. **The author decides.** The report is a worklist, not a gate, and the
    readers over-pick: a paragraph read alone also trips on things the previous
    page settled. A fragment outside the glossary is replaced with the field's

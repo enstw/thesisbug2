@@ -2,7 +2,7 @@
 """Paragraph-by-paragraph prompts for isolated readers, and a report of what they picked.
 
     ./fw read-check prompts [<unit>] --out <dir> [--files a.qmd ...] [--sample N] [--seed S]
-                                     [--min N] [--reader "<who reads this>"]
+                                     [--min N] [--reader "<who reads this>"] [--glossary <file>]
     ./fw read-check collect <dir> [--glossary <file>]
 
 `prompts` writes one prompt file per manuscript paragraph: the paragraph as a
@@ -10,16 +10,20 @@ reader sees it (citations shown as [註], emphasis marks removed) and the
 instruction to pick the fragments that are hard to read. One paragraph per
 file is the point: a reader who is given the neighbouring paragraphs learns
 the manuscript's private terms from them and stops noticing them, which is
-how those terms spread in the first place (read-check skill).
+how those terms spread in the first place (read-check skill). With
+`--glossary`, every prompt also carries the manuscript's reviewed definitions,
+because the manuscript's real reader has read them before reaching any
+paragraph.
 
 The command starts no model. The agent hands each prompt to an isolated
 reader and saves that reader's answer, as it came, under
 `<dir>/picks/<reader-name>/<paragraph-id>.*`. `collect` then keeps only the
 fragments that occur verbatim in their paragraph, counts how often each one
 occurs in the whole manuscript, and writes `<dir>/report.md` and
-`<dir>/picks.json`. With `--glossary`, the report says which picked fragments
-are terms the author has approved: only those may stay as special terms, and
-the rest are to be said in the field's ordinary vocabulary.
+`<dir>/picks.json`. With a glossary (the one the readers were given, or
+`collect --glossary`), the report says which picked fragments are terms the
+author has approved: only those may stay as special terms, and the rest are to
+be said in the field's ordinary vocabulary.
 """
 
 from __future__ import annotations
@@ -40,7 +44,7 @@ NOT_A_PARAGRAPH = ("#", "|", ":::", "![", "{{<", ">", ": ", "$$", "```", "~~~", 
 SKIP_FILES = {"outline.qmd", "references.qmd"}
 DEFAULT_READER = "這篇論文所屬領域的教授"
 
-PROMPT = """你是{reader}。下面是一篇論文裡的一段文字，你手上只有這一段，沒有論文其他部分。
+PROMPT = """你是{reader}。下面是一篇論文裡的一段文字，{have}，沒有論文其他部分。
 
 把你讀起來吃力的片段挑出來：要停下來重讀、要猜意思，或不確定是不是通行說法的詞句。指向論文其他章節的代號與交叉引用（例如 H1、第三章）不算。
 
@@ -49,10 +53,18 @@ PROMPT = """你是{reader}。下面是一篇論文裡的一段文字，你手上
 只根據下面貼的文字回答；不要開啟、搜尋或修改任何檔案，不要執行任何指令。
 
 只輸出一個 JSON 陣列，不要其他文字。每個元素是原文裡一字不差的連續片段，只框難讀的那幾個字，不要框整句；沒有就輸出 []。
-
+{glossary}
 段落（[註] 是被遮掉的引註，不必理會）：
 
 {text}
+"""
+
+HAVE_PARAGRAPH = "你手上只有這一段"
+HAVE_GLOSSARY = "你手上只有這一段，以及論文前面的名詞定義"
+GLOSSARY_BLOCK = """
+這篇論文在前面的章節定義了下列用語，請當作你已經讀過這些定義。段落裡出現這些用語時不必挑；在這些用語上加字組成的新詞沒有定義過，讀來吃力就照樣挑。名詞定義只是背景，不要從裡面挑片段。
+
+{entries}
 """
 
 
@@ -98,15 +110,35 @@ def paragraphs(source: str) -> list[tuple[int, str]]:
 def glossary_terms(source: str) -> list[dict]:
     """Entries of a definitions section or glossary file: every block that
     opens with a bold term followed by a colon, e.g. `**結構性權力（structural
-    power）**：…`. A slash between two names (受許可／無許可) lists both."""
+    power）**：…`. A slash between two names (受許可／無許可) lists both. `head`
+    is the lead-in as written and `definition` the rest of the block as a
+    reader of the finished document sees it; the block ends at a blank line or
+    at the next entry."""
     text = re.sub(r"<!--.*?-->", "", source, flags=re.S)
+    found = list(re.finditer(r"(?m)^[ \t]*(?:[-*+] |\d+\. )?\*\*([^*\n]+)\*\*[ \t]*[：:]", text))
     terms = []
-    for m in re.finditer(r"(?m)^[ \t]*(?:[-*+] |\d+\. )?\*\*([^*\n]+)\*\*[ \t]*[：:]", text):
+    for i, m in enumerate(found):
         head = m.group(1).strip()
         name, _, gloss = re.match(r"([^（(]*)[（(]?([^）)]*)", head).group(1, 0, 2)
         names = [n.strip() for n in re.split(r"[／/]", name) if n.strip()]
-        if names:
-            terms.append({"term": name.strip(), "names": names, "gloss": gloss.strip()})
+        if not names:
+            continue
+        end = found[i + 1].start() if i + 1 < len(found) else len(text)
+        body = re.split(r"\n[ \t]*\n", text[m.end():end], maxsplit=1)[0]
+        terms.append({"term": name.strip(), "names": names, "gloss": gloss.strip(),
+                      "head": head, "definition": reader_text(body)})
+    return terms
+
+
+def read_glossary(unit: Path, name: str) -> list[dict]:
+    """Entries of the glossary file `name`, looked up as given, in the unit,
+    then among its chapters."""
+    gfile = next((c for c in (Path(name), unit / name, unit / "chapters" / name) if c.is_file()), None)
+    if not gfile:
+        sys.exit(f"no such glossary file: {name}")
+    terms = glossary_terms(gfile.read_text(encoding="utf-8"))
+    if not terms:
+        sys.exit(f"no entries in {rel(gfile)}: an entry is a block opening with **term**：")
     return terms
 
 
@@ -148,6 +180,9 @@ def cmd_prompts(args: argparse.Namespace) -> None:
     total = len(paras)
     if args.sample and args.sample < total:
         paras = sample(paras, args.sample, args.seed)
+    glossary = read_glossary(unit, args.glossary) if args.glossary else []
+    shown = GLOSSARY_BLOCK.format(entries="\n".join(
+        f"- {g['head']}：{g['definition']}" for g in glossary)) if glossary else ""
     out = Path(args.out)
     (out / "prompts").mkdir(parents=True, exist_ok=True)
     for stale in (out / "prompts").glob("p*.md"):
@@ -155,10 +190,14 @@ def cmd_prompts(args: argparse.Namespace) -> None:
     for i, p in enumerate(paras, 1):
         p["id"] = f"p{i:04d}"
         (out / "prompts" / f"{p['id']}.md").write_text(
-            PROMPT.format(reader=args.reader, text=p["text"]), encoding="utf-8")
-    meta = {"unit": rel(unit), "reader": args.reader, "paragraphs": paras}
+            PROMPT.format(reader=args.reader, text=p["text"], glossary=shown,
+                          have=HAVE_GLOSSARY if glossary else HAVE_PARAGRAPH), encoding="utf-8")
+    # What the readers were given is part of the record: a pick of a defined
+    # term means something different when the reader had its definition.
+    meta = {"unit": rel(unit), "reader": args.reader, "glossary": glossary, "paragraphs": paras}
     (out / "paras.json").write_text(json.dumps(meta, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
-    print(f"{len(paras)} of {total} paragraphs -> {rel(out)}/prompts/ (one prompt per file)")
+    print(f"{len(paras)} of {total} paragraphs -> {rel(out)}/prompts/ (one prompt per file"
+          + (f", each with the {len(glossary)} glossary entries)" if glossary else ")"))
     print(f"save each reader's answers as {rel(out)}/picks/<reader-name>/<id>.json, "
           f"then: ./fw read-check collect {rel(out)}")
 
@@ -184,16 +223,8 @@ def cmd_collect(args: argparse.Namespace) -> None:
         sys.exit(f"no paras.json in {out} — run `./fw read-check prompts` first")
     meta = json.loads(meta_file.read_text(encoding="utf-8"))
     paras = {p["id"]: p for p in meta["paragraphs"]}
-    glossary: list[dict] = []
-    if args.glossary:
-        unit = course_root() / meta["unit"]
-        gfile = next((c for c in (Path(args.glossary), unit / args.glossary, unit / "chapters" / args.glossary)
-                      if c.is_file()), None)
-        if not gfile:
-            sys.exit(f"no such glossary file: {args.glossary}")
-        glossary = glossary_terms(gfile.read_text(encoding="utf-8"))
-        if not glossary:
-            sys.exit(f"no entries in {rel(gfile)}: an entry is a block opening with **term**：")
+    given: list[dict] = meta.get("glossary") or []
+    glossary = read_glossary(course_root() / meta["unit"], args.glossary) if args.glossary else given
     readers = sorted(d.name for d in (out / "picks").iterdir() if d.is_dir()) if (out / "picks").is_dir() else []
     if not readers:
         sys.exit(f"no reader answers under {out}/picks/<reader-name>/")
@@ -246,6 +277,8 @@ def cmd_collect(args: argparse.Namespace) -> None:
              "<!-- 由 ./fw read-check collect 產生，不要手改。片段是讀者的原話，只保留在段落裡逐字找得到的；",
              "     這是給作者裁定的工作清單，不是閘門：留、換成白話、或在第一次出現時定義，由作者決定。 -->", "",
              f"- 段落：{len(paras)} 段；讀者設定：{meta['reader']}",
+             (f"- 讀者拿到的名詞定義：{len(given)} 條（{'、'.join(g['term'] for g in given)}）" if given
+              else "- 讀者沒有拿到名詞定義"),
              "", "| 讀者 | 已答段數 | 片段 | 不在原文（已丟棄） | 無法解析 |", "| :--- | ---: | ---: | ---: | ---: |"]
     for r, (answered, kept, dropped, unparsed) in stats.items():
         lines.append(f"| {r} | {answered} | {kept} | {len(dropped)} | {len(unparsed)} |")
@@ -266,7 +299,8 @@ def cmd_collect(args: argparse.Namespace) -> None:
                          f"| {row['count']} | {row['files']} |")
     if glossary:
         lines += ["", "## 詞彙表條目", "",
-                  "讀者仍然挑出的條目，先檢查它第一次出現的地方有沒有定義，再檢查這個詞是不是該領域真的在用。", "",
+                  ("讀者讀過定義仍然挑出的條目，先檢查定義本身好不好懂，再檢查這個詞是不是該領域真的在用。" if given else
+                   "讀者仍然挑出的條目，先檢查它第一次出現的地方有沒有定義，再檢查這個詞是不是該領域真的在用。"), "",
                   "| 條目 | 原文或別名 | 全文出現次數 | 讀者挑出 |", "| :--- | :--- | ---: | :--- |"]
         for g in glossary:
             n = sum(c["text"].count(name) for c in corpus for name in g["names"])
@@ -301,11 +335,13 @@ def main() -> None:
     p.add_argument("--seed", type=int, default=1, help="seed for --sample (default 1)")
     p.add_argument("--min", type=int, default=40, help="skip paragraphs under this many Chinese characters (default 40)")
     p.add_argument("--reader", default=DEFAULT_READER, help="who the reader is, in the manuscript's language")
+    p.add_argument("--glossary", help="the author-reviewed definitions section or glossary file; its entries "
+                                      "and definitions go into every prompt")
     p.set_defaults(func=cmd_prompts)
     c = sub.add_parser("collect", help="verify the readers' picks and write the report")
     c.add_argument("dir", help="the directory given to `prompts --out`")
-    c.add_argument("--glossary", help="the manuscript's definitions section or glossary file; "
-                                      "entries are blocks opening with **term**：")
+    c.add_argument("--glossary", help="the manuscript's definitions section or glossary file; entries are blocks "
+                                      "opening with **term**： (default: the one the readers were given)")
     c.set_defaults(func=cmd_collect)
     args = ap.parse_args()
     args.func(args)

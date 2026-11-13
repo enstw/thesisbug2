@@ -68,7 +68,7 @@ def notes_source(unit: Path, talk: Path) -> str:
 
     "knowledge": each slide names its knowledge points in data-notes and the
     unit's speaker-notes.md holds them, so the notes travel with the slide
-    and are assembled from cited entries. "deck-notes": the older per-slide
+    and are assembled from entries traced to the Model. "deck-notes": the older per-slide
     講法 file that deck-notes also assembles. "own-file": a notes file from
     before the command, kept in sync by the unit's own script. "none": the
     notes exist only in deck.html, typed by hand — no gate can check them, and
@@ -88,8 +88,8 @@ def unmanaged_notes(talk_arg: str) -> str:
     """The message for a deck whose notes are typed into deck.html."""
     return (f"no {NOTES_FILE} — the speaker notes in deck.html are starter placeholders or typed by "
             "hand, which no gate checks and the next assembly overwrites; never edit them there: "
-            f"run ./fw deck-notes {talk_arg} --init, write the knowledge points (K/Q, each with a "
-            "cited first paragraph) into the unit's speaker-notes.md, put each slide's numbers in its "
+            f"run ./fw deck-notes {talk_arg} --init, write the knowledge points (K/Q, each first paragraph "
+            "ending with its Model section) into the unit's speaker-notes.md, put each slide's numbers in its "
             f"data-notes (deck-compile copies the storyboard's 講者備註 column), then ./fw deck-notes {talk_arg}")
 
 

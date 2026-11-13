@@ -123,11 +123,11 @@ deck ends up saying things the declared Model does not.
   (`data-notes="—"` when it needs none; `deck-compile` writes it for catalog
   rows), and `data-time` from 講 when known. The speaker note is the
   presenter's backup knowledge, not a script: `./fw deck-notes <talk>`
-  expands each number into that point's cited first paragraph from
+  expands each number into that point's first paragraph from
   `<unit>/speaker-notes.md` (presentation protocol § Speaker notes). The
   binding sits on the slide, so moving or inserting a slide cannot shift
   another slide's notes. A term, abbreviation or fact the presenter needs
-  becomes a K entry there, with its page — never prose in `deck.html`.
+  becomes a K entry there, traced to its Model section — never prose in `deck.html`.
 - A fact that turns out wrong while building is corrected in its owning
   factual layer (Model or unit backup knowledge), then in the rows and slides
   that use it; an order or emphasis change goes back to the storyboard
@@ -195,7 +195,8 @@ in `<unit>/speaker-notes.md` or a slide's `data-notes` and rerun
 one-slide fix: notes typed there pass no gate and end up restating the slide,
 which is the sparsest View. `deck-notes` refuses a content slide without
 `data-notes`, a token that is not a K/Q number, a number with no entry, an
-entry whose first paragraph has no citation, and an abbreviation the slide
+entry whose first paragraph names no Model section (or names one the Model
+does not have), and an abbreviation the slide
 shows (two or more capitals, e.g. FPA) without a `全名（縮寫）` point among
 the slide's numbers. A deck with no knowledge file (the starter's
 `[講者備註：…]` placeholders, or a deck written before the command existed)

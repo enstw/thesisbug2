@@ -1,6 +1,6 @@
 """deck-notes: a slide names its knowledge points in data-notes, the unit's
-speaker-notes.md holds them, and the presenter window shows each point's cited
-first paragraph; broken references are refused. Older per-slide 講法 files
+speaker-notes.md holds them, and the presenter window shows each point's first
+paragraph, traced to the Model; broken references are refused. Older per-slide 講法 files
 still assemble."""
 
 import json
@@ -109,14 +109,33 @@ class KnowledgeNotesTests(NotesCase):
 
     def test_refuses_free_text_unknown_numbers_and_uncited_points(self):
         self.write("speaker-notes.md", KNOWLEDGE + "\n## K3 沒出處\n\n**一句話**：只是一句話。\n")
-        self.bind({1: "K1 解釋一下 K9"})
+        self.bind({1: "K1 K3 解釋一下 K9"})
         before = (self.unit / "deck.html").read_bytes()
         r = self.run_fw("deck-notes.py", "talk")
         self.assertEqual(r.returncode, 1)
         self.assertIn("only K/Q numbers, found '解釋一下'", r.stdout)
         self.assertIn("names K9", r.stdout)
-        self.assertIn("K3 沒出處: the first paragraph carries no citation", r.stdout)
+        self.assertIn("K3 沒出處: the first paragraph names no Model section", r.stdout)
         self.assertEqual((self.unit / "deck.html").read_bytes(), before, "nothing written on a problem")
+
+    def test_a_point_traces_to_its_model_section_instead_of_a_citation(self):
+        # The note is drawn from the Model, where the facts are cited, so a locator into the
+        # Model is enough; only points this deck names are checked (another talk may own the rest).
+        with open(self.unit / "guide.qmd", "a", encoding="utf-8") as f:
+            f.write("\n## 二、方法\n\n### 抽樣的取捨\n\n作者的判斷。\n")
+        self.write("speaker-notes.md", KNOWLEDGE
+                   + "\n## K3 抽樣\n\n**一句話**：作者自己的取捨（HM § 二 › 抽樣的取捨）。\n"
+                   + "\n## K4 走錯\n\n**一句話**：指到不存在的節（HM § 二 › 沒有這節）。\n"
+                   + "\n## K5 別場的\n\n**一句話**：這場沒用到，不檢查。\n")
+        self.bind({1: "K3"})
+        r = self.run_fw("deck-notes.py", "talk")
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("・K3 抽樣：作者自己的取捨（HM § 二 › 抽樣的取捨）。", self.notes()[1])
+        self.bind({1: "K4"})
+        r = self.run_fw("deck-notes.py", "talk")
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("no Model heading '沒有這節'", r.stdout)
+        self.assertNotIn("K5", r.stdout)
 
     def test_a_content_slide_without_data_notes_is_refused(self):
         self.bind({2: None})

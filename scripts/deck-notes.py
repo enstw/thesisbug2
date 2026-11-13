@@ -6,11 +6,13 @@
     ./fw deck-notes [<talk>] --init     create the unit's speaker-notes.md from the template
 
 A speaker note is the presenter's backup knowledge, not a script: the terms,
-abbreviations, facts and likely questions behind a slide, each with its page.
-Each part has one owner (presentation protocol § Speaker notes):
+abbreviations, facts and likely questions behind a slide, each traced to the
+Model section it comes from. Each part has one owner (presentation protocol
+§ Speaker notes):
 
   知識點  <unit>/speaker-notes.md, one `## K<n> <name>` or `## Q<n> <question>`
-          section per point, first paragraph cited                 — backup knowledge
+          section per point, first paragraph names its Model
+          section (`HM § 六 › 從原稿到 PDF`)                          — backup knowledge
   綁定    each slide's data-notes="K3 K7 Q1"                         — View
   選擇    the storyboard's 講者備註 column; deck-compile copies it
           into data-notes                                           — Controller
@@ -39,7 +41,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 from _deck import TEMPLATES, is_knowledge_file, notes_source, unmanaged_notes  # noqa: E402
-from _paths import course_root, rel, resolve_talk  # noqa: E402
+from _paths import course_root, rel, resolve_talk, talk_model_files  # noqa: E402
 
 NOTES_MD, GLOSSARY, QA = "speaker-notes.md", "notes/glossary.md", "notes/qa.md"
 REFS_COLUMN = "名詞與提問"
@@ -54,6 +56,10 @@ CITE = re.compile(r"\[(@[\w:.-]+),\s*\{([^}]*)\}\]")
 # An abbreviation the audience reads: two or more capitals standing alone (FPA, MAD).
 ABBREVIATION = re.compile(r"(?<![A-Za-z])[A-Z]{2,}(?![A-Za-z])")
 NONE_MARKS = {"—", "-", "–"}
+LOCATOR = re.compile(r"§\s*([^；;）)\]\n]+)")
+NUMBERED = re.compile(r"^([一二三四五六七八九十百〇零\d]+)[、.．]\s*")
+MD_HEADING = re.compile(r"(?m)^#{1,6}\s+(.+?)\s*(?:\{[^}]*\})?\s*$")
+INCLUDE = re.compile(r"\{\{<\s*include\s+([^>\s]+)\s*>\}\}")
 
 def strip_comments(text: str) -> str:
     return re.sub(r"<!--.*?-->", "", text, flags=re.S)
@@ -261,13 +267,10 @@ def assemble_knowledge(unit: Path, talk: Path, root: Path) -> tuple[list[str], l
         return [], [f"{rel(path, root)} is missing or not in the knowledge format — "
                     f"create it with ./fw deck-notes {rel(talk, root)} --init"]
     points = knowledge(path)
-    for key, (heading, short) in points.items():
-        if "[@" not in short:
-            problems.append(f"{NOTES_MD} § {heading}: the first paragraph carries no citation — the note "
-                            "shows only that paragraph, and the presenter may say it aloud")
     deck_slides = slides(html)
     texts = visible_texts(html)
     notes = []
+    named: set[str] = set()
     for n, slide in enumerate(deck_slides):
         where = f"slide {n} ({slide['label']})"
         if slide["notes"] is None:
@@ -283,6 +286,8 @@ def assemble_knowledge(unit: Path, talk: Path, root: Path) -> tuple[list[str], l
                                 f"point into {NOTES_MD} and list its number")
             elif token not in points:
                 problems.append(f"{where} names {token}, which {NOTES_MD} does not have")
+            else:
+                named.add(token)
         headings = " ".join(points[t][0] for t in ids if t in points)
         shown = texts[n] if n < len(texts) else ""
         for abbr in sorted(set(ABBREVIATION.findall(shown))):
@@ -296,7 +301,59 @@ def assemble_knowledge(unit: Path, talk: Path, root: Path) -> tuple[list[str], l
                 heading, short = points[token]
                 parts.append(f"・{heading}\n　{short}" if token.startswith("Q") else f"・{heading}：{short}")
         notes.append("\n".join(parts))
+    problems += untraced_points(unit, talk, points, named)
     return notes, problems
+
+
+def model_headings(files: list[Path]) -> set[str]:
+    """Every heading in the Model files and the files they include; a numbered part heading
+    (「六、工具與分工」) also answers to its number (「六」) and to its text without the number."""
+    headings: set[str] = set()
+    seen: set[Path] = set()
+    queue = list(files)
+    while queue:
+        path = queue.pop()
+        if path in seen or not path.is_file():
+            continue
+        seen.add(path)
+        text = path.read_text(encoding="utf-8")
+        for m in MD_HEADING.finditer(text):
+            h = m.group(1).strip()
+            headings.add(h)
+            num = NUMBERED.match(h)
+            if num:
+                headings.update({num.group(1), h[num.end():]})
+        queue += [(path.parent / inc).resolve() for inc in INCLUDE.findall(text)]
+    return headings
+
+
+def untraced_points(unit: Path, talk: Path, points: dict[str, tuple[str, str]], named: set[str]) -> list[str]:
+    """A point the deck names must say which Model section it comes from (`HM § 六 › 標題`),
+    and every part of that locator must be a Model heading. Facts are cited in the Model;
+    a note is drawn from the Model, so it traces there rather than citing a source again.
+    A `[@key]` is still accepted for a point taken straight from a source."""
+    try:
+        headings = model_headings(talk_model_files(unit, talk))
+    except SystemExit:
+        headings = set()
+    problems = []
+    for key, (heading, short) in points.items():
+        if key not in named:
+            continue
+        found = LOCATOR.findall(re.sub(r"\[@[^\]]*\]", "", short))
+        if not found:
+            if "[@" not in short:
+                problems.append(f"{NOTES_MD} § {heading}: the first paragraph names no Model section — end it "
+                                "with where it comes from, e.g. （HM § 六 › 從原稿到 PDF）, because the note is "
+                                "drawn from the Model and the presenter may say it aloud")
+            continue
+        for loc in found:
+            for seg in loc.split("›"):
+                seg = re.sub(r"[（(][^）)]*[）)]?\s*$", "", seg).strip()
+                if seg and seg not in headings:
+                    problems.append(f"{NOTES_MD} § {heading}: '§ {loc.strip()}' — no Model heading '{seg}' "
+                                    "(the talk's Model files are listed in talk.json)")
+    return problems
 
 
 def init(unit: Path, talk: Path, root: Path) -> None:

@@ -145,7 +145,7 @@ The previews below are one storyboard row of an invented talk about brewing tea,
 
 `deck-3d` and `deck-slidev` are **derived Views**: `./fw deck-3d <talk>` and `./fw deck-slidev <talk>` generate them from the signed-off storyboard and the speaker notes in `deck.html`, and their output is never edited by hand. A wording change goes to the storyboard and every View is regenerated, so two Views cannot disagree. Drawings on an `L-CANVAS` row stay in `deck.html`; the derived Views print a warning naming the row.
 
-All HTML Views share one shell (`deck-runtime`): keyboard navigation, a presenter window with notes on `P`, and 1920×1080 print. Speaker notes are the presenter's backup knowledge (terms, facts, likely questions, each with its page), written once per unit and assembled into the deck by `./fw deck-notes`.
+All HTML Views share one shell (`deck-runtime`): keyboard navigation, a presenter window with notes on `P`, and 1920×1080 print. Speaker notes are the presenter's backup knowledge (terms, facts, likely questions, each traced to the Model section it comes from), written once per unit and assembled into the deck by `./fw deck-notes`.
 
 ## Skills
 

@@ -170,7 +170,7 @@ but citation support is still verified against the original (`source-kit`).
 
 ## Speaker notes
 
-The presenter does not read a script, and the audience asks about exactly the details a slide leaves out. So a speaker note is the presenter's backup knowledge: the terms, abbreviations, facts and likely questions behind the slide, each with its page.
+The presenter does not read a script, and the audience asks about exactly the details a slide leaves out. So a speaker note is the presenter's backup knowledge: the terms, abbreviations, facts and likely questions behind the slide, each traced to the part of the Model it comes from.
 
 | Part | Written in | Owner |
 | :--- | :--- | :--- |
@@ -178,10 +178,10 @@ The presenter does not read a script, and the audience asks about exactly the de
 | which points this audience needs on each slide | `<talk>/storyboard.md` 講者備註: numbers only | Controller |
 | the binding | each slide's `data-notes="K3 K7 Q1"` (and `data-time` from 講) | View |
 
-- Each point opens with a cited one-line version (`**一句話**` / `**簡答**`); the rest is the full explanation. The note shows only that first paragraph, because on stage there is time for a glance, not a paragraph; the presenter reads the full entries beforehand. Citation and language gates read the file directly, so it need not be appended to a submitted paper.
+- Each point opens with a one-line version (`**一句話**` / `**簡答**`) that ends with the Model section it comes from, written like `points.md`: `（HM § 六 › 從原稿到 PDF）`; the rest is the full explanation. Information flows one way — sources and the author's insight into the Model, where the facts are cited and checked; the notes from the Model — so a note traces to the Model rather than citing a source again, and the author's own judgement, which lives in the Model, needs no bib key. A point taken straight from a source may carry `[@key, {頁碼}]` instead. The note shows only that first paragraph, because on stage there is time for a glance, not a paragraph; the presenter reads the full entries beforehand. Language gates (and the citation gate, for any `[@key]` a point carries) read the file directly, so it need not be appended to a submitted paper.
 - Points are extracted and numbered while the Model is written (a reading guide can start from the source summaries); numbers never change, and a new point takes the next number, because storyboards and slides refer to them. A point is written once and serves every slide that names it. A question the readings do not answer is answered as "the text does not address this", never with an invented answer, because the presenter will say it aloud.
 - The numbers sit on the slide itself, not in a list kept in slide order, so moving or inserting a slide cannot attach notes to the wrong slide. `./fw deck-compile` copies each row's 講者備註 into `data-notes`; a hand-written slide carries it directly.
-- `./fw deck-notes <talk>` assembles the notes into `deck.html`; `--init` creates the knowledge file from the template. It refuses — and writes nothing — on a content slide without `data-notes`, a token that is not a K/Q number, a number with no entry, an entry whose first paragraph has no citation, or an abbreviation shown on a slide without a 全名（縮寫） point among its numbers. `./fw build <talk>` runs the same check.
+- `./fw deck-notes <talk>` assembles the notes into `deck.html`; `--init` creates the knowledge file from the template. It refuses — and writes nothing — on a content slide without `data-notes`, a token that is not a K/Q number, a number with no entry, a named entry whose first paragraph names no Model section (or a heading the talk's Model files do not have), or an abbreviation shown on a slide without a 全名（縮寫） point among its numbers. `./fw build <talk>` runs the same check.
 - Notes are never typed into `deck.html`, because no gate can check them there and they drift toward restating the slide. A deck with no knowledge file — the starter's `[講者備註：…]` placeholders, or a deck from before the command — is migrated before any note changes. `./fw build` refuses a `talk.json` talk without the file and notes an older root deck on every build; `./fw deck-compile` prints the same note and stops on deck-notes' refusal. Decks on the older per-slide 講法 file plus `notes/glossary.md` and `notes/qa.md` still assemble.
 
 ## Citation Handling

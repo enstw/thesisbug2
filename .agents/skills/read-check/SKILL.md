@@ -158,19 +158,30 @@ term that is neither ordinary nor approved.
    stay as they were, because the cheapest way to satisfy a reader is to delete
    the hedge it tripped on.
 
-## Calibrate the readers against people
+## The readers do all the picking
 
-Two models checking each other converge on what models find fluent, which is
-how the manuscript got here. Before trusting a reader on the whole manuscript,
-compare its picks on a sample with a human's:
+Picking is done by the isolated readers alone. Do not ask the author to mark a
+sample first as a check on the readers: that comparison only counts while the
+report is withheld from the author, so the whole pass would wait on the
+marking, and the author's judgment already enters where it decides something,
+at the glossary review and at each line of the worklist. Three things keep
+the picks honest instead:
 
-- **The author's own marks.** Have the author mark the same sample without
-  seeing the readers' picks, then count overlap, misses and extras. Do not show
-  the report first; the comparison is void once the author has seen it.
-- **A person outside the project**, when one is available: where they gave up
-  is the strongest evidence there is, and they can say that a passage is
-  unreadable even when they cannot say which words are jargon — the readers
-  supply that half.
+- **Readers from different model families.** Two models checking each other
+  tend to settle on what models find fluent, which is how the manuscript got
+  here; a second family can still pick what the first reads without effort,
+  and the report shows where they agree.
+- **The glossary is an allowlist.** A term stays because the author approved
+  it, never because no reader objected.
+- **The author decides every picked fragment.** The readers over-pick, and a
+  pick the author rejects costs one line of the report.
+
+An empty report therefore means the readers found nothing, not that a person
+will read the text easily; say so when reporting a clean run. When someone
+outside the project does read a passage, where they gave up is stronger
+evidence than any reader's pick: they can say that a passage is unreadable
+even when they cannot say which words are jargon. Record it as a finding, but
+do not make the pass wait for one.
 
 Readers do not know the author's taste. Words the author dislikes for reasons
 of style (a regional usage, a habitual abbreviation) may never be picked, so

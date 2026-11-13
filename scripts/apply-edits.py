@@ -28,7 +28,7 @@ Usage:
 Convention: payloads are one-shot and live in the session scratchpad (they
 describe a single edit batch, not reusable logic); this engine is the part
 that belongs in the repo. After applying, run the usual gates
-(lint-readability, count-zh, check-citations).
+(check-zh-variants, count-zh, check-citations).
 """
 
 from __future__ import annotations

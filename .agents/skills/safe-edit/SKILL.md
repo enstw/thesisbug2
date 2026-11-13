@@ -5,23 +5,23 @@ description: >
   prose edit: gap-filling, framing fixes, terminology sweeps, table updates, or
   applying accepted flow-check / gpt-review findings. Authors an exact-match
   JSON payload, applies it with ./fw apply-edits (validate all, then write
-  all), then runs the gates: readability ratchet, 簡繁 variants, count-zh,
-  check-citations. Defines what must not change (「」 quotes, 《》 titles, [@key]
+  all), then runs the gates: 簡繁 variants, count-zh, check-citations; a
+  rewrite for readability is accepted by read-check. Defines what must not change (「」 quotes, 《》 titles, [@key]
   locators, hypothesis wording).
 ---
 
 # safe-edit — 語料庫批次編輯紀律
 
 Every multi-spot edit to `<unit>/` goes through the same three stages: payload →
-engine → gates. The point is that a drifted anchor, an ambiguous match, or a
-readability regression is caught by machinery, not by rereading.
+engine → gates. The point is that a drifted anchor or an ambiguous match is
+caught by machinery, not by rereading.
 
 **Per-unit values.** Several things this skill protects differ from unit to
 unit, so read them before the first batch rather than assuming: the
 hypothesis or research-question labels and their exact wording (from the
 unit's theory or framing section), which chapters are summary chapters, the
-readability ceiling (one `./fw lint-readability <unit> --all` run *before*
-editing — its worst score is the ratchet), and the word budget (the unit's
+glossary of approved terms (read-check § The glossary comes first), and the
+word budget (the unit's
 outline, or the requirement in `COURSE.md`). Skip a gate whose input the unit
 doesn't have — a homework has no citations to check — rather than inventing
 the input. The discipline (payload → engine → gates, immutables, evidence
@@ -68,9 +68,6 @@ author has said which occurrence they mean, and ask when they haven't —
 different occurrences sit under different citations, so the choice changes
 what a source is made to say. The file stays untouched while you wait.
 
-The readability gate reads `<unit>/chapters/*.qmd` plus the work's entry file
-(`index.qmd`, `paper.qmd`, `homework.qmd`, or `preparation.qmd`).
-
 ## 3. Immutables (do not edit, route around)
 
 - Text inside 「」 direct quotes and 《》 titles — verbatim constraints
@@ -85,22 +82,25 @@ The readability gate reads `<unit>/chapters/*.qmd` plus the work's entry file
 
 ## 4. Gates (run after every batch, in this order)
 
-1. `./fw lint-readability <unit> --all` — **ratchet: no new
-      sentence may score above the pre-edit corpus max.** Dominant failure mode
-   in fresh prose: long pre-modifiers before 的+noun (P1) and ≥28-char
-   no-pause runs (P3). Fix by splitting sentences or adding 、/，pauses.
-2. `./fw check-zh-variants <unit>`
+1. `./fw check-zh-variants <unit>`
    — 簡繁與異體碼位的**源頭**檢查（簡體字＋内/爲/録/値 型異體＋Unicode 相容
    區）。scope 是寫作源檔（chapters/*.qmd 與頂層 *.qmd）；refs/ 逐字轉錄不掃。
    刻意示範簡體字形的行，行尾加 `<!-- zh-source-ok -->` 豁免；直接引用
    簡體原文時，只把引文包在 `<!-- zh-src -->…<!-- /zh-src -->` 裡（同一行
    其餘文字照常檢查，所以不要用整行豁免）；無網路時
    `python3` 直跑仍可做異體／相容碼位層。
-3. `./fw count-zh <file>` — stay inside the unit's word budget (its outline,
+2. `./fw count-zh <file>` — stay inside the unit's word budget (its outline,
    or the limit in `COURSE.md`). 嚴禁湊字數: padding to reach a count is worse
    than being under it.
-4. `./fw check-citations <unit>` — must stay green.
-5. `./fw check-bib <unit>` only if citations were touched.
+3. `./fw check-citations <unit>` — must stay green.
+4. `./fw check-bib <unit>` only if citations were touched.
+5. **New or reworded prose is accepted by readers, not by its editor.** A
+   batch that introduces a term outside the glossary, or that was made to
+   read better, is not reported as an improvement until **read-check** has
+   been rerun on the changed files: the editor holds the context and cannot
+   tell. There is no pattern-count gate for readability, because a count is
+   satisfied by edits that read worse, such as a comma inserted to break a
+   long run.
 6. **No per-batch PDF builds.** One `./fw build` at the end of the
    workstream, before the closing commit.
 

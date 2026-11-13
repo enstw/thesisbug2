@@ -48,11 +48,16 @@ Run 1–3 **per chapter**, 4 **once across chapters**, 5
    session is equivalent to a fresh subagent. If neither is available, prepare
    a handoff containing only the chapter and marking instructions, run the
    other checks, and mark the cold read pending; never call a same-context
-   re-read independent.
+   re-read independent. A chapter read whole still teaches its reader the
+   chapter's own terms, so wording that only a one-paragraph reader stumbles
+   on is **read-check**'s job, not this layer's.
 1. **跨章一致 (cross-chapter consistency).** One agent over the per-chapter
    *outlines* from layer 1 (not full text): terminology drift on core
    concepts (the manuscript's own coinages — is the same mechanism named the
-   same way in every chapter?), theory-chapter concepts actually used in the
+   same way in every chapter? A coinage used consistently is still a coinage:
+   consistency is checked here, whether the term should exist at all is
+   **read-check**'s question, and "it is used the same way everywhere" is not
+   an answer to it), theory-chapter concepts actually used in the
    case chapters, comparison-chapter dimensions matching case-chapter section
    structure, and every 「如第X章所述」-style reference resolving to something
    that exists and says what is claimed.
@@ -95,7 +100,7 @@ No fact checking, no citation form (**cite-check**), no whether-a-source-
 backs-the-claim (**source-kit** § Source review), no cross-strait usage
 (**fix-terms** — that lints against a fixed external rule list; flow-check
 lints the manuscript's *internal* consistency with itself). Run order for a
-full lint pass: **fix-terms → flow-check → cite-check** (cite-check stays
+full lint pass: **fix-terms → read-check → flow-check → cite-check** (cite-check stays
 last as the mechanical gate).
 
 Backs the `/check_flow` macro.

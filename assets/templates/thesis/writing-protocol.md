@@ -21,6 +21,7 @@
 * **術語與兩岸用語校正** → **`fix-terms`** skill（最高優先級指定翻譯如 制腦權／造謠／錯誤資訊／智能合約，以及 質量→品質、信息→資訊 等校正與語境敏感規則）。對應 `/fix_terms` 巨集。
 * **引用格式與一致性** → **`cite-check`** skill（`[@citation_key]` 格式、禁止 NotebookLM `[loc]`／`Location`／`Source X`、`p.`／`para.` 定位標示，並執行 `./fw check-citations`）。對應 `/check_cite` 巨集。
 * **文獻取得與「來源是否支持論點」的審核** → **`source-kit`** skill。
+* **難讀詞句與稿子自造的詞** → **`read-check`** skill（先由作者審定詞彙表：只有詞彙表裡的詞可以當專門用語保留，其餘一律用該領域的一般用語，AI 不得自行新增條目；再由一次只給一段的隔離讀者挑出難讀片段。「稿子裡已經這樣用」不是保留一個詞的理由，因為帶著全文脈絡的寫作者與審稿者都讀得懂它，只有讀者讀不懂）。對應 `/check_read` 巨集。
 * **篇章連貫（句句正確但論證跳躍）** → **`flow-check`** skill。對應 `/check_flow` 巨集。
 * **跨模型外部審稿／口試預演** → **`gpt-review`** skill。對應 `/gpt_review` 巨集。
 * **多處文字修改的落地方式** → **`safe-edit`** skill（精確比對的批次 payload → `./fw apply-edits` → 檢查關卡）。
@@ -76,6 +77,7 @@ AI 應根據使用者要求的章節屬性，自動切換寫作模式：
 | **/fix_terms** | 掃描文本執行「兩岸用語校正」與「強制翻譯檢查」並列出修正建議 — 見 **`fix-terms`** skill。 |
 | **/track_a** | 啟動「分段控制模式」，依據提供的事實與數據進行精確寫作（附引用）。 |
 | **/track_b** | 啟動「多角色辯證模式」，進行正反論述分析與紅隊自我批判。 |
+| **/check_read** | 段落冷讀挑錯：`./fw read-check` 逐段產生提問，隔離讀者只挑難讀片段，彙整成依擴散程度排序的清單交作者裁定 — 見 **`read-check`** skill。 |
 | **/check_flow** | 篇章連貫檢查：逆向大綱、銜接命名、全新脈絡冷讀、跨章一致，輸出依嚴重度排序的跳躍點清單 — 見 **`flow-check`** skill。 |
 | **/gpt_review** | 跨模型外部審稿（review／challenge／consult），結果逐字存入 `<unit>/gpt-review/` — 見 **`gpt-review`** skill。 |
 | **/check_cite** | 檢查 `[@key]` 引用格式並確認無 `[loc]` 殘留，執行 `check-citations.py` — 見 **`cite-check`** skill。 |

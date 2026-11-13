@@ -32,8 +32,9 @@ It works with an agent that can read files and run shell commands in a git repos
 | **The model invents references.** A fluent citation to a paper that does not exist, or a real paper that does not say what the sentence claims. | A citation must resolve to an entry in `references.bib` with a local full text. The agent records two judgments per source in an append-only log: is this file the cited work itself, and does it back the claim. Page locators are checked against page markers in the transcript. [Details below](#sources-and-citations). |
 | **Slides drift from the paper.** A deck written separately says things the paper does not. | A talk is planned from the manuscript: points, then a storyboard the author signs off, then slides. Every slide traces back to a cited sentence. [Details below](#slides-one-storyboard-several-views). |
 | **Mainland usage and Simplified characters creep in.** | `fix-terms` proposes Taiwan academic terms; `./fw check-zh-variants` finds Simplified and variant code points in the source files. |
-| **An agent's large edit breaks something quietly.** | `safe-edit`: every batch is a list of exact-match replacements that either all apply or none do, followed by the readability, variant, length and citation gates. |
+| **An agent's large edit breaks something quietly.** | `safe-edit`: every batch is a list of exact-match replacements that either all apply or none do, followed by the variant, length and citation gates. |
 | **One model has blind spots it repeats.** | `gpt-review` sends the chapter to a different model family as an anonymous referee; `flow-check` has a reader with no context mark where the argument jumps. |
+| **The text fills with terms only its drafting agent understands.** | `read-check` gives isolated readers one paragraph each and has them pick what is hard to read; an agent that holds the whole manuscript reads its own coinages without effort and keeps reusing them. |
 | **Work moves between machines and agents.** | Everything durable is a file in git: course context, unit progress, decisions with their reasons. No agent's private memory is relied on. |
 
 ## How a course is organised
@@ -162,6 +163,7 @@ Eighteen skills live in `.agents/skills/<name>/SKILL.md`. Each is a procedure wi
 | | `diagram` | Figures as SVG, from PlantUML (`./fw plantuml2svg`) or written directly; the text source is committed. |
 | | `house-style` | The shared look and the content-integrity rules: font, colour tokens, XeLaTeX preamble, how quotations and disputed claims are handled. |
 | Review | `fix-terms` | Taiwan academic terminology and cross-strait usage; scans and proposes. |
+| | `read-check` | Wording a new reader stumbles on: isolated readers see one paragraph each and only pick fragments; the report ranks them by how far each has spread (`./fw read-check`). |
 | | `flow-check` | Coherence across paragraphs and chapters: reverse outline, naming the connective, a cold read by a reader with no context, cross-chapter terms, seams at late insertions. |
 | | `cite-check` | Citation form and key consistency through `./fw check-citations`; the last, mechanical pass. |
 | | `gpt-review` | An external referee from a different model family: review, hostile challenge, or consultation; findings returned verbatim. |
@@ -299,7 +301,7 @@ The first generation began as a template for one assignment, grew automated pape
 - [x] Agent skills ported and cleared for publication
 - [x] Quarto templates, CSL files, fonts ported
 - [x] Writing protocols ported, generalised — identity and field come from the course's `COURSE.md`
-- [x] `fw` dispatcher and the gates: citations and source backing across both tiers, bib quality profile (`score-bib`), batch edits, readability, 簡繁 variants, 字數
+- [x] `fw` dispatcher and the gates: citations and source backing across both tiers, bib quality profile (`score-bib`), batch edits, 簡繁 variants, 字數
 - [x] `unit-init` and `build` (two-tier bibliography, APA-zh 中文／西文 grouping by `langid`)
 - [x] `install.sh` / `course-init`: one command from nothing to a private course repo with the framework mounted
 - [x] `refs where` / `refs promote`, `refs-snapshot` (push and pull not yet exercised against a real release)

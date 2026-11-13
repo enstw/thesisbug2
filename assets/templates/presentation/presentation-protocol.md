@@ -122,8 +122,8 @@ renders, including local Quarto includes.
 
 Quarto includes remain useful inside a Model to assemble sections without
 copying. They stay within the unit, because a cross-unit include lets later
-work silently change an already-graded assignment. `check-citations`,
-`check-zh-variants` and `lint-readability` follow local includes.
+work silently change an already-graded assignment. `check-citations`
+and `check-zh-variants` follow local includes.
 
 ## What a reading guide covers
 

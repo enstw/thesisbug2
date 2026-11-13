@@ -41,7 +41,7 @@ Run everything from the course root through the dispatcher:
 
 The canonical skills are `.framework/.agents/skills/<name>/SKILL.md`, also exposed through `.agents/skills/` and `.claude/skills/`. Use native skill discovery when available; otherwise read the relevant file directly. Names such as `/check_flow` are task aliases, not required slash-command APIs, so an agent without those APIs can follow the same procedure.
 
-Use your environment's file, shell, browser, and delegation capabilities. External skills named below are integrations to discover and read before use, since they are not bundled here. Never assume a vendor home directory or install into the course's skill symlinks, because that would modify the framework submodule. If a capability is missing, finish independent checks and report what remains unverified. `flow-check` specifically requires an isolated reader for its cold read; `gpt-review` requires a suitable second model for a cross-model verdict.
+Use your environment's file, shell, browser, and delegation capabilities. External skills named below are integrations to discover and read before use, since they are not bundled here. Never assume a vendor home directory or install into the course's skill symlinks, because that would modify the framework submodule. If a capability is missing, finish independent checks and report what remains unverified. `flow-check` specifically requires an isolated reader for its cold read, and `read-check` one per paragraph; `gpt-review` requires a suitable second model for a cross-model verdict.
 
 **Image generation is the provider exception:** use Codex, the maintainer's current stable backend. A Codex host can use its native image tool; another host uses the discovered `genimage-img2` Codex wrapper. Report an unavailable backend instead of substituting another image provider. Supplied PNGs and authored HTML capture still work without AI generation.
 
@@ -51,6 +51,7 @@ Use your environment's file, shell, browser, and delegation capabilities. Extern
 | Finding, fetching, writing stable per-source summaries, and auditing sources | `source-kit` |
 | Multi-spot edits to manuscript text | `safe-edit` |
 | Terminology (Traditional Chinese, Taiwan usage) | `fix-terms` |
+| Hard-to-read wording and the manuscript's own coined terms | `read-check` (`./fw read-check`) |
 | Argument flow and coherence | `flow-check` |
 | Citation consistency | `cite-check` |
 | External cross-model review, at milestones | `gpt-review` |
@@ -58,7 +59,7 @@ Use your environment's file, shell, browser, and delegation capabilities. Extern
 | Figures, 字數, transcripts | `diagram`, `count-zh`, `yt2sub` |
 | Reading or projecting a source as a page | `reader` (`./fw reader <key>`) |
 
-Lint order for a manuscript: **fix-terms → flow-check → cite-check**, with gpt-review after that at milestones. Accepted findings land through safe-edit.
+Lint order for a manuscript: **fix-terms → read-check → flow-check → cite-check**, with gpt-review after that at milestones. Accepted findings land through safe-edit.
 
 ## Sources live in one of two tiers
 

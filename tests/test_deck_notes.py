@@ -289,3 +289,13 @@ class DeckCompileNotesTests(NotesCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class AbbreviationPatternTests(unittest.TestCase):
+    def test_file_names_and_roman_numerals_are_not_abbreviations(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("deck_notes", REPO / "scripts" / "deck-notes.py")
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        found = mod.ABBREVIATION.findall("寫成 SKILL.md 的步驟；SALT II 未生效；FPA 與 IVF；第 IV 部分；Codex CLI")
+        self.assertEqual(found, ["SALT", "FPA", "IVF", "CLI"])

@@ -54,7 +54,7 @@ NOTE_ID = re.compile(r"^[KQ]\d+$")
 LABEL_PREFIX = re.compile(r"^\*\*[^*]+\*\*[：:]\s*")
 CITE = re.compile(r"\[(@[\w:.-]+),\s*\{([^}]*)\}\]")
 # An abbreviation the audience reads: two or more capitals standing alone (FPA, MAD).
-ABBREVIATION = re.compile(r"(?<![A-Za-z])[A-Z]{2,}(?![A-Za-z])")
+ABBREVIATION = re.compile(r"(?<![A-Za-z])(?![IVX]+(?![A-Za-z]))[A-Z]{2,}(?![A-Za-z]|\.[a-z])")
 NONE_MARKS = {"—", "-", "–"}
 LOCATOR = re.compile(r"§\s*([^；;）)\]\n]+)")
 NUMBERED = re.compile(r"^([一二三四五六七八九十百〇零\d]+)[、.．]\s*")

@@ -53,8 +53,8 @@ description: >
 | 指令 | 功能 |
 | :--- | :--- |
 | `/topic_discovery` | 使用者只給大領域時，先用近期新聞與政策訊號做 TRIZ 式矛盾抽取，產出不少於 5 個候選題目（見 methodology § 新聞訊號驅動的矛盾式選題法）。 |
-| `/topic_enumerate` | 使用者想有系統地找題目，或 `/topic_discovery` 只找到顯而易見的題目時：由 `./fw topic-enumerate` 把 741 組面向配對洗牌，使用者在本機網頁上選類別、把喜歡的題目放進抽屜、對題目深入、變化或切分，agent 逐批派讀者對照預先下載的材料找矛盾；組合由程式產生與記帳，因為憑印象列舉會漏掉不熟悉的組合（見 [`reference/enumeration.md`](reference/enumeration.md)）。 |
-| `/prep_start` | 依興趣或 `/topic_discovery` 結果建立 3–5 個可比較的候選題目。 |
+| `/topic_enumerate` | 使用者想有系統地找題目，或 `/topic_discovery` 只找到顯而易見的題目時：由 `./fw topic-enumerate` 把 741 組面向配對洗牌，使用者在本機網頁上選類別、把喜歡的題目放進抽屜、對題目深入、變化或切分，agent 逐批派讀者對照預先下載的材料找矛盾；組合由程式產生與記帳，因為憑印象列舉會漏掉不熟悉的組合。結束後 `shortlist` 把抽屜印成 Phase 1 的候選題目（見 [`reference/enumeration.md`](reference/enumeration.md)）。 |
+| `/prep_start` | 依興趣、`/topic_discovery` 結果或 `/topic_enumerate` 的 `shortlist` 建立 3–5 個可比較的候選題目。 |
 | `/search_plan` | 為目前候選題目建立雙語關鍵詞、查詢式與來源清單。 |
 | `/lit_scan` | 根據搜尋結果整理初步文獻清單與全文取得狀態（取得交給 **source-kit**）。 |
 | `/screen` | 用題目評估矩陣比較候選題目，標示保留、排除或待查。 |

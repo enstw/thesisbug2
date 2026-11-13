@@ -29,6 +29,15 @@
   .warn { color: var(--warn); }
   .pill { border-radius: 999px; padding: .1rem .7rem; font-size: .85rem; background: var(--soft); }
   .pill.busy { background: var(--accent); color: var(--accent-ink); }
+  .pill.deaf { background: var(--warn); color: #fff; }
+  .notice { border: 1px solid var(--warn); border-radius: .6rem; padding: .7rem 1rem; margin-bottom: 1rem; }
+  .options { margin: .5rem 0 0; padding: 0; list-style: none; }
+  .options li { border: 1px solid var(--line); border-radius: .6rem; padding: .6rem .8rem; margin-bottom: .5rem;
+                background: var(--surface); }
+  .dims { columns: 2 22rem; font-size: .88rem; margin: .5rem 0 1rem; padding: 0; list-style: none; }
+  .dims li { break-inside: avoid; padding: .15rem 0; }
+  .dims li.none { opacity: .5; }
+  .dims b { font-weight: 600; }
   .steps { display: flex; gap: .3rem; margin: 0; padding: 0; list-style: none; font-size: .88rem; color: var(--muted); }
   .steps li { padding: 0 .6rem; border-radius: 999px; border: 1px solid var(--line); }
   .steps li.now { color: var(--ink); border-color: var(--accent); font-weight: 600; }
@@ -94,6 +103,7 @@
     <span id="status" class="pill">載入中</span>
     <span id="progress" class="muted"></span>
     <span class="grow"></span>
+    <button id="cancel" hidden>取消進行中的</button>
     <button id="drawer-toggle" hidden>抽屜 <b id="drawer-count">0</b></button>
   </div>
   <div class="bar groups" id="groups" hidden></div>
@@ -102,7 +112,16 @@
   <section id="stage-anchor" hidden>
     <p class="muted">先說清楚要研究什麼。「領域」和「現象」會原文交給找題目的讀者，請寫到不認識這個題目的人也看得懂；後兩項只留給之後篩選，不會給讀者看。</p>
     <div id="anchor-form"></div>
-    <div class="row"><button class="primary" id="anchor-save">下一步：材料</button></div>
+    <div class="row">
+      <button class="primary" id="anchor-save">下一步：材料</button>
+      <button id="sharpen">請 AI 提幾個更具體的寫法</button>
+      <span class="muted" id="sharpen-working" hidden>正在想…</span>
+    </div>
+    <div id="sharpen-box" hidden>
+      <h2>更具體的寫法</h2>
+      <p class="muted">現象寫得越寬，題目越空泛。挑一個放進「現象」，再照你知道的情況修改；〔〕裡是要你補的。</p>
+      <ul class="options" id="sharpen-list"></ul>
+    </div>
   </section>
 
   <section id="stage-materials" hidden>
@@ -133,14 +152,25 @@
 
     <h2>材料</h2>
     <p class="muted">題目只會從勾選的材料裡長出來，每個題目都要指到其中的段落。材料沒談到的方向不會出現。</p>
+    <div class="row"><button id="use-all">全選</button><button id="use-none">全不選</button></div>
     <ul class="list" id="materials"></ul>
     <p id="materials-sum" class="muted"></p>
+
+    <details><summary class="muted" id="dims-summary">找題目時對照的 39 個面向</summary>
+      <ul class="dims" id="dims-setup"></ul></details>
 
     <div class="row"><button class="primary" id="begin">開始選題</button><span class="muted">開始之後，定錨和材料就固定了。</span></div>
   </section>
 
   <section id="stage-explore" hidden>
     <details class="anchor"><summary class="muted">研究現象</summary><pre id="anchor"></pre></details>
+    <div class="notice" id="index-box" hidden><span id="index-text"></span>
+      <button id="index-resume" hidden>繼續整理</button></div>
+    <div class="notice" id="stopped" hidden></div>
+    <div class="notice" id="finished-note" hidden>這一輪已經結束。請 agent 執行 <code>shortlist</code>，把抽屜裡的題目寫進選題決策包，接著查文獻。</div>
+    <details id="coverage" hidden><summary class="muted">材料涵蓋了哪些面向</summary>
+      <p class="muted">數字是談到這個面向的段落數。0 的面向沒有材料可以對照，和它有關的配對不會派出去；要補材料請另開一輪。</p>
+      <ul class="dims" id="dims-explore"></ul></details>
     <ul class="log" id="log"></ul>
     <div id="topics"></div>
   </section>
@@ -153,7 +183,8 @@
 </aside>
 <div id="toast"></div>
 <script>
-const KIND = {explore: "隨機抽", deepen: "深入", vary: "變化題型", split: "切分", scope: "擬搜尋範圍", collect: "下載材料"};
+const KIND = {explore: "隨機抽", deepen: "深入", vary: "變化題型", split: "切分", index: "整理材料",
+              scope: "擬搜尋範圍", collect: "下載材料", sharpen: "收窄現象", localize: "改寫面向的例子"};
 const HEADS = [
   ["領域", "學門與次領域", 2],
   ["現象", "想研究的具體現象：誰、在哪裡、什麼時候、發生了什麼。越具體，題目越落地", 6],
@@ -192,7 +223,20 @@ function act(label, choice, enabled, cls) {
 
 const lines = id => $(id).value.split("\n").map(x => x.trim()).filter(Boolean);
 
+function dims(id, s) {
+  $(id).replaceChildren(...s.dimensions.map(d => h("li", {className: d.passages === 0 ? "none" : ""},
+    h("b", {textContent: d.name}), d.passages == null ? "" : `　${d.passages} 段`,
+    h("div", {className: "muted", textContent: d.examples}))));
+}
+
 function renderAnchor(s) {
+  const working = s.working.includes("sharpen");
+  $("sharpen").disabled = working;
+  $("sharpen-working").hidden = !working;
+  $("sharpen-box").hidden = !s.sharpen.length;
+  $("sharpen-list").replaceChildren(...s.sharpen.map(o => h("li", null,
+    h("div", {textContent: o.text}), h("div", {className: "muted", textContent: o.why}),
+    h("button", {textContent: "放進「現象」", onclick: () => { $("anchor-現象").value = o.text; $("anchor-現象").focus(); }}))));
   if (builtAnchor) return;
   builtAnchor = true;
   $("anchor-form").replaceChildren(...HEADS.flatMap(([name, hint, rows]) => [
@@ -208,15 +252,21 @@ function renderMaterials(s) {
     h("div", null, m.title, h("div", {className: "muted", textContent:
       [m.id, m.source, m.date, `${m.chars.toLocaleString()} 字`, m.origin === "collected" ? "剛下載" : ""]
         .filter(Boolean).join("　")})))) :
-    [h("li", {className: "muted", textContent: "還沒有材料。用下面的步驟找新聞。"})]));
+    [h("li", {className: "muted", textContent: "還沒有材料。用上面的步驟找新聞。"})]));
   const used = s.materials.filter(m => m.use).length;
   $("materials-sum").textContent = `已選 ${used} 份，共 ${s.used_chars.toLocaleString()} 字。` +
-    (s.used_chars > s.budget ? `每一位讀者都要讀完全部材料，超過 ${s.budget.toLocaleString()} 字會變慢也變貴，建議少選幾份。` : "");
+    (s.used_chars > s.budget ? `材料很多，開始選題前要先整理一次，會多等幾分鐘；和現象無關的建議不要選。`
+      : s.used_chars > s.index_over ? "開始選題時會先把段落按面向整理一次，之後每位讀者只讀相關的段落。" : "");
   $("materials-sum").className = s.used_chars > s.budget ? "warn" : "muted";
+  $("use-all").disabled = $("use-none").disabled = !s.materials.length;
+  $("dims-summary").textContent = "找題目時對照的 39 個面向" +
+    (s.localized ? "（例子已改寫成你的領域）" : working.has("localize") ? "（正在把例子改寫成你的領域…）" : "");
+  dims("dims-setup", s);
 
-  $("scope-working").hidden = !working.size;
+  const fetching = working.has("scope") || working.has("collect");
+  $("scope-working").hidden = !fetching;
   $("scope-working").textContent = working.has("scope") ? "正在擬搜尋範圍…" : working.has("collect") ? "正在下載，可能要幾分鐘…" : "";
-  $("scope-ask").hidden = !!s.scope || working.size > 0;
+  $("scope-ask").hidden = !!s.scope || fetching;
   $("scope-form").hidden = !s.scope;
   const key = JSON.stringify(s.scope);
   if (s.scope && key !== shownScope) {
@@ -227,7 +277,7 @@ function renderMaterials(s) {
     $("scope-sources").value = s.scope.sources.join("\n");
     $("scope-note").textContent = s.scope.note;
   }
-  $("collect").disabled = $("scope-redraft").disabled = working.size > 0;
+  $("collect").disabled = $("scope-redraft").disabled = fetching;
   $("failed-box").hidden = !s.failed.length;
   $("failed").replaceChildren(...s.failed.map(f => h("li", {textContent: `${f.what}：${f.reason}`})));
   $("begin").disabled = working.size > 0 || !used;
@@ -259,17 +309,32 @@ function card(t) {
 }
 
 function renderExplore(s) {
-  $("progress").textContent = `已看 ${s.read} / ${s.total} 組配對，找到 ${s.topics.length} 題`;
+  $("progress").textContent = `已看 ${s.read} / ${s.total - s.bare} 組配對，找到 ${s.topics.length} 題` +
+    (s.bare ? `（另有 ${s.bare} 組材料沒有涵蓋）` : "");
   $("anchor").textContent = s.anchor.replaceAll("**", "");
+  const indexing = s.index.state === "open";
+  $("index-box").hidden = !indexing;
+  $("index-text").textContent = `正在把材料按面向整理，已完成 ${s.index.tagged} / ${s.index.total} 段。整理完才能選類別。`;
+  $("index-resume").hidden = !s.index.can_resume;
+  $("coverage").hidden = s.index.state !== "done";
+  dims("dims-explore", s);
+  $("finished-note").hidden = !s.finished;
+  $("stopped").hidden = !s.stopped;
+  if (s.stopped) {
+    const parts = Object.entries(s.stopped.results).map(([k, n]) => `${n} 組${k}`).join("、");
+    $("stopped").textContent = `「${s.stopped.group || "全部隨機"}」連續 ${s.stopped.draws} 輪都沒有題目（${parts}），先停下來。` +
+      `多數是「材料無依據」時，表示材料沒有談到這個方向，換一個類別比較快；想繼續就再按一次。`;
+  }
   $("groups").replaceChildren(
     ...s.groups.map(g => h("button", {disabled: !g.ok, onclick: () => choose({action: "explore", group: g.name})},
-      g.name, h("small", {textContent: `已看 ${g.read} / ${g.total}`}))),
+      g.name, h("small", {textContent: `已看 ${g.read} / ${g.total - g.bare}`}))),
     h("button", {disabled: !s.any_ok, onclick: () => choose({action: "explore"})},
       "全部隨機", h("small", {textContent: "不限類別"})));
-  $("log").replaceChildren(...s.log.filter(t => t.kind in KIND && !["scope", "collect"].includes(t.kind))
+  $("log").replaceChildren(...s.log.filter(t => t.kind in KIND && !["scope", "collect", "sharpen", "localize"].includes(t.kind))
     .map(t => h("li", {textContent:
       `${t.id}　${KIND[t.kind]}${t.group ? "（" + t.group + "）" : ""}${t.topic ? "　" + t.topic : ""}　${t.count} 項：` +
-      (t.status !== "done" ? "進行中" : t.found ? `找到 ${t.found} 題` : "沒有題目")})));
+      (t.status === "cancelled" ? "已取消" : t.status !== "done" ? "進行中"
+        : t.kind === "index" ? "完成" : t.found ? `找到 ${t.found} 題` : "沒有題目")})));
   $("topics").replaceChildren(...(s.topics.length ? s.topics.map(card) :
     [h("p", {className: "empty", textContent: s.out ? "正在找，出現題目就會顯示在這裡。"
       : "還沒有題目。從上面選一個類別開始，會一直找到出現題目為止。"})]));
@@ -289,8 +354,12 @@ function render(s) {
   const exploring = s.stage === "explore";
   $("groups").hidden = $("drawer-toggle").hidden = !exploring;
   if (!exploring) $("progress").textContent = "";
-  $("status").textContent = s.finished ? "已結束" : s.out ? `進行中，${s.out} 份` : "等你選擇";
-  $("status").className = "pill" + (s.out && !s.finished ? " busy" : "");
+  const deaf = !s.listening && !s.finished && (s.waiting > 0 || !s.out);
+  $("status").textContent = s.finished ? "已結束" : deaf ? (s.waiting ? `${s.waiting} 份還沒有 agent 接手` : "agent 沒有在接手")
+    : s.out ? `進行中，${s.out} 份` : "等你選擇";
+  $("status").title = deaf ? "按鈕會先記下來，要等 agent 執行 next 才會開始。請回到對話請 agent 接手。" : "";
+  $("status").className = "pill" + (deaf ? " deaf" : s.out ? " busy" : "");
+  $("cancel").hidden = !s.out || s.finished;
   if (s.stage === "anchor") renderAnchor(s); else builtAnchor = false;
   if (s.stage === "materials") renderMaterials(s);
   if (exploring) renderExplore(s);
@@ -305,6 +374,12 @@ async function refresh() {
 
 $("anchor-save").onclick = () => choose({action: "anchor",
   fields: Object.fromEntries(HEADS.map(([name]) => [name, $("anchor-" + name).value]))});
+$("sharpen").onclick = () => choose({action: "sharpen",
+  fields: Object.fromEntries(HEADS.map(([name]) => [name, $("anchor-" + name).value]))});
+$("cancel").onclick = () => choose({action: "cancel"});
+$("index-resume").onclick = () => choose({action: "index"});
+$("use-all").onclick = () => choose({action: "use", material: "*", on: true});
+$("use-none").onclick = () => choose({action: "use", material: "*", on: false});
 $("back").onclick = () => choose({action: "back"});
 $("scope-draft").onclick = $("scope-redraft").onclick = () => choose({action: "scope"});
 $("collect").onclick = () => choose({action: "collect", scope: {

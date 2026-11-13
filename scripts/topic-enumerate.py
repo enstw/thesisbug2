@@ -8,17 +8,20 @@
     ./fw topic-enumerate next [<unit>]                       print the prompts ready to send; waits for the owner
     ./fw topic-enumerate take [<unit>]                       check the answers that have arrived and record them
     ./fw topic-enumerate choose [<unit>] <action> [<topic>]  what a button on the page does
-    ./fw topic-enumerate shortlist [<unit>]                  the topics in the owner's drawer, as Markdown
+    ./fw topic-enumerate shortlist [<unit>]                  the drawer as candidate topics for preparation.qmd
 
 The owner works through three pages: the anchor (field and phenomenon), the
 materials (those already in the course, plus news an agent collects within a
 scope the owner confirms), and the search. There, the 39 TRIZ parameters, read
-as social-science dimensions, give 741 pairs in a shuffled order. Each button the owner presses on the page writes prompts for
-unseen pairs; `next` hands them to the agent, readers answer them in parallel,
-and `take` refuses an answer that skips a pair or cites a passage the materials
-lack. A draw that finds nothing is repeated until a topic turns up. The owner
-collects topics, extends them, or returns to the categories. Method:
-topic-scout reference/enumeration.md.
+as social-science dimensions, give 741 pairs in a shuffled order. Each button
+the owner presses on the page writes prompts for unseen pairs; `next` hands
+them to the agent, readers answer them in parallel, and `take` refuses an
+answer that skips a pair or cites a passage the materials lack. Long materials
+are tagged by dimension first, so a prompt carries only the passages on its
+pairs and a pair no passage speaks to is never sent. A draw that finds nothing
+is repeated, and the search stops to ask the owner after a few empty draws in a
+row. The owner collects topics, extends them, or returns to the categories.
+Method: topic-scout reference/enumeration.md.
 """
 
 from __future__ import annotations
@@ -48,6 +51,9 @@ PAIRS_TEMPLATE = ASSETS / "enum-prompt.md"
 REFINE_TEMPLATE = ASSETS / "refine-prompt.md"
 SCOPE_TEMPLATE = ASSETS / "scope-prompt.md"
 COLLECT_TEMPLATE = ASSETS / "collect-prompt.md"
+SHARPEN_TEMPLATE = ASSETS / "sharpen-prompt.md"
+LOCALIZE_TEMPLATE = ASSETS / "localize-prompt.md"
+INDEX_TEMPLATE = ASSETS / "index-prompt.md"
 PAGE = ASSETS / "explorer.html"
 
 SHOWN_HEADS = ("領域", "現象")
@@ -57,13 +63,19 @@ PLACEHOLDER = "〔"
 FOCUS, OTHER = "甲", "乙"
 TEXT_FIELDS = ("question", "scope", "data", "why")
 PAIR_KINDS = ("explore", "deepen")
-SETUP_KINDS = ("scope", "collect")
-ACTIONS = ("explore", "deepen", "vary", "split", "keep", "drop", "finish")
-SETUP_ACTIONS = ("anchor", "back", "use", "scope", "collect", "begin")
+SETUP_KINDS = ("scope", "collect", "sharpen", "localize")
+FETCH_KINDS = ("scope", "collect")
+ACTIONS = ("explore", "deepen", "vary", "split", "index", "keep", "drop", "cancel", "finish")
+SETUP_ACTIONS = ("anchor", "sharpen", "back", "use", "scope", "collect", "begin")
 EVERY_ACTION = (*SETUP_ACTIONS, *ACTIONS)
+OPEN = ("new", "sent")
+VERSION = 2
 COLLECT_COUNT, COLLECT_CHARS = 15, 2000
-FOUND = "題目"
+INDEX_CHARS, INDEX_MOST = 15_000, 4
+EXAMPLES_CHARS = 80
+FOUND, BARE = "題目", "材料未涵蓋"
 WARN_CHARS = 80_000
+LISTEN_GRACE = 30
 EXIT_WAITING, EXIT_FINISHED = 3, 5
 
 ANCHOR_SKELETON = """# 選題定錨
@@ -117,8 +129,12 @@ def all_pairs(count: int) -> list[str]:
     return [pair_id(a, b) for a in range(1, count + 1) for b in range(a + 1, count + 1)]
 
 
-def dimension(p: dict) -> str:
-    return f"{p['analogy']}（例如：{p['examples']}）"
+def examples(state: dict, p: dict) -> str:
+    return state["examples"].get(str(p["n"])) or p["examples"]
+
+
+def dimension(state: dict, p: dict) -> str:
+    return f"{p['analogy']}（例如：{examples(state, p)}）"
 
 
 def fill(template: Path, fields: dict[str, str]) -> str:
@@ -146,7 +162,8 @@ def anchor_sections(path: Path) -> dict[str, str]:
 
 
 def anchor_problems(fields: dict[str, str]) -> list[str]:
-    return [f"「{h}」還沒填" for h in HEADS if not fields.get(h) or PLACEHOLDER in fields[h]]
+    return [f"「{h}」還沒填" if not fields.get(h) else f"「{h}」裡還有〔〕要補"
+            for h in HEADS if not fields.get(h) or PLACEHOLDER in fields[h]]
 
 
 def anchor_text(fields: dict[str, str]) -> str:
@@ -230,23 +247,56 @@ def split_passages(text: str) -> list[tuple[int, str, bool]]:
     return blocks
 
 
-def read_materials(materials: list[dict]) -> tuple[list[dict], str]:
-    """Numbered passages and the text shown in a prompt."""
+def read_materials(materials: list[dict]) -> list[dict]:
+    """Numbered passages, each with the headings that open it."""
     root = course_root()
     passages: list[dict] = []
-    shown: list[str] = []
     for m in materials:
-        shown.append(f"### 材料 {int(m['id'][1:])}：{m['title']}")
-        count = 0
+        count, heads = 0, []
         for line, block, heading in split_passages((root / m["file"]).read_text(encoding="utf-8")):
             if heading:
-                shown += ["〈" + b.lstrip("# \t") + "〉" for b in block.splitlines()]
+                heads += [b.lstrip("# \t") for b in block.splitlines()]
                 continue
             count += 1
-            pid = f"{m['id']}-P{count:03d}"
-            passages.append({"id": pid, "file": m["file"], "line": line, "text": block})
-            shown.append(f"[{pid}] {block}")
-    return passages, "\n\n".join(shown)
+            passages.append({"id": f"{m['id']}-P{count:03d}", "material": m["id"], "file": m["file"],
+                             "line": line, "heads": heads, "text": block})
+            heads = []
+    return passages
+
+
+def load_passages(paths: dict) -> list[dict]:
+    return json.loads(paths["passages"].read_text(encoding="utf-8")) if paths["passages"].is_file() else []
+
+
+def shown(state: dict, passages: list[dict]) -> str:
+    """Passages as a prompt carries them, under the title of the material each is from."""
+    titles = {m["id"]: m["title"] for m in state["materials"]}
+    out: list[str] = []
+    last = None
+    for p in passages:
+        if p["material"] != last:
+            last = p["material"]
+            out.append(f"### 材料 {int(last[1:])}：{titles[last]}")
+        out += [f"〈{h}〉" for h in p["heads"]]
+        out.append(f"[{p['id']}] {p['text']}")
+    return "\n\n".join(out)
+
+
+def passages_for(paths: dict, state: dict, dims: set[int], always: list[str] = ()) -> list[dict]:
+    """What a prompt carries: every passage, or once they are tagged, those on its dimensions."""
+    passages = load_passages(paths)
+    if state["index"] != "done":
+        return passages
+    return [p for p in passages if p["id"] in always or dims & set(state["tags"][p["id"]])]
+
+
+def coverage(state: dict) -> dict[int, int]:
+    """How many passages speak to each dimension."""
+    count: dict[int, int] = {}
+    for dims in state["tags"].values():
+        for d in dims:
+            count[d] = count.get(d, 0) + 1
+    return count
 
 
 @contextmanager
@@ -257,6 +307,9 @@ def locked(paths: dict[str, Path]):
     with open(paths["lock"], "w") as handle:
         fcntl.flock(handle, fcntl.LOCK_EX)
         state = json.loads(paths["state"].read_text(encoding="utf-8"))
+        if state.get("version") != VERSION:
+            sys.exit(f"{rel(paths['run'])} was written by another version of this command; "
+                     "open a new run with --run <name>")
         before = dump(state)
         yield state
         after = dump(state)
@@ -266,8 +319,21 @@ def locked(paths: dict[str, Path]):
             os.replace(tmp, paths["state"])
 
 
-def outstanding(state: dict) -> list[dict]:
-    return [t for t in state["tasks"] if t["status"] != "done"]
+def outstanding(state: dict, kinds: tuple[str, ...] | None = None) -> list[dict]:
+    return [t for t in state["tasks"] if t["status"] in OPEN and (kinds is None or t["kind"] in kinds)]
+
+
+def cancel(state: dict, tasks: list[dict]) -> None:
+    """Withdraw prompts; their pairs return to the unseen and their buttons can be pressed again."""
+    for task in tasks:
+        task["stop"] = task["status"] == "sent"
+        task["status"] = "cancelled"
+        topic = topic_by_id(state, task.get("topic"))
+        if topic and task["kind"] in topic["done"]:
+            topic["done"].remove(task["kind"])
+        for rnd in state["rounds"]:
+            if rnd["id"] == task.get("round"):
+                rnd["closed"] = True
 
 
 def topic_by_id(state: dict, tid) -> dict | None:
@@ -299,12 +365,20 @@ def choice_problem(state: dict, params: dict, choice: dict) -> str | None:
         return "找不到這個題目"
     if action in ("keep", "drop", "finish"):
         return None
+    if action == "cancel":
+        return None if outstanding(state) else "沒有進行中的工作"
     if action not in ACTIONS:
         return "不認得這個動作"
     if state["stage"] != "explore":
         return "還沒開始選題"
     if state["finished"]:
         return "這一輪已經結束"
+    if action == "index":
+        if state["index"] != "open":
+            return "材料不需要整理，或已經整理好了"
+        return "材料正在整理" if outstanding(state, ("index",)) else None
+    if state["index"] == "open":
+        return "材料還在整理，整理完才能找題目"
     if len(outstanding(state)) >= state["limit"]:
         return f"已經有 {len(outstanding(state))} 份在進行，等它們回來再按"
     if action == "explore":
@@ -326,7 +400,7 @@ def choice_problem(state: dict, params: dict, choice: dict) -> str | None:
 def apply_choice(paths: dict, state: dict, params: dict, choice: dict) -> str | None:
     """Take the owner's choice: change the drawer, or write the prompts it calls for."""
     if choice.get("action") in SETUP_ACTIONS:
-        return apply_setup(paths, state, choice)
+        return apply_setup(paths, state, params, choice)
     problem = choice_problem(state, params, choice)
     if problem:
         return problem
@@ -339,7 +413,12 @@ def apply_choice(paths: dict, state: dict, params: dict, choice: dict) -> str | 
             state["drawer"].remove(tid)
     elif action == "finish":
         state["finished"] = True
+    elif action == "cancel":
+        cancel(state, outstanding(state))
+    elif action == "index":
+        index_tasks(paths, state, params)
     elif action == "explore":
+        state["stopped"] = None
         start_round(paths, state, params, choice.get("group"))
     elif action == "deepen":
         focus = choice["dimension"]
@@ -405,38 +484,68 @@ def collect_prompt(paths: dict, state: dict, answer: str) -> str:
         "FROM": scope["from"], "TO": scope["to"],
         "SOURCES": "\n".join(f"  - {x}" for x in scope["sources"]) or "  - 不限",
         "HAVE": have_lines(state), "COUNT": str(COLLECT_COUNT), "LIMIT": str(COLLECT_CHARS),
-        "DIR": rel(paths["materials"]), "RESPONSE_PATH": answer, "EXAMPLE": dump(example).rstrip()})
+        "DIR": str(paths["materials"]), "RESPONSE_PATH": answer, "EXAMPLE": dump(example).rstrip()})
 
 
-def apply_setup(paths: dict, state: dict, choice: dict) -> str | None:
+def sharpen_prompt(fields: dict[str, str], answer: str) -> str:
+    example = {"options": [{"text": "……", "why": "……"}, {"text": "……", "why": "……"}]}
+    return fill(SHARPEN_TEMPLATE, {"ANCHOR": anchor_text(fields), "RESPONSE_PATH": answer,
+                                   "EXAMPLE": dump(example).rstrip()})
+
+
+def localize_prompt(state: dict, params: dict, answer: str) -> str:
+    example = {"rows": [{"n": 1, "examples": "……"}, {"n": 2, "examples": "……"}]}
+    return fill(LOCALIZE_TEMPLATE, {
+        "ANCHOR": anchor_text(state["anchor_fields"]), "COUNT": str(len(params["parameters"])),
+        "DIMENSIONS": "\n".join(f"{p['n']}. {p['analogy']}（例如：{p['examples']}）" for p in params["parameters"]),
+        "LIMIT": str(EXAMPLES_CHARS), "RESPONSE_PATH": answer, "EXAMPLE": dump(example).rstrip()})
+
+
+def apply_setup(paths: dict, state: dict, params: dict, choice: dict) -> str | None:
     """The owner's choices before the search opens: the anchor, the materials, the start."""
     action = choice["action"]
     if state["stage"] == "explore":
         return "已經開始選題，定錨和材料不能再改；要改請另開一輪"
-    busy = outstanding(state)
-    if action == "anchor":
+    if action in ("anchor", "sharpen"):
         given = choice.get("fields")
         if given is not None and not isinstance(given, dict):
             return "定錨的格式不對"
         fields = {h: str(given.get(h) or "").strip() for h in HEADS} if given else anchor_sections(paths["anchor"])
+        if action == "sharpen":
+            missing = [f"「{h}」還沒填" for h in SHOWN_HEADS if not fields[h]]
+            if missing:
+                return "；".join(missing)
+            if outstanding(state, ("sharpen",)):
+                return "上一個工作還在進行"
+            state["anchor_fields"] = fields
+            new_task(paths, state, {"kind": "sharpen", "items": []}, lambda answer: sharpen_prompt(fields, answer))
+            return None
         problems = anchor_problems(fields)
         if problems:
             return "；".join(problems)
         paths["anchor"].parent.mkdir(parents=True, exist_ok=True)
         paths["anchor"].write_text(
             "# 選題定錨\n\n" + "\n\n".join(f"## {h}\n\n{fields[h]}" for h in HEADS) + "\n", encoding="utf-8")
-        state.update(anchor_fields=fields, stage="materials")
+        cancel(state, outstanding(state, ("sharpen",)))
+        state.update(anchor_fields=fields, stage="materials", sharpen=[])
+        if anchor_text(fields) != state["examples_for"]:
+            cancel(state, outstanding(state, ("localize",)))
+            state.update(examples={}, examples_for=anchor_text(fields))
+        if state["localize"] and not state["examples"] and not outstanding(state, ("localize",)):
+            new_task(paths, state, {"kind": "localize", "items": []},
+                     lambda answer: localize_prompt(state, params, answer))
     elif action == "back":
         state["stage"] = "anchor"
     elif action == "use":
-        found = next((m for m in state["materials"] if m["id"] == choice.get("material")), None)
-        if not found:
+        chosen = [m for m in state["materials"] if choice.get("material") in (m["id"], "*")]
+        if not chosen:
             return "找不到這份材料"
-        found["use"] = bool(choice.get("on"))
+        for m in chosen:
+            m["use"] = bool(choice.get("on"))
     elif action in ("scope", "collect"):
         if state["stage"] != "materials":
             return "先完成定錨"
-        if busy:
+        if outstanding(state, FETCH_KINDS):
             return "上一個工作還在進行"
         if action == "scope":
             new_task(paths, state, {"kind": "scope", "items": []}, lambda answer: scope_prompt(state, answer))
@@ -449,28 +558,58 @@ def apply_setup(paths: dict, state: dict, choice: dict) -> str | None:
             new_task(paths, state, {"kind": "collect", "items": []},
                      lambda answer: collect_prompt(paths, state, answer))
     else:
-        if busy:
+        if outstanding(state):
             return "上一個工作還在進行"
         problems = anchor_problems(state["anchor_fields"])
         if problems:
             return "；".join(problems)
-        passages, shown = read_materials([m for m in state["materials"] if m["use"]])
+        passages = read_materials([m for m in state["materials"] if m["use"]])
         if not passages:
             return "至少要勾選一份有內文的材料，因為每個題目都必須指到材料裡的段落"
         paths["passages"].write_text(dump(passages), encoding="utf-8")
-        paths["shown"].write_text(shown, encoding="utf-8")
         state.update(anchor=anchor_text(state["anchor_fields"]), stage="explore")
+        if sum(len(p["text"]) for p in passages) > state["index_over"]:
+            state["index"] = "open"
+            index_tasks(paths, state, params)
     return None
 
 
-def record_setup(paths: dict, state: dict, task: dict, data) -> list[str]:
-    """Problems in a scope or collection answer; when there are none, it is recorded."""
+def text_rows(rows, keys: tuple[str, ...]) -> bool:
+    return isinstance(rows, list) and all(
+        isinstance(r, dict) and all(isinstance(r.get(k), str) and r[k].strip() for k in keys) for r in rows)
+
+
+def record_setup(paths: dict, state: dict, params: dict, task: dict, data) -> list[str]:
+    """Problems in the answer to a setup prompt; when there are none, it is recorded."""
     if task["kind"] == "scope":
         problems = scope_problems(data)
         if problems:
             return problems
         state["scope"] = clean_scope(data)
         task.update(status="done", found=0)
+        return []
+    if task["kind"] == "sharpen":
+        options = data.get("options") if isinstance(data, dict) else None
+        if not text_rows(options, ("text", "why")) or not 2 <= len(options) <= 3:
+            return ['top level must be {"options": [...]} with 2 or 3 entries, each with text and why']
+        state["sharpen"] = [{"text": o["text"].strip(), "why": o["why"].strip()} for o in options]
+        task.update(status="done", found=len(options))
+        return []
+    if task["kind"] == "localize":
+        rows = data.get("rows") if isinstance(data, dict) else None
+        if not text_rows(rows, ("examples",)):
+            return ['top level must be {"rows": [{"n": 1, "examples": "..."}, ...]}']
+        wanted = set(params["by_n"])
+        given = [r.get("n") for r in rows]
+        errors = []
+        if len(given) != len(wanted) or {n for n in given if isinstance(n, int)} != wanted:
+            errors.append(f"needs one row for each of the {len(wanted)} numbered dimensions, no more")
+        errors += [f"row {r.get('n')}: examples longer than {EXAMPLES_CHARS} characters"
+                   for r in rows if len(r["examples"].strip()) > EXAMPLES_CHARS]
+        if errors:
+            return errors
+        state["examples"] = {str(r["n"]): r["examples"].strip() for r in rows}
+        task.update(status="done", found=len(rows))
         return []
     if not isinstance(data, dict) or not isinstance(data.get("items"), list) \
             or not isinstance(data.get("failed"), list):
@@ -509,19 +648,19 @@ def none_lines(kinds: list[dict]) -> str:
 
 def pairs_prompt(paths: dict, state: dict, params: dict, items: list[list[int]], answer: str) -> str:
     by_n = params["by_n"]
-    first = json.loads(paths["passages"].read_text(encoding="utf-8"))[0]["id"]
+    carried = passages_for(paths, state, {n for pair in items for n in pair})
     example = {"rows": [
         {"n": 1, "topics": [{"question": "……", "type": params["types"][0]["name"], "improves": FOCUS,
-                             "scope": "……", "data": "……", "why": "……", "passages": [first]}]},
+                             "scope": "……", "data": "……", "why": "……", "passages": [carried[0]["id"]]}]},
         {"n": 2, "topics": [], "none": params["none_kinds"][0]["name"], "reason": "……"}]}
     return fill(PAIRS_TEMPLATE, {
         "ANCHOR": state["anchor"],
         "COUNT": str(len(items)),
-        "PAIRS": "\n".join(f"{i}. {FOCUS}：{dimension(by_n[a])}\n   {OTHER}：{dimension(by_n[b])}"
+        "PAIRS": "\n".join(f"{i}. {FOCUS}：{dimension(state, by_n[a])}\n   {OTHER}：{dimension(state, by_n[b])}"
                            for i, (a, b) in enumerate(items, 1)),
         "TYPES": "\n".join(f"- **{t['name']}**：{t['asks']}" for t in params["types"]),
         "NONE_KINDS": none_lines(params["none_kinds"]),
-        "MATERIALS": paths["shown"].read_text(encoding="utf-8"),
+        "MATERIALS": shown(state, carried),
         "RESPONSE_PATH": answer,
         "EXAMPLE": dump(example).rstrip(),
     })
@@ -530,7 +669,8 @@ def pairs_prompt(paths: dict, state: dict, params: dict, items: list[list[int]],
 def refine_prompt(paths: dict, state: dict, params: dict, topic: dict, kind: str,
                   items: list[str], answer: str) -> str:
     by_n = params["by_n"]
-    passages = {p["id"]: p["text"] for p in json.loads(paths["passages"].read_text(encoding="utf-8"))}
+    passages = {p["id"]: p["text"] for p in load_passages(paths)}
+    carried = passages_for(paths, state, {topic["improves"], topic["worsens"]}, always=topic["passages"])
     if kind == "vary":
         asks = {t["name"]: t["asks"] for t in params["types"]}
         task = "原題目只是這個矛盾的一種問法。保持同一個矛盾，照下面每一種題型各寫出新的題目；某一種寫不出來就說明理由。"
@@ -544,13 +684,13 @@ def refine_prompt(paths: dict, state: dict, params: dict, topic: dict, kind: str
     return fill(REFINE_TEMPLATE, {
         "ANCHOR": state["anchor"],
         "QUESTION": topic["question"], "TYPE": topic["type"], "SCOPE": topic["scope"], "WHY": topic["why"],
-        "IMPROVES": dimension(by_n[topic["improves"]]),
-        "WORSENS": dimension(by_n[topic["worsens"]]),
+        "IMPROVES": dimension(state, by_n[topic["improves"]]),
+        "WORSENS": dimension(state, by_n[topic["worsens"]]),
         "CITED": "".join(f"\n  [{pid}] {passages[pid]}" for pid in topic["passages"]),
         "TASK": task,
         "ROWS": "\n".join(f"{i}. **{name}**：{asks[name]}" for i, name in enumerate(items, 1)),
         "NONE_KINDS": none_lines(params["refine_none_kinds"]),
-        "MATERIALS": paths["shown"].read_text(encoding="utf-8"),
+        "MATERIALS": shown(state, carried),
         "RESPONSE_PATH": answer,
         "EXAMPLE": dump(example).rstrip(),
     })
@@ -559,7 +699,7 @@ def refine_prompt(paths: dict, state: dict, params: dict, topic: dict, kind: str
 def new_task(paths: dict, state: dict, fields: dict, text_for) -> dict:
     """Write one prompt and record it as ready to send."""
     tid = f"T{len(state['tasks']) + 1:03d}"
-    text = text_for(rel(paths["answers"] / f"{tid}.json"))
+    text = text_for(str(paths["answers"] / f"{tid}.json"))
     for d in (paths["tasks"], paths["answers"]):
         d.mkdir(parents=True, exist_ok=True)
     (paths["tasks"] / f"{tid}.md").write_text(text, encoding="utf-8")
@@ -578,27 +718,105 @@ def pair_tasks(paths: dict, state: dict, params: dict, kind: str, pairs: list[tu
     return -(-len(pairs) // size)
 
 
-def start_round(paths: dict, state: dict, params: dict, group: str | None) -> int:
+def index_prompt(state: dict, params: dict, chunk: list[dict], answer: str) -> str:
+    example = {"rows": [{"p": p["id"], "dims": dims} for p, dims in zip(chunk, ([3, 17], []))]}
+    return fill(INDEX_TEMPLATE, {
+        "ANCHOR": state["anchor"], "COUNT": str(len(chunk)), "MOST": str(INDEX_MOST),
+        "DIMENSIONS": "\n".join(f"{p['n']}. {dimension(state, p)}" for p in params["parameters"]),
+        "PASSAGES": shown(state, chunk), "RESPONSE_PATH": answer, "EXAMPLE": dump(example).rstrip()})
+
+
+def index_tasks(paths: dict, state: dict, params: dict) -> None:
+    """Prompts that tag the passages not tagged yet, each small enough to read closely."""
+    chunks: list[list[dict]] = [[]]
+    size = 0
+    for p in load_passages(paths):
+        if p["id"] in state["tags"]:
+            continue
+        if chunks[-1] and size + len(p["text"]) > INDEX_CHARS:
+            chunks.append([])
+            size = 0
+        chunks[-1].append(p)
+        size += len(p["text"])
+    for chunk in chunks:
+        if chunk:
+            new_task(paths, state, {"kind": "index", "items": [p["id"] for p in chunk]},
+                     lambda answer, chunk=chunk: index_prompt(state, params, chunk, answer))
+
+
+def record_index(state: dict, params: dict, task: dict, data) -> list[str]:
+    """Problems in a tagging answer; when there are none, its tags are recorded."""
+    if not isinstance(data, dict) or not isinstance(data.get("rows"), list):
+        return ['top level must be {"rows": [...]}']
+    errors: list[str] = []
+    tags: dict[str, list[int]] = {}
+    for row in data["rows"]:
+        pid, dims = (row.get("p"), row.get("dims")) if isinstance(row, dict) else (None, None)
+        if pid not in task["items"]:
+            errors.append(f"row p={pid!r}: not one of the passages it was given")
+        elif pid in tags:
+            errors.append(f"row {pid}: answered twice")
+        else:
+            tags[pid] = dims
+            if not isinstance(dims, list) or len(dims) > INDEX_MOST or not all(
+                    isinstance(d, int) and not isinstance(d, bool) and d in params["by_n"] for d in dims):
+                errors.append(f"row {pid}: dims must list at most {INDEX_MOST} of the numbered dimensions")
+    missing = [pid for pid in task["items"] if pid not in tags]
+    if missing:
+        errors.append("no row for " + ", ".join(missing))
+    if errors:
+        return errors
+    state["tags"].update((pid, sorted(set(dims))) for pid, dims in tags.items())
+    task.update(status="done", found=sum(bool(dims) for dims in tags.values()))
+    return []
+
+
+def close_index(paths: dict, state: dict, params: dict) -> None:
+    """Once every passage is tagged, a pair with a dimension no passage speaks to needs no reader."""
+    if state["index"] != "open" or any(p["id"] not in state["tags"] for p in load_passages(paths)):
+        return
+    state["index"] = "done"
+    covered = coverage(state)
+    bare = [pid for pid in state["order"] if pid not in state["visited"]
+            and not all(n in covered for n in pair_of(pid))]
+    state["visited"].update((pid, {"task": None, "result": BARE}) for pid in bare)
+    print(f"materials tagged: {len(covered)} of {len(params['parameters'])} dimensions have passages; "
+          f"{len(bare)} pair(s) set aside because the materials do not cover them")
+
+
+def start_round(paths: dict, state: dict, params: dict, group: str | None, chain: int | None = None) -> int:
     """Draw the next unseen pairs of a category for `fan` readers."""
     pairs = unseen(state, params, group=group)[:state["fan"] * state["batch"]]
     if not pairs:
         return 0
     rid = len(state["rounds"]) + 1
-    state["rounds"].append({"id": rid, "group": group, "closed": False})
+    state["rounds"].append({"id": rid, "group": group, "closed": False, "chain": chain or rid})
     return pair_tasks(paths, state, params, "explore", pairs, group=group, round=rid)
 
 
 def close_rounds(paths: dict, state: dict, params: dict) -> None:
-    """A draw that found nothing is followed by another, until a topic turns up."""
+    """A draw that found nothing is followed by another; after `dry` in a row the owner is asked."""
     for rnd in state["rounds"]:
         tasks = [t for t in state["tasks"] if t.get("round") == rnd["id"]]
-        if rnd["closed"] or any(t["status"] != "done" for t in tasks):
+        if rnd["closed"] or any(t["status"] in OPEN for t in tasks):
             continue
         rnd["closed"] = True
-        if not sum(t["found"] for t in tasks) and not state["finished"]:
-            again = start_round(paths, state, params, rnd["group"])
+        if sum(t["found"] for t in tasks) or state["finished"]:
+            continue
+        chain = [r["id"] for r in state["rounds"] if r["chain"] == rnd["chain"]]
+        if len(chain) < state["dry"]:
+            again = start_round(paths, state, params, rnd["group"], rnd["chain"])
             print(f"round {rnd['id']} found nothing; " + (f"drew {again} more prompt(s), run next"
                                                           if again else "nothing left to draw there"))
+            continue
+        results: dict[str, int] = {}
+        for task in state["tasks"]:
+            if task.get("round") in chain and task["status"] == "done":
+                for a, b in task["items"]:
+                    kind = state["visited"][pair_id(a, b)]["result"]
+                    results[kind] = results.get(kind, 0) + 1
+        state["stopped"] = {"group": rnd["group"], "draws": len(chain), "results": results}
+        print(f"{len(chain)} draws in a row found nothing; stopped, the owner decides where to look next")
 
 
 def check_answer(data, task: dict, params: dict, passage_ids: set[str]) -> tuple[list[str], dict[int, dict]]:
@@ -723,11 +941,13 @@ def cmd_start(args) -> int:
     random.Random(seed).shuffle(order)
     paths["run"].mkdir(parents=True, exist_ok=True)
     paths["state"].write_text(dump({
-        "version": 1, "run": args.run, "seed": seed, "batch": args.batch, "deepen": args.deepen,
-        "fan": args.fan, "limit": args.limit, "stage": "anchor", "anchor_fields": fields, "anchor": "",
+        "version": VERSION, "run": args.run, "seed": seed, "batch": args.batch, "deepen": args.deepen,
+        "fan": args.fan, "limit": args.limit, "dry": args.dry, "index_over": args.index_over,
+        "localize": not args.stock_examples, "stage": "anchor", "anchor_fields": fields, "anchor": "",
+        "sharpen": [], "examples": {}, "examples_for": "",
         "materials": [material_record(p, i, "local") for i, p in enumerate(files, 1)],
-        "scope": None, "failed": [], "order": order, "visited": {},
-        "rounds": [], "tasks": [], "topics": [], "drawer": [], "finished": False}), encoding="utf-8")
+        "scope": None, "failed": [], "index": "off", "tags": {}, "order": order, "visited": {},
+        "rounds": [], "stopped": None, "tasks": [], "topics": [], "drawer": [], "finished": False}), encoding="utf-8")
     print(f"run {args.run}: {len(order)} pairs in shuffled order (seed {seed}), {len(files)} material file(s) listed")
     print("then:  ./fw topic-enumerate serve   (keep it running; give the owner its address)\n"
           "       ./fw topic-enumerate next    (waits until the owner presses a button)")
@@ -740,6 +960,7 @@ def cmd_next(args) -> int:
     deadline = time.monotonic() + args.wait
     while True:
         with locked(paths) as state:
+            paths["heartbeat"].touch()
             if state["finished"]:
                 print(f"finished: the owner closed the run with {len(state['drawer'])} topic(s) in the drawer\n"
                       "then:     ./fw topic-enumerate shortlist")
@@ -748,9 +969,14 @@ def cmd_next(args) -> int:
             for task in ready:
                 task["status"] = "sent"
                 print(f"task:   {task['id']} {task['kind']}")
-                print(f"prompt: {rel(paths['tasks'] / (task['id'] + '.md'))}")
-                print(f"answer: {rel(paths['answers'] / (task['id'] + '.json'))}\n")
-            if ready:
+                print(f"prompt: {paths['tasks'] / (task['id'] + '.md')}")
+                print(f"answer: {paths['answers'] / (task['id'] + '.json')}\n")
+            stops = [t for t in state["tasks"] if t.get("stop")]
+            for task in stops:
+                task["stop"] = False
+            if stops:
+                print("stop:   " + " ".join(t["id"] for t in stops) + "\n")
+            if ready or stops:
                 return 0
         if time.monotonic() >= deadline:
             print("waiting: nothing new to send; run next again")
@@ -763,8 +989,7 @@ def cmd_take(args) -> int:
     params = load_params()
     rejected = 0
     with locked(paths) as state:
-        passage_ids = {p["id"] for p in json.loads(paths["passages"].read_text(encoding="utf-8"))} \
-            if paths["passages"].is_file() else set()
+        passage_ids = {p["id"] for p in load_passages(paths)}
         for task in [t for t in state["tasks"] if t["status"] == "sent"]:
             prompt = paths["tasks"] / f"{task['id']}.md"
             answer = paths["answers"] / f"{task['id']}.json"
@@ -778,7 +1003,9 @@ def cmd_take(args) -> int:
                 errors, rows = [f"not valid JSON: {exc}"], {}
             else:
                 if task["kind"] in SETUP_KINDS:
-                    errors, rows = record_setup(paths, state, task, data), None
+                    errors, rows = record_setup(paths, state, params, task, data), None
+                elif task["kind"] == "index":
+                    errors, rows = record_index(state, params, task, data), None
                 else:
                     errors, rows = check_answer(data, task, params, passage_ids)
             if errors:
@@ -792,9 +1019,11 @@ def cmd_take(args) -> int:
                 print(f"{task['id']}: accepted ({task['kind']})")
             else:
                 print(f"{task['id']}: accepted, {record(state, task, rows)} topic(s)")
+        close_index(paths, state, params)
         close_rounds(paths, state, params)
         out = [t["id"] for t in state["tasks"] if t["status"] == "sent"]
-        print(f"{len(state['visited'])}/{len(state['order'])} pairs read, {len(state['topics'])} topic(s); "
+        read = sum(v["result"] != BARE for v in state["visited"].values())
+        print(f"{read}/{len(state['order'])} pairs read, {len(state['topics'])} topic(s); "
               + ("still out: " + " ".join(out) if out else "nothing out"))
     return 1 if rejected else 0
 
@@ -813,30 +1042,69 @@ def cmd_choose(args) -> int:
 
 def cmd_shortlist(args) -> int:
     paths = topic_enum_paths(resolve_unit(args.unit), args.run)
-    by_n = load_params()["by_n"]
+    params = load_params()
+    by_n = params["by_n"]
+    designs = {t["name"]: t["design"] for t in params["types"]}
     with locked(paths) as state:
-        topics = [topic_by_id(state, tid) for tid in state["drawer"]]
-    print(f"# 抽屜裡的候選題目（{len(topics)} 題）\n")
+        pass
+    passages = {p["id"]: p for p in load_passages(paths)}
+    materials = {m["id"]: m for m in state["materials"]}
+    topics = [topic_by_id(state, tid) for tid in state["drawer"]]
+
+    def cell(text: str) -> str:
+        return text.replace("|", "｜").replace("\n", " ")
+
+    print(f"<!-- ./fw topic-enumerate shortlist，run {state['run']}，{datetime.date.today().isoformat()}。"
+          "題目來自材料裡的矛盾；文獻上新不新、資料拿不拿得到，都還沒查。 -->\n")
+    print("# 候選題目\n\n| 題目 | 核心問題 | 可行性 | 主要文獻缺口 | 決策 |\n| :--- | :--- | :--- | :--- | :--- |")
     for t in topics:
-        print(f"## {t['id']} {t['question']}\n")
-        print(f"- 題型：{t['type']}" + (f"（依{t['axis']}切分）" if t["axis"] else ""))
-        print(f"- 矛盾：改善「{by_n[t['improves']]['analogy']}」會惡化「{by_n[t['worsens']]['analogy']}」")
-        print(f"- 對象與場域：{t['scope']}")
-        print(f"- 需要的資料：{t['data']}")
-        print(f"- 理由：{t['why']}")
-        print(f"- 依據段落：{'、'.join(t['passages'])}\n")
+        print(f"| {t['id']}（題名待定） | {cell(t['question'])} | 待查 | 待查 | 待查 |")
+    for t in topics:
+        improves, worsens = by_n[t["improves"]]["analogy"], by_n[t["worsens"]]["analogy"]
+        print(f"\n## {t['id']} {t['question']}\n")
+        print(f"- **題型**：{t['type']}" + (f"（依{t['axis']}切分）" if t["axis"] else "") + f"。{designs[t['type']]}")
+        print(f"- **核心矛盾**：改善「{improves}」會惡化「{worsens}」")
+        print(f"- **研究對象與範圍**：{t['scope']}")
+        print(f"- **需要的資料**：{t['data']}")
+        print(f"- **初步重要性**：{t['why']}")
+        print("- **觸發材料**（只用來指出問題；要引用時先照 source-kit 取得原文、建書目）：")
+        for pid in t["passages"]:
+            m = materials[passages[pid]["material"]]
+            where = "，".join(x for x in (m["source"], m["date"]) if x)
+            print(f"  - `{pid}` {m['title']}" + (f"（{where}）" if where else "") + (f" <{m['url']}>" if m["url"] else "")
+                  + f"：{cell(passages[pid]['text'])}")
+        family = [o for o in state["topics"] if o["pair"] == t["pair"] and o["id"] != t["id"]]
+        if family:
+            print("- **同一個矛盾的其他問法**（可以當子問題，或用來界定這一題不處理什麼）：")
+            for o in family:
+                print(f"  - {o['id']} {o['type']}" + (f"（依{o['axis']}切分）" if o["axis"] else "")
+                      + f"：{o['question']}" + ("" if o["id"] in state["drawer"] else "（沒放進抽屜）"))
+        print(f"- **文獻搜尋的起點**：「{improves}」與「{worsens}」是找矛盾用的通用說法，不是學術概念；"
+              "先各自對應到這個領域的概念，再找討論兩者關係的文獻")
+        print("- **待查**：文獻是否已經回答；需要的資料是否在下面的「可得資料」之內")
+    print("\n# 選題時的條件\n")
+    for h in WITHHELD_HEADS:
+        print(f"- **{h}**：{cell(state['anchor_fields'][h])}")
     return 0
 
 
-def view(state: dict, params: dict, passages: dict[str, dict]) -> dict:
+def view(paths: dict, state: dict, params: dict, passages: dict[str, dict]) -> dict:
     """What the page shows, including which buttons can be pressed."""
     out = outstanding(state)
+    beat = paths["heartbeat"]
+    covered = coverage(state) if state["index"] == "done" else None
     page = {
         "stage": state["stage"], "finished": state["finished"], "out": len(out),
-        "working": sorted({t["kind"] for t in out}), "anchor_fields": state["anchor_fields"],
-        "materials": state["materials"], "budget": WARN_CHARS,
+        "working": sorted({t["kind"] for t in out}), "waiting": sum(t["status"] == "new" for t in out),
+        "listening": beat.is_file() and time.time() - beat.stat().st_mtime < LISTEN_GRACE,
+        "anchor_fields": state["anchor_fields"], "sharpen": state["sharpen"],
+        "materials": state["materials"], "budget": WARN_CHARS, "index_over": state["index_over"],
         "used_chars": sum(m["chars"] for m in state["materials"] if m["use"]),
         "scope": state["scope"], "failed": state["failed"],
+        "dimensions": [{"n": p["n"], "group": p["group"], "name": p["analogy"], "examples": examples(state, p),
+                        "passages": covered.get(p["n"], 0) if covered is not None else None}
+                       for p in params["parameters"]],
+        "localized": bool(state["examples"]),
         "log": [{k: t.get(k) for k in ("id", "kind", "group", "topic", "status", "found")}
                 | {"count": len(t["items"])} for t in state["tasks"][-12:]][::-1]}
     if state["stage"] != "explore":
@@ -846,12 +1114,15 @@ def view(state: dict, params: dict, passages: dict[str, dict]) -> dict:
     def can(**choice) -> bool:
         return choice_problem(state, params, choice) is None
 
+    def result(pid: str) -> str | None:
+        return state["visited"].get(pid, {}).get("result")
+
     groups = []
     for name in dict.fromkeys(p["group"] for p in params["parameters"]):
-        inside = [pid for pid in state["order"]
+        inside = [result(pid) for pid in state["order"]
                   if name in (by_n[pair_of(pid)[0]]["group"], by_n[pair_of(pid)[1]]["group"])]
-        groups.append({"name": name, "total": len(inside),
-                       "read": sum(pid in state["visited"] for pid in inside),
+        groups.append({"name": name, "total": len(inside), "bare": inside.count(BARE),
+                       "read": sum(r not in (None, BARE) for r in inside),
                        "ok": can(action="explore", group=name)})
     titles = {m["file"]: m["title"] for m in state["materials"]}
     topics = []
@@ -864,8 +1135,12 @@ def view(state: dict, params: dict, passages: dict[str, dict]) -> dict:
             "can_vary": can(action="vary", topic=t["id"]), "can_split": can(action="split", topic=t["id"]),
             "deepen": [{"n": n, "name": by_n[n]["analogy"], "ok": can(action="deepen", topic=t["id"], dimension=n)}
                        for n in (t["improves"], t["worsens"])]})
+    bare = sum(v["result"] == BARE for v in state["visited"].values())
     return page | {
-        "anchor": state["anchor"], "read": len(state["visited"]), "total": len(state["order"]),
+        "anchor": state["anchor"], "read": len(state["visited"]) - bare, "bare": bare, "total": len(state["order"]),
+        "index": {"state": state["index"], "total": len(passages), "tagged": len(state["tags"]),
+                  "can_resume": can(action="index")},
+        "stopped": state["stopped"],
         "groups": groups, "any_ok": can(action="explore"), "topics": topics, "drawer": state["drawer"]}
 
 
@@ -904,7 +1179,7 @@ def make_server(paths: dict[str, Path], port: int) -> ThreadingHTTPServer:
                 return self.send(200, PAGE.read_bytes(), "text/html; charset=utf-8")
             if self.path == "/state":
                 with locked(paths) as state:
-                    return self.send_json(200, view(state, params, passages()))
+                    return self.send_json(200, view(paths, state, params, passages()))
             self.send_json(404, {"error": "not found"})
 
         def do_POST(self) -> None:
@@ -964,6 +1239,12 @@ def main() -> int:
     p.add_argument("--fan", type=int, default=4, help="prompts per category draw, read in parallel (default 4)")
     p.add_argument("--deepen", type=int, default=10, help="pairs read per deepen, split into prompts (default 10)")
     p.add_argument("--limit", type=int, default=12, help="prompts allowed out at once (default 12)")
+    p.add_argument("--dry", type=int, default=2,
+                   help="empty draws in a row before the search stops and asks the owner (default 2)")
+    p.add_argument("--index-over", type=int, default=20_000, metavar="CHARS",
+                   help="tag passages by dimension when the materials are longer than this (default 20000)")
+    p.add_argument("--stock-examples", action="store_true",
+                   help="keep the dimensions' stock examples instead of having them rewritten for the field")
     p = command("serve", cmd_serve, "the owner's page, on 127.0.0.1")
     p.add_argument("--port", type=int, default=8741, help="port to listen on (default 8741; 0 picks a free one)")
     p = command("next", cmd_next, "print the prompts ready to send; waits for the owner")
@@ -990,8 +1271,8 @@ def main() -> int:
         args.action, args.topic = words[0], (words[1] if len(words) == 2 else None)
     if getattr(args, "run", None) and not re.fullmatch(r"[A-Za-z0-9._-]+", args.run):
         sys.exit("--run takes letters, digits, dot, underscore and hyphen only")
-    if min(getattr(args, name, 1) for name in ("batch", "fan", "deepen", "limit")) < 1:
-        sys.exit("--batch, --fan, --deepen and --limit must be at least 1")
+    if min(getattr(args, name, 1) for name in ("batch", "fan", "deepen", "limit", "dry")) < 1:
+        sys.exit("--batch, --fan, --deepen, --limit and --dry must be at least 1")
     return args.func(args)
 
 

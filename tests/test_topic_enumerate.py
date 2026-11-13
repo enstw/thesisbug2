@@ -166,9 +166,9 @@ class RunCase(unittest.TestCase):
 class RunTests(RunCase):
     def test_begin_needs_a_filled_anchor_and_a_material_with_text(self):
         self.ok("init", "topic")
-        self.ok("start", "topic")
+        self.ok("start", "topic", "--stock-examples")
         self.assertIn("「領域」還沒填", self.fw("choose", "topic", "begin").stderr)
-        self.assertIn("「現象」還沒填", self.fw("choose", "topic", "anchor").stderr)
+        self.assertIn("「現象」裡還有〔〕要補", self.fw("choose", "topic", "anchor").stderr)
         (self.base / "anchor.md").write_text(ANCHOR, encoding="utf-8")
         self.ok("choose", "topic", "anchor")
         self.assertEqual(self.state()["stage"], "materials")
@@ -204,8 +204,9 @@ class RunTests(RunCase):
         for wanted in ("虛構學門的虛構次領域", "某虛構城市在 2031 年推行的虛構登記制度",
                        "[M01-P001] 第一段", "[M01-P003] 第三段", "### 材料 1：虛構日報的報導", "〈虛構報導〉",
                        "5. 甲：",
-                       "units/01-preparation-topic/topic-enum/runs/r1/answers/T001.json"):
+                       str(self.run_dir / "answers" / "T001.json")):
             self.assertIn(wanted, prompt)
+        self.assertEqual(task["answer"], str(self.run_dir / "answers" / "T001.json"))
         for leaked in ("只有主人知道", "這段註解", "不該進 prompt 的前言", "TRIZ", "切片", "信任與風險",
                        "移動物體", "參數", "materials/news.md", "{{"):
             self.assertNotIn(leaked, prompt)
@@ -332,14 +333,131 @@ class RunTests(RunCase):
         self.ok("choose", "topic", "keep", "Q001")
         self.ok("choose", "topic", "keep", "Q001")
         self.assertEqual(self.state()["drawer"], ["Q001"])
+        self.ok("choose", "topic", "vary", "Q001")
+        self.assertEqual(self.answer(rows(3, kind="不適用", n2={"n": 2, "topics": [
+            refined(question="在何種條件下不會變久？")]})).returncode, 0)
+        found = self.state()["topics"][0]
+        by_n = te.load_params()["by_n"]
         out = self.ok("shortlist", "topic").stdout
-        self.assertIn("# 抽屜裡的候選題目（1 題）", out)
-        self.assertIn("## Q001 為何登記越嚴格，等待越久？", out)
+        for wanted in ("| Q001（題名待定） | 為何登記越嚴格，等待越久？ | 待查 | 待查 | 待查 |",
+                       "## Q001 為何登記越嚴格，等待越久？",
+                       "- **題型**：解釋。研究設計偏向機制",
+                       f"- **核心矛盾**：改善「{by_n[found['improves']]['analogy']}」會惡化「{by_n[found['worsens']]['analogy']}」",
+                       "  - `M01-P001` 虛構日報的報導（虛構日報）：第一段：登記變嚴格之後，申請人等待的時間變長。",
+                       "  - Q002 條件：在何種條件下不會變久？（沒放進抽屜）",
+                       "- **可得資料**：只有主人知道的資料來源"):
+            self.assertIn(wanted, out)
         self.ok("choose", "topic", "drop", "Q001")
         self.assertEqual(self.state()["drawer"], [])
         self.ok("choose", "topic", "finish")
         self.assertEqual(self.fw("next", "topic", "--wait", "0").returncode, 5)
         self.assertIn("這一輪已經結束", self.fw("choose", "topic", "explore").stderr)
+
+
+    def test_cancel_withdraws_prompts_and_frees_their_pairs_and_buttons(self):
+        self.found_topic()
+        self.assertIn("沒有進行中的工作", self.fw("choose", "topic", "cancel").stderr)
+        self.ok("choose", "topic", "explore")
+        self.ok("choose", "topic", "vary", "Q001")
+        sent = self.tasks()
+        held = self.state()["tasks"][1]["items"]
+        self.ok("choose", "topic", "split", "Q001")
+        self.ok("choose", "topic", "cancel")
+        self.assertEqual(self.tasks(), [{"stop": "T002 T003"}])
+        self.assertEqual(self.fw("next", "topic", "--wait", "0").returncode, 3)
+        r = self.answer(rows(5, n1={"n": 1, "topics": [topic()]}), sent[0])
+        self.assertIn("5/741 pairs read, 1 topic(s); nothing out", r.stdout)
+        state = self.state()
+        self.assertEqual([t["status"] for t in state["tasks"]], ["done", "cancelled", "cancelled", "cancelled"])
+        self.assertEqual((state["topics"][0]["done"], state["rounds"][1]["closed"]), ([], True))
+        self.ok("choose", "topic", "vary", "Q001")
+        self.ok("choose", "topic", "explore")
+        self.assertEqual(self.state()["tasks"][5]["items"], held)
+
+    def test_search_stops_to_ask_after_empty_draws_in_a_row(self):
+        self.start()
+        self.ok("choose", "topic", "explore", "--group", "信任與風險")
+        self.answer(rows(5, kind="材料無依據"))
+        r = self.answer(rows(5, n2={"n": 2, "topics": [], "none": "無矛盾", "reason": "互不影響"}, kind="材料無依據"))
+        self.assertIn("2 draws in a row found nothing; stopped", r.stdout)
+        state = self.state()
+        self.assertEqual(len(state["tasks"]), 2)
+        self.assertEqual(state["stopped"], {"group": "信任與風險", "draws": 2, "results": {"材料無依據": 9, "無矛盾": 1}})
+        self.assertEqual(self.fw("next", "topic", "--wait", "0").returncode, 3)
+        self.ok("choose", "topic", "explore")
+        self.assertIsNone(self.state()["stopped"])
+
+    def test_long_materials_are_tagged_first_and_prompts_carry_only_what_their_pairs_touch(self):
+        self.prepare()
+        self.ok("start", "topic", "--seed", "7", "--fan", "1", "--index-over", "10")
+        self.ok("choose", "topic", "begin")
+        self.assertIn("材料還在整理", self.fw("choose", "topic", "explore").stderr)
+        (task,) = self.tasks()
+        self.assertEqual(task["task"], "T001 index")
+        prompt = (self.root / task["prompt"]).read_text(encoding="utf-8")
+        for wanted in ("某虛構城市在 2031 年推行的虛構登記制度", "1. 行動者的負擔（例如：", "39. ",
+                       "[M01-P001] 第一段", "〈小標〉\n\n[M01-P003] 第三段", "最多標 4 個"):
+            self.assertIn(wanted, prompt)
+        for leaked in ("TRIZ", "移動物體", "規模與範圍", "只有主人知道", "{{"):
+            self.assertNotIn(leaked, prompt)
+
+        def tags(p1=(1, 2), **more):
+            return {"rows": [{"p": "M01-P001", "dims": list(p1)}, {"p": "M01-P002", "dims": [3]},
+                             {"p": "M01-P003", "dims": []}][:more.get("keep", 3)]}
+
+        for data, message in ((tags(keep=2), "no row for M01-P003"), (tags(p1=(1, 40)), "dims must list at most 4"),
+                              (tags(p1=(1, 2, 3, 4, 5)), "dims must list at most 4")):
+            self.assertIn(message, self.answer(data, task).stderr)
+        self.ok("choose", "topic", "cancel")
+        self.assertIn("材料還在整理", self.fw("choose", "topic", "explore").stderr)
+        self.ok("choose", "topic", "index")
+        task, stop = self.tasks()
+        self.assertEqual((stop, task["task"]), ({"stop": "T001"}, "T002 index"))
+        r = self.answer(tags(), task)
+        self.assertIn("materials tagged: 3 of 39 dimensions have passages; 738 pair(s) set aside", r.stdout)
+        self.assertIn("0/741 pairs read", r.stdout)
+        state = self.state()
+        self.assertEqual((state["index"], state["tags"]["M01-P001"], len(state["visited"])), ("done", [1, 2], 738))
+
+        self.ok("choose", "topic", "explore")
+        (task,) = self.tasks()
+        self.assertEqual(sorted(te.pair_id(a, b) for a, b in self.state()["tasks"][2]["items"]),
+                         ["01x02", "01x03", "02x03"])
+        prompt = (self.root / task["prompt"]).read_text(encoding="utf-8")
+        self.assertIn("[M01-P002] 第二段", prompt)
+        self.assertNotIn("M01-P003", prompt)
+        r = self.answer(rows(3, n1={"n": 1, "topics": [topic()]}), task)
+        self.assertIn("3/741 pairs read, 1 topic(s)", r.stdout)
+        self.assertIn("都看過或正在看了", self.fw("choose", "topic", "explore").stderr)
+        self.ok("choose", "topic", "split", "Q001")
+        prompt = (self.root / self.tasks()[0]["prompt"]).read_text(encoding="utf-8")
+        self.assertIn("[M01-P001] 第一段", prompt)
+        self.assertNotIn("[M01-P003]", prompt)
+
+    def test_saving_the_anchor_has_the_examples_rewritten_for_the_field(self):
+        self.prepare()
+        self.ok("start", "topic", "--seed", "7", "--fan", "1")
+        self.ok("choose", "topic", "anchor")
+        (task,) = self.tasks()
+        self.assertEqual(task["task"], "T001 localize")
+        prompt = (self.root / task["prompt"]).read_text(encoding="utf-8")
+        self.assertIn("某虛構城市在 2031 年推行的虛構登記制度", prompt)
+        self.assertIn("39. ", prompt)
+        self.assertNotIn("只有主人知道", prompt)
+        self.assertIn("上一個工作還在進行", self.fw("choose", "topic", "begin").stderr)
+        full = {"rows": [{"n": n, "examples": f"虛構例子{n}"} for n in range(1, 40)]}
+        self.assertIn("needs one row for each of the 39", self.answer({"rows": full["rows"][:38]}, task).stderr)
+        self.assertIn("longer than 80", self.answer(
+            {"rows": full["rows"][:38] + [{"n": 39, "examples": "長" * 81}]}, task).stderr)
+        self.assertEqual(self.answer(full, task).returncode, 0)
+        self.ok("choose", "topic", "anchor")
+        self.assertEqual(len(self.state()["tasks"]), 1)
+        self.ok("choose", "topic", "begin")
+        self.ok("choose", "topic", "explore")
+        prompt = (self.root / self.tasks()[0]["prompt"]).read_text(encoding="utf-8")
+        a, b = self.state()["tasks"][1]["items"][0]
+        self.assertIn(f"（例如：虛構例子{a}）", prompt)
+        self.assertNotIn(te.load_params()["by_n"][b]["examples"], prompt)
 
 
 class PageTests(RunCase):
@@ -371,7 +489,9 @@ class PageTests(RunCase):
         self.serve()
         self.assertIn("<title>選題</title>", self.get("/"))
         view = json.loads(self.get("/state"))
-        self.assertEqual((view["read"], view["total"], view["out"]), (5, 741, 0))
+        self.assertEqual((view["read"], view["total"], view["out"], view["listening"]), (5, 741, 0, True))
+        os.utime(self.run_dir / ".listening", (0, 0))
+        self.assertFalse(json.loads(self.get("/state"))["listening"])
         self.assertEqual([g["name"] for g in view["groups"]],
                          ["規模與範圍", "權力、秩序與變遷", "資源與成本", "信任與風險", "治理與制度設計"])
         shown = view["topics"][0]
@@ -383,7 +503,8 @@ class PageTests(RunCase):
         self.assertEqual(self.post({"action": "explore", "group": "規模與範圍"})[0], 200)
         self.assertEqual(self.post({"action": "vary", "topic": "Q001"})[0], 200)
         view = json.loads(self.get("/state"))
-        self.assertEqual((view["drawer"], view["out"], view["topics"][0]["can_vary"]), (["Q001"], 2, False))
+        self.assertEqual((view["drawer"], view["out"], view["waiting"], view["topics"][0]["can_vary"]),
+                         (["Q001"], 2, 2, False))
         status, body = self.post({"action": "split", "topic": "Q404"})
         self.assertEqual((status, body["error"]), (409, "找不到這個題目"))
         self.assertEqual([t["task"] for t in self.tasks()], ["T002 explore", "T003 vary"])
@@ -393,7 +514,7 @@ class PageTests(RunCase):
         (self.root / "COURSE.md").write_text("# 課\n\n| | |\n| :--- | :--- |\n| Field | 虛構學門 |\n", encoding="utf-8")
         (self.base / "materials").mkdir(parents=True)
         (self.base / "materials" / "news.md").write_text(MATERIAL, encoding="utf-8")
-        self.ok("start", "topic", "--seed", "7", "--fan", "1")
+        self.ok("start", "topic", "--seed", "7", "--fan", "1", "--stock-examples")
         self.serve()
         view = json.loads(self.get("/state"))
         self.assertEqual((view["stage"], view["anchor_fields"]["領域"], view["anchor_fields"]["現象"]),
@@ -401,7 +522,21 @@ class PageTests(RunCase):
         self.assertNotIn("topics", view)
         self.assertEqual(self.post({"action": "explore"}), (409, {"error": "還沒開始選題"}))
         self.assertEqual(self.post({"action": "begin"})[1]["error"], "「現象」還沒填；「可得資料」還沒填；「指導與限制」還沒填")
-        fields = {"領域": "虛構學門", "現象": " 某城市的登記制度 ", "可得資料": "申請紀錄", "指導與限制": "兩年"}
+        fields = {"領域": "虛構學門", "現象": " 某城市的登記制度 ", "可得資料": "", "指導與限制": ""}
+        self.assertEqual(self.post({"action": "sharpen", "fields": dict(fields, 現象="")})[1]["error"], "「現象」還沒填")
+        self.assertEqual(self.post({"action": "sharpen", "fields": fields})[0], 200)
+        (task,) = self.tasks()
+        self.assertEqual(task["task"], "T001 sharpen")
+        self.assertIn("某城市的登記制度", (self.root / task["prompt"]).read_text(encoding="utf-8"))
+        self.assertIn("with 2 or 3 entries", self.answer({"options": [{"text": "只有一個", "why": "x"}]}, task).stderr)
+        options = [{"text": "某城市 2031 年的〔哪一項〕登記", "why": "只看一項"}, {"text": "某城市的申請人", "why": "只看一方"}]
+        self.assertEqual(self.answer({"options": options}, task).returncode, 0)
+        view = json.loads(self.get("/state"))
+        self.assertEqual((view["stage"], view["sharpen"], view["anchor_fields"]["現象"]),
+                         ("anchor", options, "某城市的登記制度"))
+        fields.update(可得資料="申請紀錄", 指導與限制="兩年")
+        self.assertEqual(self.post({"action": "anchor", "fields": dict(fields, 現象=options[0]["text"])})[1]["error"],
+                         "「現象」裡還有〔〕要補")
         self.assertEqual(self.post({"action": "anchor", "fields": fields})[0], 200)
         self.assertIn("## 現象\n\n某城市的登記制度\n", (self.base / "anchor.md").read_text(encoding="utf-8"))
 
@@ -409,16 +544,18 @@ class PageTests(RunCase):
         only = view["materials"][0]
         self.assertEqual((view["stage"], only["id"], only["title"], only["source"], only["use"], only["origin"]),
                          ("materials", "M01", "虛構日報的報導", "虛構日報", True, "local"))
+        self.assertEqual((view["sharpen"], len(view["dimensions"]), view["dimensions"][0]["passages"]), ([], 39, None))
         self.assertEqual(view["used_chars"], len(MATERIAL))
         self.assertEqual(self.post({"action": "use", "material": "M01", "on": False})[0], 200)
         self.assertIn("至少要勾選一份", self.post({"action": "begin"})[1]["error"])
-        self.assertEqual(self.post({"action": "use", "material": "M01", "on": True})[0], 200)
+        self.assertEqual(self.post({"action": "use", "material": "*", "on": True})[0], 200)
+        self.assertEqual(json.loads(self.get("/state"))["materials"][0]["use"], True)
         self.assertEqual(self.post({"action": "collect"})[1]["error"], "還沒有搜尋範圍")
 
         self.assertEqual(self.post({"action": "scope"})[0], 200)
         self.assertEqual(self.post({"action": "begin"})[1]["error"], "上一個工作還在進行")
         (task,) = self.tasks()
-        self.assertEqual(task["task"], "T001 scope")
+        self.assertEqual(task["task"], "T002 scope")
         prompt = (self.root / task["prompt"]).read_text(encoding="utf-8")
         self.assertIn("某城市的登記制度", prompt)
         self.assertIn("- 虛構日報的報導", prompt)
@@ -435,10 +572,10 @@ class PageTests(RunCase):
         edited = dict(view["scope"], keywords=["登記制度", "等待時間"])
         self.assertEqual(self.post({"action": "collect", "scope": edited})[0], 200)
         (task,) = self.tasks()
-        self.assertEqual(task["task"], "T002 collect")
+        self.assertEqual(task["task"], "T003 collect")
         prompt = (self.root / task["prompt"]).read_text(encoding="utf-8")
         for wanted in ("  - 等待時間", "2030-01-01 到 2031-06-30", "  - 虛構日報",
-                       "units/01-preparation-topic/topic-enum/materials/", "- 虛構日報的報導"):
+                       f"`{self.base / 'materials'}/`", "- 虛構日報的報導"):
             self.assertIn(wanted, prompt)
         self.assertNotIn("registration", prompt)
         item = {"file": "2031-05-wait.md", "title": "t", "source": "s", "date": "2031-05-01", "url": "u"}

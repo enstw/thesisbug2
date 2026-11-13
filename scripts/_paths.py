@@ -233,7 +233,7 @@ def topic_enum_paths(unit: Path, run: str = "r1") -> dict[str, Path]:
     rd = base / "runs" / run
     return {"base": base, "anchor": base / "anchor.md", "materials": base / "materials",
             "run": rd, "state": rd / "state.json", "lock": rd / ".lock",
-            "passages": rd / "passages.json", "shown": rd / "materials.md",
+            "passages": rd / "passages.json", "heartbeat": rd / ".listening",
             "tasks": rd / "tasks", "answers": rd / "answers"}
 
 

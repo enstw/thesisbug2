@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>選題</title>
+<style>
+  :root {
+    --bg: #f6f4ef; --surface: #fffdf8; --ink: #23201b; --muted: #6d665b; --line: #ddd6c8;
+    --accent: #2f5d50; --accent-ink: #fff; --soft: #e9f0ec; --warn: #9a4a1f; --kept: #b8862b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #191815; --surface: #23211d; --ink: #ece7dc; --muted: #a39b8c; --line: #3a372f;
+      --accent: #7fb7a4; --accent-ink: #10201b; --soft: #26332e; --warn: #e29a6b; --kept: #d9b05c;
+    }
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font: 16px/1.7 system-ui, "PingFang TC", "Noto Sans TC", sans-serif; }
+  header { position: sticky; top: 0; z-index: 5; background: var(--bg); border-bottom: 1px solid var(--line); }
+  .bar, main { max-width: 60rem; margin: 0 auto; padding: 0 1rem; }
+  .bar { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1rem; padding-top: .7rem; padding-bottom: .7rem; }
+  h1 { font-size: 1.15rem; margin: 0; }
+  h2 { font-size: 1.1rem; margin: 1.6rem 0 .5rem; }
+  .grow { flex: 1; }
+  .muted { color: var(--muted); font-size: .9rem; }
+  .warn { color: var(--warn); }
+  .pill { border-radius: 999px; padding: .1rem .7rem; font-size: .85rem; background: var(--soft); }
+  .pill.busy { background: var(--accent); color: var(--accent-ink); }
+  .steps { display: flex; gap: .3rem; margin: 0; padding: 0; list-style: none; font-size: .88rem; color: var(--muted); }
+  .steps li { padding: 0 .6rem; border-radius: 999px; border: 1px solid var(--line); }
+  .steps li.now { color: var(--ink); border-color: var(--accent); font-weight: 600; }
+  button, textarea, input { font: inherit; color: var(--ink); background: var(--surface);
+                            border: 1px solid var(--line); border-radius: .5rem; }
+  button { padding: .35rem .8rem; cursor: pointer; }
+  button:hover:not(:disabled) { border-color: var(--accent); }
+  button:disabled { opacity: .45; cursor: default; }
+  button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  textarea, input[type=date] { width: 100%; padding: .5rem .7rem; }
+  textarea { resize: vertical; }
+  label { display: block; margin: 1rem 0 .2rem; font-weight: 600; }
+  label small { font-weight: 400; color: var(--muted); margin-left: .5rem; }
+  .row { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; margin-top: 1rem; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 0 1rem; }
+  .groups { display: flex; flex-wrap: wrap; gap: .5rem; padding-bottom: .8rem; }
+  .groups button { text-align: left; line-height: 1.3; }
+  .groups small { display: block; color: var(--muted); font-size: .75rem; }
+  @media (max-width: 40rem) {
+    .groups { flex-wrap: nowrap; overflow-x: auto; }
+    .groups button { flex: none; }
+    .two { grid-template-columns: 1fr; }
+  }
+  main { padding-top: 1rem; padding-bottom: 4rem; }
+  details.anchor { margin-bottom: 1rem; }
+  details.anchor pre, .cited p { white-space: pre-wrap; font: inherit; margin: .4rem 0; }
+  .log, .list { margin: 0 0 1rem; padding: 0; list-style: none; }
+  .log li { font-size: .88rem; color: var(--muted); }
+  .list li { display: flex; gap: .7rem; align-items: baseline; padding: .45rem 0; border-bottom: 1px solid var(--line); }
+  .list li.off { opacity: .5; }
+  .list input { flex: none; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: .8rem;
+          padding: 1rem 1.1rem; margin-bottom: 1rem; }
+  .card.kept { border-color: var(--kept); box-shadow: inset 4px 0 0 var(--kept); }
+  .chips { display: flex; flex-wrap: wrap; gap: .4rem; font-size: .8rem; color: var(--muted); }
+  .chips span { border: 1px solid var(--line); border-radius: 999px; padding: 0 .55rem; }
+  .card h3 { font-size: 1.12rem; line-height: 1.55; margin: .5rem 0; }
+  .tension { color: var(--accent); font-weight: 600; }
+  dl { display: grid; grid-template-columns: max-content 1fr; gap: .15rem .8rem; margin: .5rem 0; font-size: .93rem; }
+  dt { color: var(--muted); }
+  dd { margin: 0; }
+  .cited { font-size: .9rem; border-left: 3px solid var(--line); padding-left: .8rem; margin: .4rem 0; }
+  .cited b { color: var(--muted); font-weight: 600; }
+  .actions { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .7rem; }
+  .empty { text-align: center; color: var(--muted); padding: 3rem 1rem; }
+  aside { position: fixed; top: 0; right: 0; bottom: 0; width: min(26rem, 92vw); z-index: 10;
+          background: var(--surface); border-left: 1px solid var(--line); padding: 1rem;
+          transform: translateX(100%); transition: transform .2s; overflow-y: auto; }
+  aside.open { transform: none; box-shadow: -8px 0 24px rgba(0, 0, 0, .18); }
+  aside h2 { margin: 0 0 .6rem; display: flex; align-items: center; }
+  aside ol { padding-left: 1.3rem; margin: 0 0 1rem; }
+  aside li { margin-bottom: .8rem; }
+  aside li button { font-size: .8rem; padding: .1rem .5rem; margin-top: .2rem; }
+  #toast { position: fixed; left: 50%; bottom: 1.2rem; transform: translateX(-50%); z-index: 20;
+           background: var(--warn); color: #fff; padding: .5rem 1rem; border-radius: .5rem; display: none; }
+</style>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <h1>選題</h1>
+    <ol class="steps"><li data-stage="anchor">1 定錨</li><li data-stage="materials">2 材料</li><li data-stage="explore">3 選題</li></ol>
+    <span id="status" class="pill">載入中</span>
+    <span id="progress" class="muted"></span>
+    <span class="grow"></span>
+    <button id="drawer-toggle" hidden>抽屜 <b id="drawer-count">0</b></button>
+  </div>
+  <div class="bar groups" id="groups" hidden></div>
+</header>
+<main>
+  <section id="stage-anchor" hidden>
+    <p class="muted">先說清楚要研究什麼。「領域」和「現象」會原文交給找題目的讀者，請寫到不認識這個題目的人也看得懂；後兩項只留給之後篩選，不會給讀者看。</p>
+    <div id="anchor-form"></div>
+    <div class="row"><button class="primary" id="anchor-save">下一步：材料</button></div>
+  </section>
+
+  <section id="stage-materials" hidden>
+    <div class="row"><button id="back">回到定錨</button></div>
+    <h2>找新聞</h2>
+    <p class="muted">這是整個流程唯一上網的步驟。先擬搜尋範圍，你改過、確認之後才會去下載，抓到的會加進下面的材料清單。已有的材料夠用的話可以跳過。</p>
+    <div class="row" id="scope-ask"><button id="scope-draft">請 AI 擬搜尋範圍</button></div>
+    <p id="scope-working" class="muted" hidden></p>
+    <div id="scope-form" hidden>
+      <label>搜尋詞<small>一行一個</small></label>
+      <textarea id="scope-keywords" rows="8"></textarea>
+      <div class="two">
+        <div><label>從</label><input type="date" id="scope-from"></div>
+        <div><label>到</label><input type="date" id="scope-to"></div>
+      </div>
+      <label>來源<small>一行一個，可以是媒體、機關或一類來源</small></label>
+      <textarea id="scope-sources" rows="5"></textarea>
+      <p class="muted" id="scope-note"></p>
+      <div class="row">
+        <button class="primary" id="collect">照這個範圍下載</button>
+        <button id="scope-redraft">重新擬一份</button>
+      </div>
+    </div>
+    <div id="failed-box" hidden>
+      <h2>抓不到的</h2>
+      <ul class="log" id="failed"></ul>
+    </div>
+
+    <h2>材料</h2>
+    <p class="muted">題目只會從勾選的材料裡長出來，每個題目都要指到其中的段落。材料沒談到的方向不會出現。</p>
+    <ul class="list" id="materials"></ul>
+    <p id="materials-sum" class="muted"></p>
+
+    <div class="row"><button class="primary" id="begin">開始選題</button><span class="muted">開始之後，定錨和材料就固定了。</span></div>
+  </section>
+
+  <section id="stage-explore" hidden>
+    <details class="anchor"><summary class="muted">研究現象</summary><pre id="anchor"></pre></details>
+    <ul class="log" id="log"></ul>
+    <div id="topics"></div>
+  </section>
+</main>
+<aside id="drawer">
+  <h2>抽屜裡的候選題目<span class="grow"></span><button id="drawer-close">關閉</button></h2>
+  <ol id="drawer-list"></ol>
+  <p class="muted" id="drawer-empty">還沒有題目。在題目卡上按「放進抽屜」。</p>
+  <button class="primary" id="finish">結束，就用抽屜裡這些</button>
+</aside>
+<div id="toast"></div>
+<script>
+const KIND = {explore: "隨機抽", deepen: "深入", vary: "變化題型", split: "切分", scope: "擬搜尋範圍", collect: "下載材料"};
+const HEADS = [
+  ["領域", "學門與次領域", 2],
+  ["現象", "想研究的具體現象：誰、在哪裡、什麼時候、發生了什麼。越具體，題目越落地", 6],
+  ["可得資料", "拿得到的資料、場域或受訪者。不會給讀者看", 3],
+  ["指導與限制", "指導教授專長、修業年限、篇幅。不會給讀者看", 3]];
+const $ = id => document.getElementById(id);
+let last = "", open = new Set(), builtAnchor = false, shownScope = null;
+
+function h(tag, props, ...kids) {
+  const el = Object.assign(document.createElement(tag), props || {});
+  for (const k of kids.flat()) if (k != null) el.append(k);
+  return el;
+}
+
+function toast(text) {
+  const t = $("toast");
+  t.textContent = text;
+  t.style.display = "block";
+  clearTimeout(toast.timer);
+  toast.timer = setTimeout(() => { t.style.display = "none"; }, 4000);
+}
+
+async function choose(choice) {
+  try {
+    const r = await fetch("/choose", {method: "POST", body: JSON.stringify(choice),
+      headers: {"Content-Type": "application/json", "X-Topic-Enumerate": "1"}});
+    if (!r.ok) toast((await r.json()).error || "沒有送出");
+  } catch (e) { toast("連不上本機服務"); }
+  refresh();
+}
+
+function act(label, choice, enabled, cls) {
+  return h("button", {textContent: label, disabled: !enabled, className: cls || "",
+                      onclick: () => choose(choice)});
+}
+
+const lines = id => $(id).value.split("\n").map(x => x.trim()).filter(Boolean);
+
+function renderAnchor(s) {
+  if (builtAnchor) return;
+  builtAnchor = true;
+  $("anchor-form").replaceChildren(...HEADS.flatMap(([name, hint, rows]) => [
+    h("label", {htmlFor: "anchor-" + name}, name, h("small", {textContent: hint})),
+    h("textarea", {id: "anchor-" + name, rows, value: s.anchor_fields[name] || ""})]));
+}
+
+function renderMaterials(s) {
+  const working = new Set(s.working);
+  $("materials").replaceChildren(...(s.materials.length ? s.materials.map(m => h("li", {className: m.use ? "" : "off"},
+    h("input", {type: "checkbox", checked: m.use,
+                onchange: e => choose({action: "use", material: m.id, on: e.target.checked})}),
+    h("div", null, m.title, h("div", {className: "muted", textContent:
+      [m.id, m.source, m.date, `${m.chars.toLocaleString()} 字`, m.origin === "collected" ? "剛下載" : ""]
+        .filter(Boolean).join("　")})))) :
+    [h("li", {className: "muted", textContent: "還沒有材料。用下面的步驟找新聞。"})]));
+  const used = s.materials.filter(m => m.use).length;
+  $("materials-sum").textContent = `已選 ${used} 份，共 ${s.used_chars.toLocaleString()} 字。` +
+    (s.used_chars > s.budget ? `每一位讀者都要讀完全部材料，超過 ${s.budget.toLocaleString()} 字會變慢也變貴，建議少選幾份。` : "");
+  $("materials-sum").className = s.used_chars > s.budget ? "warn" : "muted";
+
+  $("scope-working").hidden = !working.size;
+  $("scope-working").textContent = working.has("scope") ? "正在擬搜尋範圍…" : working.has("collect") ? "正在下載，可能要幾分鐘…" : "";
+  $("scope-ask").hidden = !!s.scope || working.size > 0;
+  $("scope-form").hidden = !s.scope;
+  const key = JSON.stringify(s.scope);
+  if (s.scope && key !== shownScope) {
+    shownScope = key;
+    $("scope-keywords").value = s.scope.keywords.join("\n");
+    $("scope-from").value = s.scope.from;
+    $("scope-to").value = s.scope.to;
+    $("scope-sources").value = s.scope.sources.join("\n");
+    $("scope-note").textContent = s.scope.note;
+  }
+  $("collect").disabled = $("scope-redraft").disabled = working.size > 0;
+  $("failed-box").hidden = !s.failed.length;
+  $("failed").replaceChildren(...s.failed.map(f => h("li", {textContent: `${f.what}：${f.reason}`})));
+  $("begin").disabled = working.size > 0 || !used;
+}
+
+function card(t) {
+  const origin = t.parent ? `由 ${t.parent} ${KIND[t.kind]}` : KIND[t.kind];
+  const cited = h("details", {className: "cited", open: open.has(t.id),
+                              ontoggle: e => e.target.open ? open.add(t.id) : open.delete(t.id)},
+    h("summary", {textContent: `依據段落（${t.cited.length}）`}),
+    t.cited.map(c => h("p", null, h("b", {textContent: `${c.id}　${c.file}　`}), c.text)));
+  return h("article", {className: "card" + (t.kept ? " kept" : "")},
+    h("div", {className: "chips"},
+      h("span", {textContent: t.id}), h("span", {textContent: t.type}),
+      t.axis ? h("span", {textContent: `依${t.axis}切分`}) : null, h("span", {textContent: origin})),
+    h("h3", {textContent: t.question}),
+    h("div", {className: "tension", textContent: `改善「${t.improves_name}」→ 惡化「${t.worsens_name}」`}),
+    h("dl", null,
+      h("dt", {textContent: "對象與場域"}), h("dd", {textContent: t.scope}),
+      h("dt", {textContent: "需要的資料"}), h("dd", {textContent: t.data}),
+      h("dt", {textContent: "理由"}), h("dd", {textContent: t.why})),
+    cited,
+    h("div", {className: "actions"},
+      t.kept ? act("從抽屜拿掉", {action: "drop", topic: t.id}, true)
+             : act("放進抽屜", {action: "keep", topic: t.id}, true, "primary"),
+      t.deepen.map(d => act(`深入：${d.name}`, {action: "deepen", topic: t.id, dimension: d.n}, d.ok)),
+      act("變化題型", {action: "vary", topic: t.id}, t.can_vary),
+      act("切分", {action: "split", topic: t.id}, t.can_split)));
+}
+
+function renderExplore(s) {
+  $("progress").textContent = `已看 ${s.read} / ${s.total} 組配對，找到 ${s.topics.length} 題`;
+  $("anchor").textContent = s.anchor.replaceAll("**", "");
+  $("groups").replaceChildren(
+    ...s.groups.map(g => h("button", {disabled: !g.ok, onclick: () => choose({action: "explore", group: g.name})},
+      g.name, h("small", {textContent: `已看 ${g.read} / ${g.total}`}))),
+    h("button", {disabled: !s.any_ok, onclick: () => choose({action: "explore"})},
+      "全部隨機", h("small", {textContent: "不限類別"})));
+  $("log").replaceChildren(...s.log.filter(t => t.kind in KIND && !["scope", "collect"].includes(t.kind))
+    .map(t => h("li", {textContent:
+      `${t.id}　${KIND[t.kind]}${t.group ? "（" + t.group + "）" : ""}${t.topic ? "　" + t.topic : ""}　${t.count} 項：` +
+      (t.status !== "done" ? "進行中" : t.found ? `找到 ${t.found} 題` : "沒有題目")})));
+  $("topics").replaceChildren(...(s.topics.length ? s.topics.map(card) :
+    [h("p", {className: "empty", textContent: s.out ? "正在找，出現題目就會顯示在這裡。"
+      : "還沒有題目。從上面選一個類別開始，會一直找到出現題目為止。"})]));
+  const byId = Object.fromEntries(s.topics.map(t => [t.id, t]));
+  $("drawer-count").textContent = s.drawer.length;
+  $("drawer-empty").hidden = s.drawer.length > 0;
+  $("finish").disabled = s.finished;
+  $("drawer-list").replaceChildren(...s.drawer.map(id => h("li", null,
+    h("div", {textContent: byId[id].question}),
+    h("div", {className: "muted", textContent: `${id}　${byId[id].type}`}),
+    h("button", {textContent: "拿掉", onclick: () => choose({action: "drop", topic: id})}))));
+}
+
+function render(s) {
+  for (const li of document.querySelectorAll(".steps li")) li.className = li.dataset.stage === s.stage ? "now" : "";
+  for (const stage of ["anchor", "materials", "explore"]) $("stage-" + stage).hidden = s.stage !== stage;
+  const exploring = s.stage === "explore";
+  $("groups").hidden = $("drawer-toggle").hidden = !exploring;
+  if (!exploring) $("progress").textContent = "";
+  $("status").textContent = s.finished ? "已結束" : s.out ? `進行中，${s.out} 份` : "等你選擇";
+  $("status").className = "pill" + (s.out && !s.finished ? " busy" : "");
+  if (s.stage === "anchor") renderAnchor(s); else builtAnchor = false;
+  if (s.stage === "materials") renderMaterials(s);
+  if (exploring) renderExplore(s);
+}
+
+async function refresh() {
+  try {
+    const text = await (await fetch("/state", {cache: "no-store"})).text();
+    if (text !== last) { last = text; render(JSON.parse(text)); }
+  } catch (e) { $("status").textContent = "連不上本機服務"; }
+}
+
+$("anchor-save").onclick = () => choose({action: "anchor",
+  fields: Object.fromEntries(HEADS.map(([name]) => [name, $("anchor-" + name).value]))});
+$("back").onclick = () => choose({action: "back"});
+$("scope-draft").onclick = $("scope-redraft").onclick = () => choose({action: "scope"});
+$("collect").onclick = () => choose({action: "collect", scope: {
+  keywords: lines("scope-keywords"), from: $("scope-from").value, to: $("scope-to").value,
+  sources: lines("scope-sources"), note: $("scope-note").textContent}});
+$("begin").onclick = () => choose({action: "begin"});
+$("drawer-toggle").onclick = () => $("drawer").classList.toggle("open");
+$("drawer-close").onclick = () => $("drawer").classList.remove("open");
+$("finish").onclick = () => choose({action: "finish"});
+refresh();
+setInterval(refresh, 1500);
+</script>
+</body>
+</html>

@@ -227,6 +227,16 @@ def workflow_paths(unit: Path) -> dict[str, Path]:
             "progress": unit / "PROGRESS.md", "decisions": unit / "DECISIONS.md"}
 
 
+def topic_enum_paths(unit: Path, run: str = "r1") -> dict[str, Path]:
+    """Topic enumeration: the owner's anchor, default materials, and one run's ledger."""
+    base = unit / "topic-enum"
+    rd = base / "runs" / run
+    return {"base": base, "anchor": base / "anchor.md", "materials": base / "materials",
+            "run": rd, "state": rd / "state.json", "lock": rd / ".lock",
+            "passages": rd / "passages.json", "shown": rd / "materials.md",
+            "tasks": rd / "tasks", "answers": rd / "answers"}
+
+
 INCLUDE_RE = re.compile(r"\{\{<\s*include\s+(\S+?)\s*>\}\}")
 
 # Files the author writes but that are not prose to check: status files quote

@@ -115,18 +115,61 @@ term that is neither ordinary nor approved.
    reader gets one prompt file and nothing else — no other paragraph, no unit
    files, no conversation. The glossary reaches the reader only inside that
    prompt, never as a file to open, because a reader that can open the
-   manuscript's files is no longer isolated. Use a fresh-context subagent per paragraph, or an
-   external model through whatever review integration the host has (select and
-   record the model as gpt-review § Step 0 does), started outside the course
-   directory so it cannot open the manuscript. Do not batch paragraphs into one
+   manuscript's files is no longer isolated. Do not batch paragraphs into one
    request to save calls, because the batch is the context that hides the
-   terms. A lighter model or a lower reasoning effort is enough, since
-   reconstructing the meaning is exactly what the reader is not supposed to
-   do; in the maintainer's runs it picked at least as much. Two readers from different model families are better
-   than one, and the report shows where they agree. Name each reader directory
-   after the model and effort. With no isolated reader available, leave the
-   prompts in place and report the check as pending; a same-context reread is
-   never this check.
+   terms.
+
+   **The default reader is Claude Haiku at low effort, run headless**
+   (maintainer decision, 2026-11-14), whichever agent is the host. The
+   maintainer's Claude quota is the largest, and a stronger reader buys
+   nothing, since reconstructing the meaning is exactly what the reader is
+   not supposed to do: on twenty thesis paragraphs Haiku touched 81–85% of
+   the fragments a Codex and a Gemini reader had both picked, about as often
+   as those two touched each other's picks, and Sonnet at ten times the cost
+   touched no more.
+
+   ```bash
+   out=$(cd <out> && pwd); reader=claude-haiku-low
+   mkdir -p "$out/picks/$reader"
+   cd "$(mktemp -d)"
+   find "$out/prompts" -name 'p*.md' | sort | xargs -P 6 -I{} sh -c '
+     a="$1/$(basename "$2" .md).json"
+     [ -s "$a" ] && exit 0
+     claude -p --model haiku --effort low --tools "" --strict-mcp-config \
+       --permission-mode dontAsk --safe-mode --no-session-persistence \
+       --system-prompt "你只根據使用者貼上的文字回答。" < "$2" > "$a" || rm -f "$a"
+   ' _ "$out/picks/$reader" {}
+   ```
+
+   The empty directory and `--tools ""` leave the reader nothing to open.
+   `--safe-mode` with `--system-prompt` keeps the client's own system prompt
+   and the user's instruction files out of the request, which would otherwise
+   reach every reader (claude 2.1.325, 2026-11-14: about 1,200 input tokens
+   for a paragraph with both flags, 9,000 with neither). A failed call leaves
+   no file, so running the block again asks only the paragraphs still missing.
+   Prefer this to a subagent even on a Claude host, because a subagent carries
+   the host's instructions and file tools, and only the prompt's own sentence
+   keeps it away from the manuscript.
+
+   **Add at most one more reader, from another model family, and only when
+   that provider's quota can spare it** (the author has said so, or the host
+   can see what is left; when that is unknown, do not start one). Haiku
+   belongs to the family that usually drafted the manuscript, so a second
+   family can pick what Haiku reads without effort; give it the `--sample`
+   paragraphs or the rewritten ones first, where its calls count most. Run it
+   through whatever review integration the host has (select and record the
+   model as gpt-review § Step 0 does), at low effort, started outside the
+   course directory so it cannot open the manuscript. Haiku's own picks vary
+   between runs (three runs made the same pick 54 times out of 236 distinct
+   picks), so a second Haiku run saved as another reader is the cheap way to
+   widen the net. Name each reader directory after the model and effort; the
+   report shows where readers agree.
+
+   Without the `claude` CLI, or when it is not signed in, use the host's own
+   isolated reader on a light model: a fresh-context subagent per paragraph,
+   or an external model as above. With no isolated reader available, leave
+   the prompts in place and report the check as pending; a same-context
+   reread is never this check.
 1. **Build the report:** `./fw read-check collect <out>`. It marks picked
    fragments against the glossary the readers were given and says so at the
    top; `--glossary <file>` names one when the readers had none or the
@@ -167,10 +210,11 @@ marking, and the author's judgment already enters where it decides something,
 at the glossary review and at each line of the worklist. Three things keep
 the picks honest instead:
 
-- **Readers from different model families.** Two models checking each other
+- **A second model family when its quota allows.** Haiku belongs to the
+  family that usually drafted the manuscript, and models checking each other
   tend to settle on what models find fluent, which is how the manuscript got
-  here; a second family can still pick what the first reads without effort,
-  and the report shows where they agree.
+  here; one reader from another family can still pick what Haiku reads
+  without effort. When Haiku alone read, say so with the result.
 - **The glossary is an allowlist.** A term stays because the author approved
   it, never because no reader objected.
 - **The author decides every picked fragment.** The readers over-pick, and a

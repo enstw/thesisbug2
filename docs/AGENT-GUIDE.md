@@ -45,6 +45,8 @@ Use your environment's file, shell, browser, and delegation capabilities. Extern
 
 **Image generation is the provider exception:** use Codex, the maintainer's current stable backend. A Codex host can use its native image tool; another host uses the discovered `genimage-img2` Codex wrapper. Report an unavailable backend instead of substituting another image provider. Supplied PNGs and authored HTML capture still work without AI generation.
 
+**`read-check`'s reader is the second provider exception:** Claude Haiku at low effort, run headless as the skill shows, from any host. Add at most one reader from another model family, and only when that provider's quota can spare it. Without the `claude` CLI, use your own isolated reader or report the check as pending.
+
 | Stage | Skill |
 | :--- | :--- |
 | Choosing a topic | `topic-scout` |

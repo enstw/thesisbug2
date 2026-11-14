@@ -73,6 +73,9 @@ what a source is made to say. The file stays untouched while you wait.
 - Text inside 「」 direct quotes and 《》 titles — verbatim constraints
   (house-style `content-integrity` rules; a quoted official term keeps the
   source's own lexicon even where fix-terms would otherwise correct it).
+  A quote wrapped in `<!-- quote -->…<!-- /quote -->` is one the author has
+  confirmed as a source's words; keep the marks with it, because read-check
+  relies on them to leave its wording out of the worklist.
 - `[@key, locator]` citations — never change a key or locator as a side
   effect of rewording. New claims need new verified locators (below).
 - Hypothesis or research-question wording and operationalization language —

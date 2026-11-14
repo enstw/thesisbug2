@@ -176,6 +176,19 @@ term that is neither ordinary nor approved.
    glossary has changed since. Fragments that do not
    occur verbatim in their paragraph are dropped and counted, and an answer
    that is not a JSON array of strings is listed to be asked again.
+   **Fragments inside a direct quotation are set aside** and listed at the
+   end of the report instead: the wording is the source's, so no rewrite
+   can fix it, and turning a quotation into a paraphrase or retranslating it
+   is the author's call. A 「…」 counts as a quotation when the citation
+   follows its closing mark at once (past an optional parenthetical such as
+   the original wording), when it shares that citation with the next
+   quotation (「甲」、「乙」[註]), or when it elides with ……; quotation marks
+   around the manuscript's own term carry no citation and stay in, because
+   those coinages are what this check exists for. A quotation the rule
+   misses, such as an official term quoted a few words before its citation,
+   is marked in the source as `<!-- quote -->「…」<!-- /quote -->` — after
+   checking the words against the source, since the mark exempts them from
+   every later run. `paras.json` records each paragraph's quotation spans.
    `report.md` opens with the fragments ranked by how many readers picked them
    and how often each occurs across the whole manuscript: a fragment in dozens
    of places and many files is a term the manuscript grew itself. `picks.json`

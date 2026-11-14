@@ -20,7 +20,11 @@ reader and saves that reader's answer, as it came, under
 `<dir>/picks/<reader-name>/<paragraph-id>.*`. `collect` then keeps only the
 fragments that occur verbatim in their paragraph, counts how often each one
 occurs in the whole manuscript, and writes `<dir>/report.md` and
-`<dir>/picks.json`. With a glossary (the one the readers were given, or
+`<dir>/picks.json`. A fragment inside a direct quotation is set aside and
+listed on its own, because its wording is the source's: a quotation is
+recognised from its citation (`quote_spans`), and one the rule misses is
+marked in the source as `<!-- quote -->「…」<!-- /quote -->`.
+With a glossary (the one the readers were given, or
 `collect --glossary`), the report says which picked fragments are terms the
 author has approved: only those may stay as special terms, and the rest are to
 be said in the field's ordinary vocabulary.
@@ -86,12 +90,83 @@ def reader_text(block: str) -> str:
     return re.sub(r"\s*\n\s*", " ", t).strip()
 
 
-def paragraphs(source: str) -> list[tuple[int, str]]:
-    """(1-based line, reader text) for every prose paragraph in a .qmd source."""
-    text = blank_keeping_lines(source, r"\A---\n.*?\n---[ \t]*(?=\n)")
+# After the closing 」 of a direct quotation the citation follows at once, at
+# most past closing marks and one parenthetical (the original wording, say).
+CITED_NEXT = re.compile(r"[」』）)]*(?:（[^（）]*）|\([^()]*\))?\[註\]")
+# What may stand between quotations that share one citation: 「甲」、「乙」[註].
+QUOTE_JOIN = re.compile(r"[、，,與和及或]")
+
+
+def quote_spans(text: str) -> list[tuple[int, int]]:
+    """(start, end) of every 「…」 in a reader text that quotes a source
+    verbatim: the citation follows the closing mark at once, the quotation
+    shares that citation with the next one, or it elides with …… . A reader's
+    pick inside one names the source's wording, which the rewriter may not
+    change, so it is no reading fix. Quotation marks around the manuscript's
+    own term carry no citation and stay in, because such coinages are what
+    this check looks for."""
+    found, depth, start = [], 0, 0
+    for i, ch in enumerate(text):
+        if ch == "「":
+            if not depth:
+                start = i
+            depth += 1
+        elif ch == "」" and depth:
+            depth -= 1
+            if not depth:
+                found.append((start, i + 1))
+    direct = [False] * len(found)
+    for k in range(len(found) - 1, -1, -1):
+        s, e = found[k]
+        joined = (k + 1 < len(found) and direct[k + 1]
+                  and QUOTE_JOIN.fullmatch(text[e:found[k + 1][0]]) is not None)
+        direct[k] = "……" in text[s:e] or bool(CITED_NEXT.match(text, e)) or joined
+    return [span for span, d in zip(found, direct) if d]
+
+
+def locate(text: str, frag: str, quotes: list[tuple[int, int]]) -> tuple[int, bool]:
+    """Offset of a picked fragment and whether it lies inside a quotation. An
+    occurrence in the author's own words is preferred, since that is the one
+    the rewriter can act on."""
+    hits = [m.start() for m in re.finditer(re.escape(frag), text)] if frag else []
+    if not hits:
+        return -1, False
+    inside = [any(s <= at and at + len(frag) <= e for s, e in quotes) for at in hits]
+    if all(inside):
+        return hits[0], True
+    return hits[inside.index(False)], False
+
+
+# The author's mark for a quotation the citation rule cannot see (an official
+# term quoted a few words before its citation, say). Comments vanish from every
+# output, the same way `<!-- zh-src -->` marks Simplified source text.
+QUOTE_OPEN, QUOTE_CLOSE = "\ue000", "\ue001"
+
+
+def take_marks(text: str) -> tuple[str, list[tuple[int, int]]]:
+    """Remove the quote marks from a reader text; return it with their spans."""
+    out, spans, start = [], [], None
+    for ch in text:
+        if ch == QUOTE_OPEN:
+            start = len(out)
+        elif ch == QUOTE_CLOSE:
+            if start is not None:
+                spans.append((start, len(out)))
+            start = None
+        else:
+            out.append(ch)
+    return "".join(out), spans
+
+
+def paragraph_records(source: str) -> list[dict]:
+    """Every prose paragraph in a .qmd source: its 1-based line, its reader
+    text, and the spans of that text that quote a source."""
+    text = re.sub(r"<!--\s*quote\s*-->", QUOTE_OPEN, source)
+    text = re.sub(r"<!--\s*/quote\s*-->", QUOTE_CLOSE, text)
+    text = blank_keeping_lines(text, r"\A---\n.*?\n---[ \t]*(?=\n)")
     text = blank_keeping_lines(text, r"<!--.*?-->")
     text = blank_keeping_lines(text, r"(?m)^(```|~~~).*?^\1[ \t]*$")
-    out: list[tuple[int, str]] = []
+    out: list[dict] = []
     start, block = 0, []
     for no, line in enumerate([*text.split("\n"), ""], 1):
         if line.strip():
@@ -100,11 +175,17 @@ def paragraphs(source: str) -> list[tuple[int, str]]:
             block.append(line.strip())
             continue
         if block and not block[0].startswith(NOT_A_PARAGRAPH):
-            shown = reader_text("\n".join(block))
+            shown, marked = take_marks(reader_text("\n".join(block)))
             if shown:
-                out.append((start, shown))
+                out.append({"line": start, "text": shown,
+                            "quotes": sorted(set(marked) | set(quote_spans(shown)))})
         block = []
     return out
+
+
+def paragraphs(source: str) -> list[tuple[int, str]]:
+    """(1-based line, reader text) for every prose paragraph in a .qmd source."""
+    return [(r["line"], r["text"]) for r in paragraph_records(source)]
 
 
 def glossary_terms(source: str) -> list[dict]:
@@ -152,8 +233,7 @@ def unit_paragraphs(unit: Path, only: list[str] | None = None) -> list[dict]:
         files = [f for f in files if f.name in wanted]
     if not files:
         sys.exit(f"no manuscript .qmd in {rel(unit)} (looked for chapters/*.qmd and *.qmd)")
-    return [{"file": rel(f), "line": line, "text": shown}
-            for f in files for line, shown in paragraphs(f.read_text(encoding="utf-8"))]
+    return [{"file": rel(f), **r} for f in files for r in paragraph_records(f.read_text(encoding="utf-8"))]
 
 
 def sample(paras: list[dict], n: int, seed: int) -> list[dict]:
@@ -230,6 +310,10 @@ def cmd_collect(args: argparse.Namespace) -> None:
         sys.exit(f"no reader answers under {out}/picks/<reader-name>/")
 
     spans: dict[str, dict[tuple[int, int], set[str]]] = {pid: defaultdict(set) for pid in paras}
+    quoted: dict[str, dict[str, set[str]]] = {pid: defaultdict(set) for pid in paras}
+    # paras.json from before quotations were recorded: the citation rule alone.
+    quotes = {pid: [tuple(q) for q in p["quotes"]] if "quotes" in p else quote_spans(p["text"])
+              for pid, p in paras.items()}
     stats = {}
     for r in readers:
         answered, kept, dropped, unparsed = 0, 0, [], []
@@ -243,9 +327,12 @@ def cmd_collect(args: argparse.Namespace) -> None:
                 continue
             answered += 1
             for frag in picks:
-                at = p["text"].find(frag) if frag else -1
+                at, in_quote = locate(p["text"], frag, quotes[pid])
                 if at < 0:
                     dropped.append((pid, frag))
+                    continue
+                if in_quote:
+                    quoted[pid][frag].add(r)
                     continue
                 spans[pid][(at, at + len(frag))].add(r)
                 kept += 1
@@ -285,6 +372,9 @@ def cmd_collect(args: argparse.Namespace) -> None:
     for r, (_a, _k, _d, unparsed) in stats.items():
         if unparsed:
             lines.append(f"\n{r} 無法解析的答案：{'、'.join(unparsed)}（不是 JSON 字串陣列，請重問）")
+    n_quoted = sum(len(q) for q in quoted.values())
+    if n_quoted:
+        lines.append(f"\n直接引文內的片段 {n_quoted} 個不列入上表與下文（字詞是來源原文，不是改寫能處理的難讀），清單在文末。")
 
     spread = sorted(by_text.items(), key=lambda kv: (-len(kv[1]["readers"]), -kv[1]["count"], kv[0]))
     lines += ["", "## 片段在全文的擴散", "",
@@ -319,9 +409,19 @@ def cmd_collect(args: argparse.Namespace) -> None:
         p = paras[pid]
         lines.append(f"- **{pid}** `{p['file']}:{p['line']}`（被挑字數 {share(pid):.0%}）："
                      + "；".join(f"{x['text']}〔{'、'.join(x['readers'])}〕" for x in merged[pid]))
+    if n_quoted:
+        lines += ["", "## 直接引文內的片段（不列入）", "",
+                  "「」緊接引註、與下一段引文共用引註、含「……」，或作者以 <!-- quote --> 標記的引文，字詞是來源原文。要讓這些片段好讀，"
+                  "只能重譯外文引文或改成轉述，由作者決定，不是冷讀的改寫項目。", ""]
+        for pid in sorted(paras):
+            if quoted[pid]:
+                p = paras[pid]
+                lines.append(f"- **{pid}** `{p['file']}:{p['line']}`："
+                             + "；".join(f"{t}〔{'、'.join(sorted(w))}〕" for t, w in sorted(quoted[pid].items())))
     (out / "report.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
     kept = sum(k for _a, k, _d, _u in stats.values())
-    print(f"{len(readers)} readers, {kept} fragments kept -> {rel(out)}/report.md, {rel(out)}/picks.json")
+    print(f"{len(readers)} readers, {kept} fragments kept, {n_quoted} inside direct quotations set aside "
+          f"-> {rel(out)}/report.md, {rel(out)}/picks.json")
 
 
 def main() -> None:

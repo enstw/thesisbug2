@@ -71,6 +71,30 @@ class ParagraphTests(unittest.TestCase):
         self.assertTrue(self.paras[1][1].startswith("Latin words wrap across lines 但中文"))
 
 
+class QuotationTests(unittest.TestCase):
+    def quoted(self, text):
+        return [text[s:e] for s, e in read_check.quote_spans(text)]
+
+    def test_a_quotation_is_known_by_the_citation_after_it(self):
+        self.assertEqual(self.quoted("作者說「貨幣是權力」[註]，本文稱之為「同構接合」。"), ["「貨幣是權力」"])
+        self.assertEqual(self.quoted("他稱為「數位支柱」（a digital pillar）[註]。"), ["「數位支柱」"])
+
+    def test_quotations_sharing_a_citation_and_elisions_count(self):
+        self.assertEqual(self.quoted("法案要求「扣押」、「凍結」[註]；又稱「依面值……贖回」，另見「同構接合」。"),
+                         ["「扣押」", "「凍結」", "「依面值……贖回」"])
+
+    def test_the_manuscripts_own_term_in_quotation_marks_stays_in(self):
+        self.assertEqual(self.quoted("本文所說的「同構接合」，指兩個結構以同一方式相接[註]。"), [])
+
+    def test_the_author_marks_a_quotation_the_rule_misses(self):
+        recs = read_check.paragraph_records(
+            "官方稱之為<!-- quote -->「變相買賣外匯」<!-- /quote -->，逐案追訴[@x, p. 1]，本文另稱「同構接合」，"
+            "這一段夠長可以通過最短字數的門檻。\n")
+        text = recs[0]["text"]
+        self.assertNotIn("quote", text)
+        self.assertEqual([text[s:e] for s, e in recs[0]["quotes"]], ["「變相買賣外匯」"])
+
+
 class GlossaryTests(unittest.TestCase):
     def test_entries_are_bold_lead_ins_with_a_colon(self):
         terms = read_check.glossary_terms(
@@ -155,6 +179,30 @@ class CommandTests(unittest.TestCase):
             self.assertIn("| 同構接合 | 同構接合 | a、b | 1 | 4 | 2 |", report)
             self.assertIn("| 同構接合 | isomorphic coupling | 4 | a、b |", report)
             self.assertIn("| 受許可／無許可 | permissioned / permissionless | 0 |  |", report)
+
+    def test_picks_inside_a_quotation_are_set_aside(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp).resolve()
+            unit = root / "units" / "01-paper-x"
+            (unit / "chapters").mkdir(parents=True)
+            (unit / "WORK.json").write_text("{}", encoding="utf-8")
+            (unit / "chapters" / "01.qmd").write_text(
+                "作者認為美元的地位「日益鈣化」[@smith2020, p. 3]，本文則把日益鈣化的過程稱為同構接合，"
+                "這一段夠長可以通過最短字數的門檻，所以算一段。\n", encoding="utf-8")
+            out = root / "rc"
+            r = self.run_fw(root, "prompts", "units/01-paper-x", "--out", str(out))
+            self.assertEqual(r.returncode, 0, r.stderr)
+            (out / "picks" / "a").mkdir(parents=True)
+            (out / "picks" / "a" / "p0001.json").write_text('["鈣化", "同構接合", "「日益鈣化」"]', encoding="utf-8")
+            r = self.run_fw(root, "collect", str(out))
+            self.assertEqual(r.returncode, 0, r.stderr)
+            picks = json.loads((out / "picks.json").read_text(encoding="utf-8"))
+            # 鈣化 also occurs in the author's own words, so that occurrence is the one kept.
+            self.assertEqual([x["text"] for x in picks["p0001"]], ["鈣化", "同構接合"])
+            self.assertGreater(picks["p0001"][0]["s"], 20)
+            report = (out / "report.md").read_text(encoding="utf-8")
+            self.assertIn("直接引文內的片段 1 個不列入", report)
+            self.assertIn("「日益鈣化」〔a〕", report)
 
     def test_glossary_goes_to_every_reader_and_is_recorded(self):
         with tempfile.TemporaryDirectory() as tmp:

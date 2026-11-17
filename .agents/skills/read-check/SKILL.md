@@ -176,19 +176,40 @@ term that is neither ordinary nor approved.
    glossary has changed since. Fragments that do not
    occur verbatim in their paragraph are dropped and counted, and an answer
    that is not a JSON array of strings is listed to be asked again.
-   **Fragments inside a direct quotation are set aside** and listed at the
-   end of the report instead: the wording is the source's, so no rewrite
-   can fix it, and turning a quotation into a paraphrase or retranslating it
-   is the author's call. A 「…」 counts as a quotation when the citation
-   follows its closing mark at once (past an optional parenthetical such as
-   the original wording), when it shares that citation with the next
-   quotation (「甲」、「乙」[註]), or when it elides with ……; quotation marks
-   around the manuscript's own term carry no citation and stay in, because
-   those coinages are what this check exists for. A quotation the rule
-   misses, such as an official term quoted a few words before its citation,
-   is marked in the source as `<!-- quote -->「…」<!-- /quote -->` — after
-   checking the words against the source, since the mark exempts them from
-   every later run. `paras.json` records each paragraph's quotation spans.
+   **A quotation is treated by whose words its Chinese is**, which
+   `prompts` settles by looking the quotation up in the transcript of the
+   work it cites (`<unit>/refs/<key>.md` or the library's, and the `.tc.md`
+   reading copy of a Simplified source):
+
+   - **Found there word for word, it is the source's wording**: a Chinese
+     source, or a published translation that is itself the work cited.
+     Fragments picked inside it are set aside and listed at the end of the
+     report, because the words have to be copied as they stand and no
+     rewrite can fix them; making them readable means paraphrasing, or
+     citing the original and translating it, which is the author's call.
+   - **Not found there, it is the manuscript's own translation** of a
+     foreign-language source, and its fragments stay in the worklist marked
+     （自譯引文）. The Chinese was chosen by whoever drafted the passage, so a
+     coined rendering enters here with a citation behind it, and exempting it
+     would let it spread. A quotation whose source has no transcript to
+     compare stays in too, since only wording shown to be a source's is set
+     aside. When the work cited is the original, the Chinese is translated
+     from the original, never copied from a translation that is not cited,
+     because the comparison cannot tell a borrowed translation from the
+     manuscript's own.
+
+   A 「…」 counts as a quotation when the citation follows its closing mark
+   at once (past an optional parenthetical such as the original wording),
+   when it shares that citation with the next quotation (「甲」、「乙」[註]),
+   or when it elides with ……; quotation marks around the manuscript's own
+   term carry no citation and are read as the author's text, because those
+   coinages are what this check exists for. A source's own words that these
+   rules miss (an official term quoted a few words before its citation, a
+   quotation whose transcript is garbled at that spot) are marked in the
+   source as `<!-- quote -->「…」<!-- /quote -->`, after checking the words
+   against the source, since the mark exempts them from every later run;
+   the mark is never put on the manuscript's own translation. `paras.json`
+   records both kinds of quotation for each paragraph.
    `report.md` opens with the fragments ranked by how many readers picked them
    and how often each occurs across the whole manuscript: a fragment in dozens
    of places and many files is a term the manuscript grew itself. `picks.json`
@@ -213,6 +234,24 @@ term that is neither ordinary nor approved.
    hypothesis labels and every qualifier that states how strong the evidence is
    stay as they were, because the cheapest way to satisfy a reader is to delete
    the hedge it tripped on.
+
+   **A fragment inside the manuscript's own translation is retranslated from
+   the original, and accepted on two counts.** The readers judge only whether
+   the Chinese reads (達), and they never see the original: the manuscript's
+   real reader has only the Chinese, and a reader holding the source reads the
+   translation through it. Whether the Chinese still says what the source says
+   (信) is a separate check that needs the original, and it comes first,
+   because the cheapest way to make a translation read smoothly is to say
+   something the source did not. So the rewriter opens the passage the report
+   points to (the citation and its transcript) and translates from it, using
+   the glossary's rendering for any term the glossary holds; then the readers
+   stop picking the fragment, and a run other than the rewriter's compares the
+   new Chinese with the original passage and finds the meaning unchanged
+   (source-kit's support review for that citation). A retranslation that
+   passes the readers and fails the comparison is not accepted. Where the
+   source itself is hard, the author chooses between a faithful translation
+   that stays hard, with the original given beside it, and a paraphrase
+   outside quotation marks.
 
 ## The readers do all the picking
 

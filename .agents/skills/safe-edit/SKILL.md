@@ -76,6 +76,12 @@ what a source is made to say. The file stays untouched while you wait.
   A quote wrapped in `<!-- quote -->…<!-- /quote -->` is one the author has
   confirmed as a source's words; keep the marks with it, because read-check
   relies on them to leave its wording out of the worklist.
+  The one exception is a quotation that is the manuscript's own translation
+  of a foreign-language source (read-check lists it as 自譯引文: the Chinese
+  is not in the cited work's transcript). Its Chinese is ours, so it may be
+  retranslated, but only from the original passage and only with a second
+  run confirming the meaning is unchanged (read-check § Procedure, step 5),
+  because a translation reworded for fluency alone drifts from its source.
 - `[@key, locator]` citations — never change a key or locator as a side
   effect of rewording. New claims need new verified locators (below).
 - Hypothesis or research-question wording and operationalization language —

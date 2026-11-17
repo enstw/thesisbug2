@@ -95,6 +95,30 @@ class QuotationTests(unittest.TestCase):
         self.assertEqual([text[s:e] for s, e in recs[0]["quotes"]], ["「變相買賣外匯」"])
 
 
+    def test_a_quotation_is_the_sources_wording_when_its_transcript_has_it(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp).resolve()
+            unit = root / "units" / "01-paper-x"
+            (unit / "refs").mkdir(parents=True)
+            (root / "library" / "refs").mkdir(parents=True)
+            (unit / "refs" / "chen2024.md").write_text(
+                "認知作戰的核心不在於說服，\n而在於使對手喪失「判斷真偽」的能力。這是第一句。\n", encoding="utf-8")
+            (unit / "refs" / "wang2021.md").write_text("货币是权力的延伸。\n", encoding="utf-8")
+            (root / "library" / "refs" / "wang2021.tc.md").write_text("貨幣是權力的延伸。\n", encoding="utf-8")
+            os.environ["FW_COURSE_ROOT"] = str(root)
+            self.addCleanup(os.environ.pop, "FW_COURSE_ROOT")
+            recs = read_check.paragraph_records(
+                "陳氏說「認知作戰的核心不在於說服……喪失『判斷真偽』的能力」[@chen2024, p. 12]，"
+                "又說對手會「失去辨別力」[^1]；王氏稱「貨幣是權力的延伸」[@wang2021, p. 2]，"
+                "史氏則說「貨幣是一種承諾」[@smith2020, p. 9]。\n\n[^1]: 見 [@chen2024, p. 13]。\n",
+                read_check.Sources(unit))
+            text = recs[0]["text"]
+            self.assertEqual([text[s:e] for s, e in recs[0]["quotes"]],
+                             ["「認知作戰的核心不在於說服……喪失『判斷真偽』的能力」", "「貨幣是權力的延伸」"])
+            self.assertEqual([(text[q["s"]:q["e"]], q["cite"], q["refs"]) for q in recs[0]["translations"]],
+                             [("「失去辨別力」", "[^1]", ["units/01-paper-x/refs/chen2024.md"]),
+                              ("「貨幣是一種承諾」", "[@smith2020, p. 9]", [])])
+
 class GlossaryTests(unittest.TestCase):
     def test_entries_are_bold_lead_ins_with_a_colon(self):
         terms = read_check.glossary_terms(
@@ -180,29 +204,62 @@ class CommandTests(unittest.TestCase):
             self.assertIn("| 同構接合 | isomorphic coupling | 4 | a、b |", report)
             self.assertIn("| 受許可／無許可 | permissioned / permissionless | 0 |  |", report)
 
-    def test_picks_inside_a_quotation_are_set_aside(self):
+    QUOTING = ("作者認為美元的地位「日益鈣化」[@smith2020, p. 3]，本文則把日益鈣化的過程稱為同構接合，"
+               "這一段夠長可以通過最短字數的門檻，所以算一段。\n")
+
+    def quoting_unit(self, root, transcripts):
+        unit = root / "units" / "01-paper-x"
+        (unit / "chapters").mkdir(parents=True)
+        (unit / "WORK.json").write_text("{}", encoding="utf-8")
+        (unit / "chapters" / "01.qmd").write_text(self.QUOTING, encoding="utf-8")
+        for name, text in transcripts.items():
+            (root / name).parent.mkdir(parents=True, exist_ok=True)
+            (root / name).write_text(text, encoding="utf-8")
+        out = root / "rc"
+        r = self.run_fw(root, "prompts", "units/01-paper-x", "--out", str(out))
+        self.assertEqual(r.returncode, 0, r.stderr)
+        (out / "picks" / "a").mkdir(parents=True)
+        (out / "picks" / "a" / "p0001.json").write_text('["鈣化", "同構接合", "「日益鈣化」"]', encoding="utf-8")
+        r = self.run_fw(root, "collect", str(out))
+        self.assertEqual(r.returncode, 0, r.stderr)
+        return (json.loads((out / "picks.json").read_text(encoding="utf-8"))["p0001"],
+                (out / "report.md").read_text(encoding="utf-8"))
+
+    def test_picks_inside_the_sources_own_wording_are_set_aside(self):
+        # The cited work is in Chinese (or is a published translation): the
+        # quotation is in its transcript, across a line and a page break.
         with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp).resolve()
-            unit = root / "units" / "01-paper-x"
-            (unit / "chapters").mkdir(parents=True)
-            (unit / "WORK.json").write_text("{}", encoding="utf-8")
-            (unit / "chapters" / "01.qmd").write_text(
-                "作者認為美元的地位「日益鈣化」[@smith2020, p. 3]，本文則把日益鈣化的過程稱為同構接合，"
-                "這一段夠長可以通過最短字數的門檻，所以算一段。\n", encoding="utf-8")
-            out = root / "rc"
-            r = self.run_fw(root, "prompts", "units/01-paper-x", "--out", str(out))
-            self.assertEqual(r.returncode, 0, r.stderr)
-            (out / "picks" / "a").mkdir(parents=True)
-            (out / "picks" / "a" / "p0001.json").write_text('["鈣化", "同構接合", "「日益鈣化」"]', encoding="utf-8")
-            r = self.run_fw(root, "collect", str(out))
-            self.assertEqual(r.returncode, 0, r.stderr)
-            picks = json.loads((out / "picks.json").read_text(encoding="utf-8"))
+            picks, report = self.quoting_unit(Path(tmp).resolve(), {
+                "units/01-paper-x/refs/smith2020.md":
+                    "**[Page 3 start]**\n\n美元的地位日益\n\n**[Page 4 start]**\n\n鈣化，難以撼動。\n"})
             # 鈣化 also occurs in the author's own words, so that occurrence is the one kept.
-            self.assertEqual([x["text"] for x in picks["p0001"]], ["鈣化", "同構接合"])
-            self.assertGreater(picks["p0001"][0]["s"], 20)
-            report = (out / "report.md").read_text(encoding="utf-8")
-            self.assertIn("直接引文內的片段 1 個不列入", report)
+            self.assertEqual([x["text"] for x in picks], ["鈣化", "同構接合"])
+            self.assertGreater(picks[0]["s"], 20)
+            self.assertNotIn("translation", picks[0])
+            self.assertIn("來源原文內的片段 1 個不列入", report)
             self.assertIn("「日益鈣化」〔a〕", report)
+            self.assertNotIn("自譯引文", report)
+
+    def test_picks_inside_the_manuscripts_own_translation_stay_in(self):
+        # The cited work is in English, so the Chinese in the quotation marks
+        # is the manuscript's and a reader's pick there is a rewrite item.
+        with tempfile.TemporaryDirectory() as tmp:
+            picks, report = self.quoting_unit(Path(tmp).resolve(), {
+                "library/refs/smith2020.md": "**[Page 3 start]**\n\nThe dollar's role is increasingly calcified.\n"})
+            self.assertEqual([x["text"] for x in picks], ["「日益鈣化」", "鈣化", "同構接合"])
+            self.assertEqual(picks[0]["translation"], {"quote": "「日益鈣化」", "cite": "[@smith2020, p. 3]",
+                                                       "refs": ["library/refs/smith2020.md"]})
+            self.assertNotIn("translation", picks[2])
+            self.assertIn("自譯引文內的片段 2 處照常列入", report)
+            self.assertIn("「日益鈣化」 [@smith2020, p. 3] → `library/refs/smith2020.md`：「日益鈣化」〔a〕；鈣化〔a〕", report)
+            self.assertNotIn("不列入", report)
+
+    def test_a_quotation_with_no_transcript_to_compare_stays_in(self):
+        # Set aside only what is shown to be a source's wording.
+        with tempfile.TemporaryDirectory() as tmp:
+            picks, report = self.quoting_unit(Path(tmp).resolve(), {})
+            self.assertEqual(picks[0]["translation"]["refs"], [])
+            self.assertIn("「日益鈣化」 [@smith2020, p. 3] → 未比對：", report)
 
     def test_glossary_goes_to_every_reader_and_is_recorded(self):
         with tempfile.TemporaryDirectory() as tmp:

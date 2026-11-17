@@ -20,10 +20,16 @@ reader and saves that reader's answer, as it came, under
 `<dir>/picks/<reader-name>/<paragraph-id>.*`. `collect` then keeps only the
 fragments that occur verbatim in their paragraph, counts how often each one
 occurs in the whole manuscript, and writes `<dir>/report.md` and
-`<dir>/picks.json`. A fragment inside a direct quotation is set aside and
-listed on its own, because its wording is the source's: a quotation is
-recognised from its citation (`quote_spans`), and one the rule misses is
-marked in the source as `<!-- quote -->「…」<!-- /quote -->`.
+`<dir>/picks.json`. A quotation is recognised from its citation
+(`cited_quotes`), and `prompts` looks each one up in the transcript of the
+work it cites (`refs/<key>.md`). One found there word for word is the source's
+wording, or a published translation's: a fragment picked inside it is set
+aside and listed on its own, because no rewrite may change it. One not found
+there is the manuscript's own translation, so its fragments stay in the
+worklist, and the report names the citation and the transcript, because a
+retranslation has to be made from the original and checked against it. The
+author marks a source's own words that the rules miss as
+`<!-- quote -->「…」<!-- /quote -->`.
 With a glossary (the one the readers were given, or
 `collect --glossary`), the report says which picked fragments are terms the
 author has approved: only those may stay as special terms, and the rest are to
@@ -37,11 +43,12 @@ import json
 import random
 import re
 import sys
+import unicodedata
 from collections import defaultdict
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _paths import course_root, manuscript_files, rel, resolve_unit  # noqa: E402
+from _paths import course_root, library, manuscript_files, rel, resolve_unit  # noqa: E402
 
 CJK = re.compile(r"[一-鿿]")
 NOT_A_PARAGRAPH = ("#", "|", ":::", "![", "{{<", ">", ": ", "$$", "```", "~~~", "<")
@@ -97,14 +104,14 @@ CITED_NEXT = re.compile(r"[」』）)]*(?:（[^（）]*）|\([^()]*\))?\[註\]")
 QUOTE_JOIN = re.compile(r"[、，,與和及或]")
 
 
-def quote_spans(text: str) -> list[tuple[int, int]]:
-    """(start, end) of every 「…」 in a reader text that quotes a source
-    verbatim: the citation follows the closing mark at once, the quotation
-    shares that citation with the next one, or it elides with …… . A reader's
-    pick inside one names the source's wording, which the rewriter may not
-    change, so it is no reading fix. Quotation marks around the manuscript's
-    own term carry no citation and stay in, because such coinages are what
-    this check looks for."""
+def cited_quotes(text: str) -> list[tuple[int, int, int | None]]:
+    """(start, end, note) of every 「…」 in a reader text that quotes a source:
+    the citation follows the closing mark at once, the quotation shares that
+    citation with the next one, or it elides with …… . `note` counts the [註]
+    that cites it from the paragraph's first, and is None for a quotation
+    known only by its elision. Quotation marks around the manuscript's own
+    term carry no citation and stay out, because such coinages are what this
+    check looks for."""
     found, depth, start = [], 0, 0
     for i, ch in enumerate(text):
         if ch == "「":
@@ -115,13 +122,70 @@ def quote_spans(text: str) -> list[tuple[int, int]]:
             depth -= 1
             if not depth:
                 found.append((start, i + 1))
-    direct = [False] * len(found)
+    direct: list[tuple[bool, int | None]] = [(False, None)] * len(found)
     for k in range(len(found) - 1, -1, -1):
         s, e = found[k]
-        joined = (k + 1 < len(found) and direct[k + 1]
-                  and QUOTE_JOIN.fullmatch(text[e:found[k + 1][0]]) is not None)
-        direct[k] = "……" in text[s:e] or bool(CITED_NEXT.match(text, e)) or joined
-    return [span for span, d in zip(found, direct) if d]
+        cited = CITED_NEXT.match(text, e)
+        if cited:
+            direct[k] = (True, text.count("[註]", 0, cited.end()) - 1)
+        elif (k + 1 < len(found) and direct[k + 1][0]
+              and QUOTE_JOIN.fullmatch(text[e:found[k + 1][0]]) is not None):
+            direct[k] = direct[k + 1]
+        elif "……" in text[s:e]:
+            direct[k] = (True, None)
+    return [(*span, note) for span, (d, note) in zip(found, direct) if d]
+
+
+def quote_spans(text: str) -> list[tuple[int, int]]:
+    return [(s, e) for s, e, _note in cited_quotes(text)]
+
+
+# Whose words a quotation's Chinese is decides whether a pick inside it can be
+# acted on. Found word for word in the cited work's transcript, it is the
+# source's wording (or a published translation's, when that is the work cited)
+# and stays as it is. Not found there, the manuscript translated it.
+NOTE = re.compile(r"\^\[[^\]]*\]|\[\^[^\]]+\]|\[[^\[\]]*@[^\[\]]*\]")
+CITE_KEY = re.compile(r"(?<![\w@])@([a-zA-Z0-9_:.-]+)")
+PAGE_MARK = re.compile(r"(?m)^\s*(?:\*\*)?\[(?:Page\s+\d+\s+end)?(?:,\s*)?(?:Page\s+\d+\s+start)?\](?:\*\*)?\s*$")
+# What a quotation may leave out or add: an elision, an editorial insertion.
+QUOTE_GAP = re.compile(r"(?:…|⋯|\.{3,})+|[〔［\[][^〕］\]]*[〕］\]]")
+
+
+def squeeze(text: str) -> str:
+    """Text as a word-for-word comparison should see it: a transcript breaks
+    lines and pages where the source's layout did, and a quotation inside a
+    quotation changes its marks, so spacing, page markers, emphasis and
+    quotation marks are dropped and full-width forms folded."""
+    t = unicodedata.normalize("NFKC", PAGE_MARK.sub("", text))
+    return re.sub(r"[\s*_「」『』“”‘’\"']", "", t)
+
+
+def note_keys(note: str, defs: dict[str, str]) -> list[str]:
+    """Citation keys of one note; a footnote reference is read at its definition."""
+    ref = re.fullmatch(r"\[\^([^\]]+)\]", note)
+    return [k.rstrip(".:") for k in CITE_KEY.findall(defs.get(ref.group(1), "") if ref else note)]
+
+
+class Sources:
+    """The transcripts a unit's citations point at: its own refs/, then the
+    course library's; `<key>.tc.md` is the Traditional reading copy of a
+    Simplified source, and a quotation may follow either script."""
+
+    def __init__(self, unit: Path):
+        self.dirs = [unit / "refs", library() / "refs"]
+        self.squeezed: dict[Path, str] = {}
+
+    def holds(self, quotation: str, keys: list[str]) -> tuple[bool, list[str]]:
+        """Whether one cited transcript has every piece of the quotation word
+        for word, and the transcripts that were there to compare."""
+        files = [f for k in dict.fromkeys(keys) for d in self.dirs
+                 for f in (d / f"{k}.md", d / f"{k}.tc.md") if f.is_file()]
+        pieces = [p for p in map(squeeze, QUOTE_GAP.split(quotation)) if p]
+        for f in files:
+            if f not in self.squeezed:
+                self.squeezed[f] = squeeze(f.read_text(encoding="utf-8", errors="replace"))
+        found = bool(pieces) and any(all(p in self.squeezed[f] for p in pieces) for f in files)
+        return found, [rel(f) for f in files]
 
 
 def locate(text: str, frag: str, quotes: list[tuple[int, int]]) -> tuple[int, bool]:
@@ -158,14 +222,19 @@ def take_marks(text: str) -> tuple[str, list[tuple[int, int]]]:
     return "".join(out), spans
 
 
-def paragraph_records(source: str) -> list[dict]:
+def paragraph_records(source: str, sources: Sources | None = None) -> list[dict]:
     """Every prose paragraph in a .qmd source: its 1-based line, its reader
-    text, and the spans of that text that quote a source."""
+    text, the spans of that text whose wording is a source's (`quotes`), and
+    the cited quotations that are not word for word in their source's
+    transcript (`translations`, each with its citation and the transcripts
+    compared; none compared when `sources` is not given or holds no transcript
+    for the key)."""
     text = re.sub(r"<!--\s*quote\s*-->", QUOTE_OPEN, source)
     text = re.sub(r"<!--\s*/quote\s*-->", QUOTE_CLOSE, text)
     text = blank_keeping_lines(text, r"\A---\n.*?\n---[ \t]*(?=\n)")
     text = blank_keeping_lines(text, r"<!--.*?-->")
     text = blank_keeping_lines(text, r"(?m)^(```|~~~).*?^\1[ \t]*$")
+    defs = dict(re.findall(r"(?m)^\[\^([^\]]+)\]:[ \t]*(.+)$", text))
     out: list[dict] = []
     start, block = 0, []
     for no, line in enumerate([*text.split("\n"), ""], 1):
@@ -177,8 +246,21 @@ def paragraph_records(source: str) -> list[dict]:
         if block and not block[0].startswith(NOT_A_PARAGRAPH):
             shown, marked = take_marks(reader_text("\n".join(block)))
             if shown:
-                out.append({"line": start, "text": shown,
-                            "quotes": sorted(set(marked) | set(quote_spans(shown)))})
+                notes = NOTE.findall("\n".join(block))
+                if len(notes) != shown.count("[註]"):
+                    notes = []
+                theirs, ours = set(marked), []
+                for s, e, n in cited_quotes(shown):
+                    if any(ms <= s and e <= me for ms, me in marked):
+                        continue
+                    cite = notes[n] if n is not None and n < len(notes) else ""
+                    keys = [k for note in ([cite] if cite else notes) for k in note_keys(note, defs)]
+                    found, compared = sources.holds(shown[s + 1:e - 1], keys) if sources else (False, [])
+                    if found:
+                        theirs.add((s, e))
+                    else:
+                        ours.append({"s": s, "e": e, "cite": cite, "refs": compared})
+                out.append({"line": start, "text": shown, "quotes": sorted(theirs), "translations": ours})
         block = []
     return out
 
@@ -223,7 +305,7 @@ def read_glossary(unit: Path, name: str) -> list[dict]:
     return terms
 
 
-def unit_paragraphs(unit: Path, only: list[str] | None = None) -> list[dict]:
+def unit_paragraphs(unit: Path, only: list[str] | None = None, sources: Sources | None = None) -> list[dict]:
     files = [f for f in manuscript_files(unit) if f.name not in SKIP_FILES]
     if only:
         wanted = {Path(o).name for o in only}
@@ -233,7 +315,8 @@ def unit_paragraphs(unit: Path, only: list[str] | None = None) -> list[dict]:
         files = [f for f in files if f.name in wanted]
     if not files:
         sys.exit(f"no manuscript .qmd in {rel(unit)} (looked for chapters/*.qmd and *.qmd)")
-    return [{"file": rel(f), **r} for f in files for r in paragraph_records(f.read_text(encoding="utf-8"))]
+    return [{"file": rel(f), **r} for f in files
+            for r in paragraph_records(f.read_text(encoding="utf-8"), sources)]
 
 
 def sample(paras: list[dict], n: int, seed: int) -> list[dict]:
@@ -254,7 +337,8 @@ def sample(paras: list[dict], n: int, seed: int) -> list[dict]:
 
 def cmd_prompts(args: argparse.Namespace) -> None:
     unit = resolve_unit(args.unit)
-    paras = [p for p in unit_paragraphs(unit, args.files) if len(CJK.findall(p["text"])) >= args.min]
+    paras = [p for p in unit_paragraphs(unit, args.files, Sources(unit))
+             if len(CJK.findall(p["text"])) >= args.min]
     if not paras:
         sys.exit(f"no paragraph of at least {args.min} Chinese characters in {rel(unit)}")
     total = len(paras)
@@ -356,8 +440,16 @@ def cmd_collect(args: argparse.Namespace) -> None:
         # a longer compound built on an approved name is a new term.
         row["approved"] = next((g["term"] for g in glossary if any(frag in n for n in g["names"])), "")
 
-    merged = {pid: [{"s": s, "e": e, "text": paras[pid]["text"][s:e], "readers": sorted(who)}
+    def translation(pid: str, s: int, e: int) -> dict:
+        """What to open for a fragment inside the manuscript's own translation."""
+        q = next((q for q in paras[pid].get("translations", []) if q["s"] <= s and e <= q["e"]), None)
+        return {"translation": {"quote": paras[pid]["text"][q["s"]:q["e"]], "cite": q["cite"],
+                                "refs": q["refs"]}} if q else {}
+
+    merged = {pid: [{"s": s, "e": e, "text": paras[pid]["text"][s:e], "readers": sorted(who),
+                     **translation(pid, s, e)}
                     for (s, e), who in sorted(found.items())] for pid, found in spans.items()}
+    n_ours = sum("translation" in x for found in merged.values() for x in found)
     (out / "picks.json").write_text(json.dumps(merged, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
 
     lines = [f"# 段落冷讀：讀者挑出的難讀片段（{meta['unit']}）", "",
@@ -373,8 +465,11 @@ def cmd_collect(args: argparse.Namespace) -> None:
         if unparsed:
             lines.append(f"\n{r} 無法解析的答案：{'、'.join(unparsed)}（不是 JSON 字串陣列，請重問）")
     n_quoted = sum(len(q) for q in quoted.values())
+    if n_ours:
+        lines.append(f"\n自譯引文內的片段 {n_ours} 處照常列入下文（引文在所引來源的轉錄檔裡逐字找不到，中文是稿子自己譯的），"
+                     "要對照的原文另列一節。")
     if n_quoted:
-        lines.append(f"\n直接引文內的片段 {n_quoted} 個不列入上表與下文（字詞是來源原文，不是改寫能處理的難讀），清單在文末。")
+        lines.append(f"\n來源原文內的片段 {n_quoted} 個不列入上表與下文（字詞是來源或所引譯本的，不是改寫能處理的難讀），清單在文末。")
 
     spread = sorted(by_text.items(), key=lambda kv: (-len(kv[1]["readers"]), -kv[1]["count"], kv[0]))
     lines += ["", "## 片段在全文的擴散", "",
@@ -408,11 +503,28 @@ def cmd_collect(args: argparse.Namespace) -> None:
             continue
         p = paras[pid]
         lines.append(f"- **{pid}** `{p['file']}:{p['line']}`（被挑字數 {share(pid):.0%}）："
-                     + "；".join(f"{x['text']}〔{'、'.join(x['readers'])}〕" for x in merged[pid]))
+                     + "；".join(f"{x['text']}〔{'、'.join(x['readers'])}〕"
+                                 + ("（自譯引文）" if "translation" in x else "") for x in merged[pid]))
+    if n_ours:
+        lines += ["", "## 自譯引文內的片段（對照原文處理）", "",
+                  "下列引文在所引來源的轉錄檔裡逐字找不到，中文是稿子自己從原文譯的，所以片段已列入上面各表。"
+                  "重譯以原文的意思為準，不可為了通順改動來源說的事。驗收要過兩關：不看原文的隔離讀者不再挑，"
+                  "另一次對照原文的檢查確認意思沒變。引的若是中文來源或已出版的譯本，找不到表示引文抄錯或轉錄檔有誤，先核對。"
+                  "「未比對」表示所引來源沒有轉錄檔。", ""]
+        for pid in sorted(paras):
+            by_quote: dict[tuple[str, str, str], list[str]] = defaultdict(list)
+            for x in merged[pid]:
+                if "translation" in x:
+                    t = x["translation"]
+                    where = "、".join(f"`{r}`" for r in t["refs"]) or "未比對"
+                    by_quote[(t["quote"], t["cite"], where)].append(f"{x['text']}〔{'、'.join(x['readers'])}〕")
+            for (quote, cite, where), frags in by_quote.items():
+                lines.append(f"- **{pid}** `{paras[pid]['file']}:{paras[pid]['line']}` {quote} {cite} → {where}："
+                             + "；".join(frags))
     if n_quoted:
-        lines += ["", "## 直接引文內的片段（不列入）", "",
-                  "「」緊接引註、與下一段引文共用引註、含「……」，或作者以 <!-- quote --> 標記的引文，字詞是來源原文。要讓這些片段好讀，"
-                  "只能重譯外文引文或改成轉述，由作者決定，不是冷讀的改寫項目。", ""]
+        lines += ["", "## 來源原文內的片段（不列入）", "",
+                  "在所引來源的轉錄檔裡逐字找得到，或作者以 <!-- quote --> 標記的引文：字詞是來源的，或所引譯本的，必須照錄。"
+                  "要讓這些片段好讀，只能改成轉述，或改引原文自己重譯，由作者決定，不是冷讀的改寫項目。", ""]
         for pid in sorted(paras):
             if quoted[pid]:
                 p = paras[pid]
@@ -420,7 +532,8 @@ def cmd_collect(args: argparse.Namespace) -> None:
                              + "；".join(f"{t}〔{'、'.join(sorted(w))}〕" for t, w in sorted(quoted[pid].items())))
     (out / "report.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
     kept = sum(k for _a, k, _d, _u in stats.values())
-    print(f"{len(readers)} readers, {kept} fragments kept, {n_quoted} inside direct quotations set aside "
+    print(f"{len(readers)} readers, {kept} fragments kept ({n_ours} spans inside the manuscript's own "
+          f"translations), {n_quoted} inside a source's own wording set aside "
           f"-> {rel(out)}/report.md, {rel(out)}/picks.json")
 
 

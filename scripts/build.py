@@ -247,7 +247,8 @@ def generate(unit: Path, root: Path, work: dict, fmt: str = "pdf", target: str |
     ptype = work["type"]
     tdir = FRAMEWORK / "assets" / "templates" / ptype
     # apa-zh (《遠景基金會季刊》撰稿規範) exists for the two types whose templates
-    # carry a _quarto-apa-zh.yml; journal stays Chicago full-note.
+    # carry a _quarto-apa-zh.yml; journal stays Chicago full-note, and the
+    # same two types can opt into it with "citation": "chicago-fullnote".
     apa_zh = ptype in APA_ZH_TYPES and work.get("citation") == "apa-zh"
     template = tdir / ("_quarto-apa-zh.yml" if apa_zh else "_quarto.yml")
     if not template.is_file():
@@ -259,6 +260,12 @@ def generate(unit: Path, root: Path, work: dict, fmt: str = "pdf", target: str |
         yml = yml.replace("    - draft.qmd", "    - guide.qmd")
     for placeholder, key in PLACEHOLDERS.items():
         yml = yml.replace(f'"{placeholder}"', f'"{yaml_escape(str(work.get(key, "")))}"')
+    # chicago-fullnote is the notes-and-bibliography style journal already
+    # uses. Only the CSL differs from the default template, so the line is
+    # swapped here instead of keeping a third copy of the template in step.
+    if ptype in APA_ZH_TYPES and work.get("citation") == "chicago-fullnote":
+        yml = re.sub(r"^csl: .*$", "csl: {{FW}}/assets/chicago-fullnote-bibliography.csl",
+                     yml, count=1, flags=re.M)
 
     # The preamble carries a font path LaTeX resolves from the unit directory,
     # so it has to be generated per unit too.

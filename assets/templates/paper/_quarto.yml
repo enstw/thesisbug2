@@ -34,6 +34,9 @@ bibliography: references.bib
 #     _quarto-apa-zh.yml INSTEAD of this file — do not hand-edit the csl line
 #     (<unit>/_quarto.yml is regenerated on every build). Details:
 #     assets/templates/paper/citation-style.md.
+#   Option — chicago-fullnote = Chicago notes and bibliography (footnotes):
+#     --citation chicago-fullnote; build swaps the csl line below for
+#     chicago-fullnote-bibliography.csl and keeps the rest of this file.
 csl: {{FW}}/assets/apa.csl
 
 lang: zh-TW

@@ -3,7 +3,7 @@
 
     ./fw unit-init --type paper --name final --title "…"
                    [--author "…"] [--subtitle "…"] [--date YYYY-MM-DD]
-                   [--citation apa|apa-zh]          (paper and thesis)
+                   [--citation apa|apa-zh|chicago-fullnote]  (paper and thesis)
                    (author and citation default to COURSE.md)
                    [--variant thesis|reading-guide] (presentation only)
                    [--extends <earlier-unit>] [--no-build]
@@ -35,6 +35,7 @@ from _deck import deck_problems, presentation_files  # noqa: E402
 TYPES = ("preparation", "homework", "paper", "journal", "thesis", "presentation")
 CITATION_TYPES = ("preparation", "paper", "journal", "thesis", "presentation")
 APA_ZH_TYPES = ("paper", "thesis")   # types with a _quarto-apa-zh.yml template
+CITATION_STYLES = ("apa", "apa-zh", "chicago-fullnote")   # what build accepts for those types
 TEMPLATES = FRAMEWORK / "assets" / "templates"
 SHARED = FRAMEWORK / "assets" / "scaffold"
 
@@ -95,8 +96,9 @@ def main() -> None:
     ap.add_argument("--subtitle", default="",
                     help="the specific case and scope; the title itself is the hook or course theme")
     ap.add_argument("--date", default=dt.date.today().isoformat())
-    ap.add_argument("--citation", choices=("apa", "apa-zh"),
-                    help="paper and thesis; apa-zh is 《遠景基金會季刊》撰稿規範 (中文/西文 split); "
+    ap.add_argument("--citation", choices=CITATION_STYLES,
+                    help="paper and thesis; apa-zh is 《遠景基金會季刊》撰稿規範 (中文/西文 split), "
+                         "chicago-fullnote is Chicago notes and bibliography (footnotes); "
                          "default: the Citation style row of COURSE.md, else apa")
     ap.add_argument("--variant", choices=("thesis", "reading-guide"))
     ap.add_argument("--extends", help="earlier unit this one builds on (recorded, never included live)")
@@ -118,7 +120,7 @@ def main() -> None:
         sys.exit("--author is required (COURSE.md has no Author filled in)")
     if not a.citation:
         style = course.get("Citation style", "").strip("`")
-        a.citation = style if style in ("apa", "apa-zh") else "apa"
+        a.citation = style if style in CITATION_STYLES else "apa"
     existing = list_units(root)
     if a.extends and not any(u.name == a.extends for u in existing):
         sys.exit(f"--extends: no unit named {a.extends}")

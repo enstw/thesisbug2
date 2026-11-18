@@ -106,6 +106,20 @@ class ApaZhSelectionTests(unittest.TestCase):
             self.assertIn("_bib-en.json", yml)
             self.assertTrue((self.unit / "_bib-en.json").is_file())
 
+    def test_chicago_fullnote_swaps_only_the_csl(self):
+        # A course row of chicago-fullnote used to fall back to APA without a word.
+        for ptype in ("paper", "thesis"):
+            with self.subTest(ptype=ptype):
+                work = {"type": ptype, "title": "T", "author": "A", "date": "2026-01-01",
+                        "citation": "chicago-fullnote"}
+                build.generate(self.unit, self.root, work)
+                yml = (self.unit / "_quarto.yml").read_text(encoding="utf-8")
+                self.assertIn(f"templates/{ptype}/_quarto.yml", yml.splitlines()[0])
+                self.assertIn("chicago-fullnote-bibliography.csl", yml)
+                self.assertNotIn("apa.csl", yml)
+                self.assertNotIn("bibliography-csl:", yml)
+                self.assertIn("lang: zh-TW", yml)
+
     def test_thesis_without_the_option_keeps_single_list(self):
         work = {"type": "thesis", "title": "T", "author": "A", "date": "2026-01-01"}
         build.generate(self.unit, self.root, work)

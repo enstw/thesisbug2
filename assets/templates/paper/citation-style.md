@@ -3,7 +3,7 @@
 > **`paper`／`thesis` 預設體例 = 標準 APA 7th**：自動、CSL 驅動（`../assets/apa.csl`），`[@key]` 自動產生夾註與單一字母序清單。乾淨、通用、零維護。
 > **apa-zh = 選用體例**：《遠景基金會季刊》撰稿規範（113 年 10 月 30 日修訂）的實作——author-date 夾註、中文文獻（筆劃序、全形標點）在前、西文文獻（A–Z、英文術語）在後、非英文條目附 `[英譯]`。台灣國際關係／戰略學門多所系所指定此規範為學位論文格式，故以它為目標而非泛泛的「APA 中文化」。
 > **啟用方式**：建立時指定 `./fw unit-init --type paper|thesis --citation apa-zh`；既有 unit 在 `WORK.json` 加 `"citation": "apa-zh"` 並把參考文獻頁改為兩個 div（下節）。`./fw build` 據此改用 `_quarto-apa-zh.yml`，**照常出稿**，無需手改設定；`_metadata.yml` 不可再釘 `csl:`，否則蓋掉變體。
-> **三型別引用分工**：`homework` 不引註；`journal` = Chicago full-note（英文期刊，`chicago-fullnote-bibliography.csl`）；`paper`／`thesis` = APA 7th（預設）/ apa-zh（選用）。
+> **三型別引用分工**：`homework` 不引註；`journal` = Chicago full-note（英文期刊，`chicago-fullnote-bibliography.csl`）；`paper`／`thesis` = APA 7th（預設）/ apa-zh（選用）/ chicago-fullnote（選用：課程指定 Chicago 時，`--citation chicago-fullnote`，build 只換 CSL，腳註＋單一書目）。模板的 `lang: zh-TW` 也是 citeproc 的語系，西文條目會印成「收入」「編」「及」；書目全為西文時，在 unit 的 `_metadata.yml` 加 `lang: en-US`（版面字串由模板的 `language:` 固定為繁中，不受影響）。
 > **本文件角色**：定義 apa-zh 的**目標體例**（§1–§8，即遠景規範的摘錄）、實作與 bib 資料約定（下兩節）。
 
 ## 實作（兩份 CSL ＋ multibib ＋ cite-lang）

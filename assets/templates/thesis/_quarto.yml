@@ -25,6 +25,9 @@ bibliography: references.bib
 #     build reads "citation": "apa-zh" from WORK.json and loads
 #     _quarto-apa-zh.yml INSTEAD of this file. Do not pin csl in _metadata.yml
 #     when using the option. Details: assets/templates/paper/citation-style.md.
+#   Option — chicago-fullnote = Chicago notes and bibliography (footnotes):
+#     --citation chicago-fullnote; build swaps the csl line below for
+#     chicago-fullnote-bibliography.csl and keeps the rest of this file.
 csl: {{FW}}/assets/apa.csl
 lang: zh-TW
 

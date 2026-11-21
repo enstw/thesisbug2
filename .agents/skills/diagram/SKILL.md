@@ -48,4 +48,4 @@ Either way, run — and extend — `./fw plantuml2svg` rather than curling plant
 
 ## Raster imagery
 
-For AI-generated **raster** imagery (painterly art, not diagrams), use Codex's native image tool or the discovered `genimage-img2` Codex wrapper: generation is the provider exception because Codex is the maintainer's currently stable backend. If unavailable, report the asset as pending instead of switching providers. SVG-first still governs diagrams and icons.
+For AI-generated **raster** imagery (painterly art, not diagrams), use one of the two backends the framework `AGENTS.md` allows: Codex (its native image tool or the discovered `genimage-img2` wrapper) or agy (Gemini's nano banana, through the discovered `genimage-nb` wrapper). Use Codex when the image must carry exact lettering, because agy has added text it was told to leave out. If neither is available, report the asset as pending instead of switching to another provider. SVG-first still governs diagrams and icons.

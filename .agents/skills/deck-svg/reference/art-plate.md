@@ -50,10 +50,12 @@ same in both. Make the plate for the deck's default theme.
 
 ## Making one
 
-Use the framework's image backend (framework `AGENTS.md`, image generation),
-one call per plate, and look at each result before using it. These prompts
-kept the subject low and the rest empty on both backends tried (gpt-image-2
-and nano banana, 2026-11-21); change only the subject line.
+Use either of the framework's image backends (framework `AGENTS.md`, image
+generation): Codex (gpt-image-2) or agy (Gemini's nano banana). A plate has no
+lettering, so either will do. Make one call per plate and look at each result
+before using it. These prompts kept the subject low and the rest empty on both
+backends (2026-11-21, five images, each on the first try); change only the
+subject line.
 
 Dark ground, photograph:
 

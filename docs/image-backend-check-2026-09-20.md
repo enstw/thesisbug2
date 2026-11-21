@@ -19,3 +19,11 @@ Create an academic presentation cover illustration: a notebook, a magnifying gla
 重現方式：從目前 agent 的 skill 清單取得 `genimage-nb` 的實際路徑，依其登入與呼叫說明，以相同提示詞、不同檔名執行三次。測試圖與原始 JSON 紀錄留在執行機的暫存目錄，不放入框架的共用素材。
 
 本輪證據顯示 agy 能連續成功產圖，尚不足以推論長期穩定性；完整文字限制三次都未通過。依維護者本次指示，框架仍保留 Codex 作為產圖後端的例外規則。若日後採用 agy，須保留逐張校對，並另外驗證實際工作所需的負載與失敗情境。
+
+## 2026-11-21 追記：agy 列為第二個產圖後端
+
+維護者決定把 agy 列為可用的產圖後端，與 Codex 並列。agy 是 Antigravity 的 CLI，它的產圖模型是 Gemini 的 nano banana；agy、Gemini、nano banana 指的是同一個後端。
+
+依據是情境圖（deck-svg 的 `art:`）的實測：同一組提示詞要求灰階、主體只在下三分之一、其餘留空、不含任何文字，Codex 兩張、agy 三張，五張都一次就符合，沒有出現文字。這次沒有計時。
+
+上表的結論沒有變：要求「只含指定的兩行字」時，agy 三次都多加了文字。所以分工是：圖裡要有精確文字時用 Codex；不含文字的圖兩者皆可。兩者產出的每一張圖都要先看過再使用。跨日、並行、登入失效與限流仍然沒有驗證。

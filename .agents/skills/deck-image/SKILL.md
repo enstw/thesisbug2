@@ -4,7 +4,7 @@ description: >
   Builds an image-based presentation deck where every slide is one full-bleed
   PNG. Use when asked for an image slide deck, "generate slides as images",
   "deck-image", or to turn AI-generated or hand-drawn slide images into a
-  presentation. Plans slides, renders each via Codex image generation or an
+  presentation. Plans slides, renders each via Codex or agy image generation or an
   HTML-to-PNG renderer, or assembles images supplied by the user,
   then build-deck.py assembles a self-contained 16:9 deck-stage HTML deck. For
   live, editable HTML slides use deck-svg instead.
@@ -33,16 +33,19 @@ source of truth. (`$SKILL_DIR` = this skill's own folder.)
 
 ## Renderers
 
-The host agent may vary, but **AI image generation uses Codex**, the
-maintainer's currently stable backend. A Codex native image tool, the
-`genimage-img2` Codex wrapper, browser capture of authored HTML, and supplied
-PNGs all satisfy the same assembly input. External skills are not bundled here;
+The host agent may vary, but **AI image generation uses Codex or agy**, the
+two backends the framework `AGENTS.md` allows (agy is Antigravity's CLI and
+its image model is Gemini's nano banana: one backend under three names). A
+Codex native image tool, the `genimage-img2` Codex wrapper, the `genimage-nb`
+agy wrapper, browser capture of authored HTML, and supplied PNGs all satisfy
+the same assembly input. External skills are not bundled here;
 discover their actual paths and read their instructions instead of assuming
 a vendor's home directory.
 
 | Renderer | How | Best for | Pre-condition |
 | :--- | :--- | :--- | :--- |
-| Codex image generation | Codex native image tool, or the discovered `genimage-img2` Codex wrapper for another host | photographic or illustrated slides | a working Codex generation path; the wrapper requires an installed, authenticated Codex CLI |
+| Codex image generation | Codex native image tool, or the discovered `genimage-img2` Codex wrapper for another host | photographic or illustrated slides, and every slide whose image carries its text | a working Codex generation path; the wrapper requires an installed, authenticated Codex CLI |
+| agy image generation | the discovered `genimage-nb` wrapper (nano banana) | photographic or illustrated slides without lettering | an installed, signed-in agy CLI |
 | Authored HTML → PNG | fixed 1920×1080 HTML captured by available browser tools; optional `genimage-canvas` integration | typography-heavy slides with editable source text | browser capture; external integrations may have additional dependencies |
 | Supplied images | copy the user's PNGs into the deck | already-approved slide images | readable image files |
 
@@ -62,12 +65,17 @@ not this skill.
 
 ## Pre-flight (per renderer actually used)
 
-For AI generation, use Codex's native image tool when available; otherwise
-discover and read `genimage-img2` and use its Codex wrapper. Verify that path's
+For AI generation, use Codex (its native image tool when available, otherwise
+discover and read `genimage-img2` and use its Codex wrapper) or agy (discover
+and read `genimage-nb`). A slide image here usually carries the slide's words,
+so prefer Codex for it: asked for two exact lines of text and nothing else,
+agy added other text in three runs of three (framework
+`docs/image-backend-check-2026-09-20.md`). Verify the chosen path's
 dependencies through its documented interface. Do not infer login state from
 a credential file or probe unrelated providers, because installation paths and
-authentication differ by host. Do not silently substitute another provider
-when Codex is unavailable; the provider exception exists for reliability.
+authentication differ by host. Do not silently substitute a provider outside
+these two when both are unavailable; the provider exception exists for
+reliability.
 Supplied PNGs need no generator. If no renderer is available, finish the slide
 specs and report image production as pending; do not call an image deck complete
 or change the requested deliverable without the user's agreement.
@@ -158,10 +166,10 @@ Prompt rules:
 Target: `generated-slides/<NN>-<slug>.png` at 16:9 for every slide, whichever
 renderer produces it. Run from the deck directory.
 
-### Codex image generation
+### Codex or agy image generation
 
-Send each slide's prompt through the Codex native tool or discovered wrapper
-and save its output at the planned PNG path. Keep prompts in files or structured tool arguments
+Send each slide's prompt through the Codex native tool or the discovered
+wrapper of the backend chosen above and save its output at the planned PNG path. Keep prompts in files or structured tool arguments
 to preserve exact text. Track completion and errors per slide; retry only a
 failed slide after identifying a fix. Use the host's long-job mechanism where
 needed; no particular shell-tool API is required.

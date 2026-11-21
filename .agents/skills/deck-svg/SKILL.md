@@ -300,9 +300,9 @@ as literal text, so use one of these instead.
    theme colour, or `<img src="<name>.svg">` it. The Quarto `![](…)` figure
    form is for `.qmd` documents, not the deck.
 1. **Raster art** (a photographic or engraved scene) comes from supplied
-   images or Codex image generation — the provider exception the framework
-   `AGENTS.md` records; report the asset as pending when no backend works
-   instead of switching providers. In a compiled deck it goes in through
+   images or from Codex or agy image generation — the provider exception the
+   framework `AGENTS.md` records; report the asset as pending when neither
+   backend works instead of switching providers. In a compiled deck it goes in through
    `art:` ([`reference/art-plate.md`](reference/art-plate.md)): a grayscale
    file under `<talk>/` that the slide tints with `--chapter`, so it is not
    regenerated when the theme changes. Diagrams and icons stay SVG;

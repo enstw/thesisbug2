@@ -1,19 +1,32 @@
 # Art plate — a generated picture under a slide's content
 
 A plate is a picture that sets the scene of a slide: vehicles in mist under a
-slide about military aid, a container port under one about supply chains. It
-is a design-stage choice (`art:` in 畫面內容), so it changes no word and does
-not touch the author's sign-off.
+slide about military aid, a container port under one about supply chains, a
+map of the region beside a cover's title. It is a design-stage choice (`art:`
+in 畫面內容), so it changes no word and does not touch the author's sign-off.
 
 ## What a plate may show
 
-A plate carries **atmosphere and nothing the argument rests on**. Do not put a
-map, a border, a chart, a flag, an arrow, a number or any lettering in it:
-a generated map draws borders and routes that are wrong, nothing in the Model
-backs them, and the audience reads a picture on a slide as a claim. A figure
-that carries a fact is content, so it is written in the storyboard and drawn
-as SVG (`L-CANVAS`, the **diagram** skill). Keep recognisable people out as
-well.
+A plate shows **where or in what setting the slide's point sits; it carries no
+data**.
+
+- **A scene** (vehicles, a port, a skyline).
+- **A map of the region**, with the place the slide is about lit and, if
+  wanted, a few lines leaving it. Generated maps were ruled out here until
+  2026-11-21 because they drew coastlines wrong; that day both backends drew
+  the western Pacific from China to New Zealand with every coast in place and
+  the right island lit, so the maintainer lifted the rule. Lay each generated
+  map beside a real one before using it (coastlines, which place is lit, where
+  the lines run), and regenerate one that is off: the audience reads a map as a
+  claim, and a wrong one is a wrong claim whoever drew it.
+- **Not** a chart, a number or any lettering: a picture cannot be held to the
+  type floor, the contrast check or the storyboard's words, and one backend
+  adds text it was told to leave out. **Not** a flag or a recognisable person.
+
+When the audience must be able to check what a figure shows (a chart's values,
+a route with named stops, a border the argument turns on), it is content: it
+is written in the storyboard and drawn as SVG (`L-CANVAS`, the **diagram**
+skill).
 
 ## Where it goes
 
@@ -23,6 +36,11 @@ so the contrast check keeps reading the plain slide colour. Measured on a
 404-character slide (2026-11-21): a picture behind the text had to stay under
 20% strength for the weakest text colour to keep 4.5:1, and at that strength a
 photograph could not be seen.
+
+On the cover (`L-HERO-TITLE`) the plate takes the right half of the slide and
+the title block the left half, left-aligned, so the two never overlap; the
+compiler fits `title_lines` to the narrower box. Make a cover plate square,
+with its subject in the middle and its left edge fading to the ground colour.
 
 So a plate needs room. `deck.html#debug` reports `art = thin` and the slide
 (`artBad`) when the band is under 240px; take the picture off that row, since
@@ -72,6 +90,21 @@ faces.
 
 Light ground, photograph: the same with `high-key … pale mist … no deep
 blacks … empty smooth pale fog … fading to pure white`, and `art_ground: light`.
+
+Map, dark ground (a cover plate, so square and centred):
+
+```text
+Background plate for the right half of a presentation cover slide. A
+monochrome grayscale map on a pure black ground, seen from directly above:
+<the region>, with geographically accurate coastlines of <the countries in
+view>. Land is soft dark grey with a slightly lighter coastline; the sea is
+pure black. <The place the talk is about> is the brightest shape on the map,
+filled with glowing white. <Optional: thin bright curved lines leave it toward
+…, each ending in one small bright dot.> Square frame; the map fills it and
+fades to pure black at the left edge. No text, no labels, no place names, no
+letters, no numbers, no legend, no compass, no grid, no logos, no flags, no
+watermark.
+```
 
 Line art (either theme):
 

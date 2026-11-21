@@ -76,12 +76,36 @@ class LayoutDefinition:
     optional_slots: list[str] = field(default_factory=list)
 
 
+# The author's emphasis inside any slot text: `*詞*` is drawn in the chapter colour, `**詞**` in bold.
+_STRONG = re.compile(r"\*\*(?=\S)([^*\n]+?)(?<=\S)\*\*")
+_EM = re.compile(r"\*(?=\S)([^*\n]+?)(?<=\S)\*")
+# Private-use characters carry the marks from esc() to the finished slide, because the same
+# escaped text also lands in attributes (data-label), where a tag would break the markup.
+_MARKS = {"\ue000": "<em>", "\ue001": "</em>", "\ue002": "<strong>", "\ue003": "</strong>"}
+
+
+def plain(text: str) -> str:
+    """Slot text without its emphasis marks: the words the audience reads."""
+    return _EM.sub(r"\1", _STRONG.sub(r"\1", text))
+
+
 def esc(s: Any) -> str:
-    """Escape text for safe HTML embedding, leaving markup tags alone if raw."""
+    """Escape text for safe HTML embedding; emphasis marks become placeholders `inline_marks` resolves."""
     if s is None:
         return ""
-    text = str(s).strip()
-    return html.escape(text, quote=True)
+    text = html.escape(str(s).strip(), quote=True)
+    text = _STRONG.sub("\ue002\\1\ue003", text)
+    return _EM.sub("\ue000\\1\ue001", text)
+
+
+def inline_marks(rendered: str) -> str:
+    """Turn esc()'s emphasis placeholders into tags in the slide's text, and drop them inside tags."""
+    if not any(mark in rendered for mark in _MARKS):
+        return rendered
+    rendered = re.sub(r"<[^>]*>", lambda m: re.sub("[\ue000-\ue003]", "", m.group(0)), rendered)
+    for mark, tag in _MARKS.items():
+        rendered = rendered.replace(mark, tag)
+    return rendered
 
 
 def parse_inline_dict(s: str) -> dict[str, Any]:
@@ -158,7 +182,21 @@ def parse_slot_payload(raw_text: str) -> dict[str, Any]:
     re_bullet = re.compile(r"^[*-]\s*(?:\[(.*?)\]\s*)?(.*?)(?:[:：|｜]\s*(.*))?$")
     re_key_val = re.compile(r"^([a-zA-Z0-9_]+)\s*[:：]\s*(.*)$")
 
+    def bullet(line: str) -> dict[str, Any]:
+        m = re_bullet.match(line)
+        item: dict[str, Any] = {"text": line[1:].strip()}
+        if m and m.group(1):
+            item["tag"] = m.group(1).strip()
+        item["head"] = (m.group(2) or "").strip() if m else line[1:].strip()
+        item["body"] = (m.group(3) or "").strip() if m else ""
+        return item
+
     for line in lines:
+        # `-- 子項` belongs to the item above it: a card that holds several lines of its own.
+        owner = slots.get(current_list_key or "items")
+        if line.startswith("--") and not line.startswith("---") and isinstance(owner, list) and owner:
+            owner[-1].setdefault("points", []).append(bullet(line[1:]))
+            continue
         if line.startswith(("-", "*")):
             # It's a bullet item
             m = re_bullet.match(line)
@@ -382,6 +420,9 @@ def _est_em(text: str) -> float:
     return sum(1.0 if ord(c) > 0x2E7F else 0.55 for c in text)
 
 
+HERO_ART_BOX = 800
+
+
 def render_hero_title(slots: dict[str, Any], variant: str, ctx: SlideContext) -> str:
     title = esc(slots.get("title") or "未命名簡報")
     dlabel = _dlabel(slots, title)
@@ -393,13 +434,16 @@ def render_hero_title(slots: dict[str, Any], variant: str, ctx: SlideContext) ->
     # just enough to fit, rather than letting the line wrap mid-phrase again.
     texts = [t for t in _slot_lines(slots.get("title_lines")) if t]
     title_html, h1_style = title, ""
+    # With a picture the text keeps the left half of the slide (HERO_ART_BOX, deck.css
+    # `.hero.has-art`), so lines are fitted to that narrower box and a smaller default size.
+    box, base = (HERO_ART_BOX, 108) if art_names(slots) else (1500, 132)
     if texts:
         # No per-line <span>: the title's colour is a gradient clipped to the
         # h1's text, and a child element would hide that from deck-check.
         title_html = "<br>".join(esc(t) for t in texts)
-        widest = max(len(t) for t in texts) or 1
-        fit = int(1500 * 0.97 / (widest * 1.04))
-        size = f" font-size: calc({fit}px * var(--deck-font-scale, 1));" if fit < 132 else ""
+        widest = max(len(plain(t)) for t in texts) or 1
+        fit = int(box * 0.97 / (widest * 1.04))
+        size = f" font-size: calc({fit}px * var(--deck-font-scale, 1));" if fit < base else ""
         h1_style = f' style="white-space: nowrap;{size}"'
     sub = esc(slots.get("sub") or slots.get("subtitle") or "")
     # `sub_lines:` does for the subtitle what `title_lines` does for the title:
@@ -410,12 +454,17 @@ def render_hero_title(slots: dict[str, Any], variant: str, ctx: SlideContext) ->
     sub_style = ""
     if sub_texts:
         sub = "<br>".join(esc(t) for t in sub_texts)
-        fit = int(1500 * 0.97 / (max(_est_em(t) for t in sub_texts) or 1))
+        fit = int(box * 0.97 / (max(_est_em(plain(t)) for t in sub_texts) or 1))
         size = f" font-size: calc({max(fit, 34)}px * var(--deck-font-scale, 1));" if fit < 48 else ""
         sub_style = f' style="white-space: nowrap;{size}"'
-    meta = esc(slots.get("meta") or slots.get("author") or "")
+    # A name stands over its affiliation when the row gives both; alone, either is the one meta line.
+    author, affiliation, meta = (esc(slots.get(k) or "") for k in ("author", "affiliation", "meta"))
     sub_html = f'<p class="hero__sub rise d1"{sub_style}>{sub}</p>' if sub else ""
-    meta_html = f'<p class="hero__meta rise d2">{meta}</p>' if meta else ""
+    if author and (affiliation or meta):
+        meta_html = f'<p class="hero__author rise d2">{author}</p>' + "".join(
+            f'\n      <p class="hero__meta rise d3">{line}</p>' for line in (affiliation, meta) if line)
+    else:
+        meta_html = "".join(f'<p class="hero__meta rise d2">{line}</p>' for line in (meta or author, affiliation) if line)
 
     return f"""  <section class="slide hero" data-label="{dlabel}">
     <div class="railtop"></div>
@@ -459,6 +508,64 @@ def render_finale_summary(slots: dict[str, Any], variant: str, ctx: SlideContext
   </section>"""
 
 
+def _card_text(card: dict[str, Any], indent: str = "            ") -> str:
+    """A card's body paragraph and, when the row gives it lines of its own (`-- 子項`), that list."""
+    body = esc(card.get("body") or "")
+    points = card.get("points") or []
+    if not points:
+        return f"<p>{body}</p>"
+    rows = []
+    for point in points:
+        tag = f'{esc(point.get("tag"))} ' if point.get("tag") else ""
+        head, text = esc(point.get("head") or ""), esc(point.get("body") or "")
+        rows.append(f"<li>{tag}<strong>{head}</strong>：{text}</li>" if text else f"<li>{tag}{head}</li>")
+    listing = f'<ul class="card__points">{"".join(rows)}</ul>'
+    return (f"<p>{body}</p>\n{indent}" if body else "") + listing
+
+
+ICON_FILE = Path(__file__).resolve().parent.parent / ".agents/skills/deck-svg/icons/lucide.json"
+_ICON_SET: dict[str, str] = {}
+
+
+def icon_set() -> dict[str, str]:
+    """Lucide's icons, name → the markup inside its 24×24 <svg> (ISC licence, beside the file)."""
+    if not _ICON_SET and ICON_FILE.is_file():
+        _ICON_SET.update(json.loads(ICON_FILE.read_text(encoding="utf-8")))
+    return _ICON_SET
+
+
+def icon_names(slots: dict[str, Any]) -> list[str]:
+    """The `icons:` slot as one name per card, in order; `-` leaves a card without one."""
+    raw = slots.get("icons")
+    lines = _slot_lines(raw) if isinstance(raw, list) else [str(raw or "")]
+    return [name.strip() for line in lines for name in re.split(r"[,，、]", line) if name.strip()]
+
+
+def _icons(slots: dict[str, Any], count: int) -> tuple[list[str], str]:
+    """(one icon's markup per card, "" where there is none; warnings as comments)."""
+    names = icon_names(slots)
+    notes = []
+    if len(names) > count:
+        notes.append(warn(f"icons: 有 {len(names)} 個，這一頁只有 {count} 張卡片"))
+    out = []
+    for name in (names + [""] * count)[:count]:
+        if not name or name in NO_LABEL:
+            out.append("")
+        elif name in icon_set():
+            out.append(f'<svg class="icon" viewBox="0 0 24 24" aria-hidden="true">{icon_set()[name]}</svg>')
+        else:
+            import difflib
+            near = difflib.get_close_matches(name, list(icon_set()), n=4, cutoff=0.5)
+            notes.append(warn(f"icons: 沒有叫 '{name}' 的圖示"
+                              + (f"（相近：{'、'.join(near)}）" if near else "")
+                              + "；用 ./fw deck-compile --icons <關鍵字> 找名稱"))
+            out.append("")
+    return out, "".join(notes)
+
+
+ICON_LAYOUTS = ("L-3CARD-VERDICT", "L-4CARD-GRID", "L-6CARD-GRID", "L-BANNER-6GRID")
+
+
 def render_3card_verdict(slots: dict[str, Any], variant: str, ctx: SlideContext) -> str:
     title = esc(slots.get("title") or "")
     dlabel = _dlabel(slots, title)
@@ -470,16 +577,17 @@ def render_3card_verdict(slots: dict[str, Any], variant: str, ctx: SlideContext)
     card_class = f"card card--{variant}"
 
     cards_html = []
-    for i, c in enumerate(cards[:ITEM_CAP["L-3CARD-VERDICT"]]):
+    cards = cards[:ITEM_CAP["L-3CARD-VERDICT"]]
+    icons, icon_notes = _icons(slots, len(cards))
+    for i, c in enumerate(cards):
         tag = esc(c.get("tag") or "")
         head = esc(c.get("head") or "")
-        body = esc(c.get("body") or "")
         tag_html = f'<span class="tag">{tag}</span>' if tag else ""
         delay = f"d{i+1}"
         cards_html.append(f"""          <div class="{card_class} rise {delay}">
             {tag_html}
-            <h3>{head}</h3>
-            <p>{body}</p>
+            <h3>{icons[i]}{head}</h3>
+            {_card_text(c)}
           </div>""")
 
     note_label = _note_label(slots, CLOSING_LABEL["L-3CARD-VERDICT"])
@@ -494,7 +602,7 @@ def render_3card_verdict(slots: dict[str, Any], variant: str, ctx: SlideContext)
 {''.join(cards_html)}
       </div>
       {verdict_html}
-    </div>
+    </div>{icon_notes}
   </section>"""
 
 
@@ -508,10 +616,12 @@ def render_4card_grid(slots: dict[str, Any], variant: str, ctx: SlideContext) ->
     lead_html = f'<p class="lead rise">{lead}</p>' if lead else ""
 
     cards_html = []
-    for i, c in enumerate(cards[:ITEM_CAP["L-4CARD-GRID"]]):
+    cards = cards[:ITEM_CAP["L-4CARD-GRID"]]
+    icons, icon_notes = _icons(slots, len(cards))
+    for i, c in enumerate(cards):
         tag = esc(c.get("tag") or "")
-        head = esc(c.get("head") or "")
-        body = esc(c.get("body") or "")
+        head = icons[i] + esc(c.get("head") or "")
+        text = _card_text(c)
         tag_html = f'<span class="tag">{tag}</span>' if tag else ""
         delay = f"d{i+1}"
         if variant == "numbered-1-4":
@@ -521,7 +631,7 @@ def render_4card_grid(slots: dict[str, Any], variant: str, ctx: SlideContext) ->
           <div>
             {tag_html}
             <h3>{head}</h3>
-            <p>{body}</p>
+            {text}
           </div>
         </div>""")
         elif variant == "pillars":
@@ -530,14 +640,14 @@ def render_4card_grid(slots: dict[str, Any], variant: str, ctx: SlideContext) ->
           {cap}
           <div class="pillar__body">
             <h3>{head}</h3>
-            <p>{body}</p>
+            {text}
           </div>
         </div>""")
         else:
             cards_html.append(f"""        <div class="card card--grid-2x2 rise {delay}">
           {tag_html}
           <h3>{head}</h3>
-          <p>{body}</p>
+          {text}
         </div>""")
 
     note_label = _note_label(slots, CLOSING_LABEL["L-4CARD-GRID"])
@@ -553,7 +663,7 @@ def render_4card_grid(slots: dict[str, Any], variant: str, ctx: SlideContext) ->
 {''.join(cards_html)}
       </div>
       {verdict_html}
-    </div>
+    </div>{icon_notes}
   </section>"""
 
 
@@ -1331,28 +1441,28 @@ def tag_accents(tags: list[str]) -> dict[str, str]:
     return colours
 
 
-def _card_grid(cards: list[dict[str, Any]], first_delay: int) -> str:
+def _card_grid(cards: list[dict[str, Any]], first_delay: int, slots: dict[str, Any] | None = None) -> str:
     """Up to six cards in two or three columns, each with a category pill, a head, an optional
     second name, a gloss and an optional citation; a row of the grid arrives together."""
     colours = tag_accents([str(c.get("tag") or "").strip() for c in cards])
     cols = 2 if len(cards) in (1, 2, 4) else 3
     cards_html = []
+    icons, icon_notes = _icons(slots or {}, len(cards))
     for i, c in enumerate(cards):
         tag = str(c.get("tag") or "").strip()
-        head = esc(c.get("head") or "")
+        head = icons[i] + esc(c.get("head") or "")
         sub = esc(c.get("sub") or "")
-        body = esc(c.get("body") or "")
         cite = esc(c.get("cite") or "")
         pill = f'<span class="pill" style="--chapter:{colours[tag]}">{esc(tag)}</span>' if tag else ""
         sub_html = f'\n            <p class="axis__sub">{sub}</p>' if sub else ""
-        body_html = f"\n            <p>{body}</p>" if body else ""
+        body_html = f"\n            {_card_text(c)}" if c.get("body") or c.get("points") else ""
         cite_html = f'\n            <p class="axis__cite">{cite}</p>' if cite else ""
         cards_html.append(f"""          <div class="axis__card rise d{min(first_delay + i // cols, 4)}">
             <div class="axis__top"><h3>{head}</h3>{pill}</div>{sub_html}{body_html}{cite_html}
           </div>""")
     return f"""        <div class="axis__grid axis__grid--{cols}">
 {chr(10).join(cards_html)}
-        </div>"""
+        </div>{icon_notes}"""
 
 
 def render_6card_grid(slots: dict[str, Any], variant: str, ctx: SlideContext) -> str:
@@ -1379,7 +1489,7 @@ def render_6card_grid(slots: dict[str, Any], variant: str, ctx: SlideContext) ->
       <h2 class="kicker rise">{title}</h2>
       {lead_html}
       <div class="axis axis--{variant}">
-{_card_grid(cards, first_delay=1)}
+{_card_grid(cards, first_delay=1, slots=slots)}
       </div>
       {verdict_html}
     </div>
@@ -1410,7 +1520,7 @@ def render_banner_grid(slots: dict[str, Any], variant: str, ctx: SlideContext) -
     b_sub_html = f"<small>{b_sub}</small>" if b_sub else ""
     b_body_html = f"<p>{b_body}</p>" if b_body else ""
 
-    grid_html = _card_grid(cards, first_delay=2)
+    grid_html = _card_grid(cards, first_delay=2, slots=slots)
 
     return f"""  <section class="slide" style="--chapter:{ctx.accent}" data-label="{dlabel}">
 {_render_topbar(ctx)}
@@ -1563,7 +1673,7 @@ CATALOG: dict[str, LayoutDefinition] = {
         required_slots=["title"],
         allowed_variants=["default"],
         render_func=render_hero_title,
-        optional_slots=["sub", "meta", "subtitle", "author"],
+        optional_slots=["sub", "meta", "subtitle", "author", "affiliation"],
     ),
     "L-FINALE-SUMMARY": LayoutDefinition(
         id="L-FINALE-SUMMARY",
@@ -1769,6 +1879,25 @@ ALIASES = {
     "l-stat": "L-STAT-HERO",
     "l-defn": "L-DEFN-EXAMPLE",
 }
+
+
+def with_source(rendered: str, slots: dict[str, Any]) -> str:
+    """The slide with its `source:` line (where the slide's material comes from) under the content."""
+    source = slots.get("source")
+    if not isinstance(source, str) or not source.strip():
+        return rendered
+    head, _, tail = rendered.rpartition("  </section>")
+    return f'{head}    <p class="source rise d4">{esc(source)}</p>\n  </section>{tail}'
+
+
+def _finished(render: Callable[[dict[str, Any], str, SlideContext], str]) -> Callable[[dict[str, Any], str, SlideContext], str]:
+    def wrapped(slots: dict[str, Any], variant: str, ctx: SlideContext) -> str:
+        return inline_marks(with_source(render(slots, variant, ctx), slots))
+    return wrapped
+
+
+for _layout in CATALOG.values():
+    _layout.render_func = _finished(_layout.render_func)
 
 
 def get_layout(layout_id: str) -> LayoutDefinition:

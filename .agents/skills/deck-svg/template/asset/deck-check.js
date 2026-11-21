@@ -100,6 +100,8 @@
     const layers = [];
     for (let node = el; node && node.nodeType === 1; node = node.parentElement) {
       const cs = getComputedStyle(node);
+      // 裁成文字形狀的背景（封面標題的漸層）是那段文字的顏色，不是它裡面強調字的底色。
+      if ((cs.webkitBackgroundClip || cs.backgroundClip) === 'text') continue;
       const own = [];
       for (const layer of splitTop(cs.backgroundImage)) {
         const colors = layerColors(layer);

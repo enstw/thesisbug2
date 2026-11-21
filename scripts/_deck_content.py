@@ -23,17 +23,17 @@ from html.parser import HTMLParser
 from typing import Any, Iterator
 
 try:
-    from _deck_catalog import parse_slot_payload
+    from _deck_catalog import parse_slot_payload, plain
     from _deck_outline import COMMON, SPECS, extract_storyboard_rows
     from _deck_steps import premise_value, section
 except ImportError:          # imported as scripts._deck_content (tests)
-    from ._deck_catalog import parse_slot_payload
+    from ._deck_catalog import parse_slot_payload, plain
     from ._deck_outline import COMMON, SPECS, extract_storyboard_rows
     from ._deck_steps import premise_value, section
 
 # Slots and columns the design stage owns: they steer the form and carry no content.
 DESIGN_SLOTS = {"variant", "html", "matrix_width", "label_width", "points_align", "title_lines", "sub_lines",
-                "art", "art_ground"}
+                "art", "art_ground", "icons"}
 DESIGN_COLUMNS = {"版型", "動態"}
 # Slots whose value is shown as a label or names a file, so it is not text to find on the slide.
 UNCHECKED_SLOTS = DESIGN_SLOTS | {"verdict_label", "label", "data_label", "eyebrow"}
@@ -131,7 +131,7 @@ def lost_content(layout_id: str, slots: dict[str, Any], rendered: str) -> list[s
     problems: list[str] = []
 
     def missing(value: Any) -> list[str]:
-        return [t for t in leaves(value) if _squash(t) not in shown]
+        return [t for t in leaves(value) if _squash(plain(t)) not in shown]
 
     for key, value in slots.items():
         if key in UNCHECKED_SLOTS or (not free and (key in spec.styling or key in spec.dropped)):
@@ -247,5 +247,5 @@ def sign_problem(storyboard_text: str) -> str:
 def char_count(cell: str) -> int:
     """How many characters a row puts on its slide: every piece of text in 畫面內容, spaces left out."""
     slots = parse_slot_payload(cell)
-    return sum(len(_squash(html_lib.unescape(t))) for key, value in slots.items()
+    return sum(len(_squash(plain(html_lib.unescape(t)))) for key, value in slots.items()
                if key not in DESIGN_SLOTS for t in leaves(value))

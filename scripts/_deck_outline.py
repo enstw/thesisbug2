@@ -24,10 +24,10 @@ from typing import Any, Callable
 
 try:
     from _deck_catalog import (CATALOG, CLOSING_LABEL, DEFAULT_WORDS, ITEM_CAP, get_layout,
-                               matrix_focus, matrix_note_label, note_label_text, parse_slot_payload)
+                               matrix_focus, matrix_note_label, note_label_text, parse_slot_payload, plain)
 except ImportError:          # imported as scripts._deck_outline (tests)
     from ._deck_catalog import (CATALOG, CLOSING_LABEL, DEFAULT_WORDS, ITEM_CAP, get_layout,
-                                matrix_focus, matrix_note_label, note_label_text, parse_slot_payload)
+                                matrix_focus, matrix_note_label, note_label_text, parse_slot_payload, plain)
 
 
 # ---------- the storyboard table ----------
@@ -179,7 +179,8 @@ class Outline:
 
 
 def _text(value: Any) -> str:
-    return "" if value is None or isinstance(value, (list, dict)) else str(value).strip()
+    # the derived Views draw plain text, so the author's emphasis marks (`*詞*`) come off here
+    return "" if value is None or isinstance(value, (list, dict)) else plain(str(value).strip())
 
 
 def _first(slots: dict[str, Any], names: tuple[str, ...]) -> Any:
@@ -192,8 +193,11 @@ def _first(slots: dict[str, Any], names: tuple[str, ...]) -> Any:
 def _item(raw: Any) -> Item:
     if not isinstance(raw, dict):
         return Item(head=_text(raw))
+    # a card's own lines (`-- 子項`) ride in its text, so a derived View loses none of them
+    points = "；".join("：".join(p for p in (_text(pt.get("head")), _text(pt.get("body"))) if p)
+                      for pt in raw.get("points") or [] if isinstance(pt, dict))
     return Item(head=_text(raw.get("head") or raw.get("label") or raw.get("point") or raw.get("raw")),
-                body=_text(raw.get("body") or raw.get("desc")),
+                body="；".join(p for p in (_text(raw.get("body") or raw.get("desc")), points) if p),
                 tag=_text(raw.get("tag") or raw.get("time") or raw.get("level_name")))
 
 
@@ -363,10 +367,10 @@ class Spec:
 
 
 # `variant` pins a slide's depth variant; it steers the HTML layout only, so no outline carries it.
-COMMON = ("title", "label", "data_label", "eyebrow", "verdict_label", "variant", "art", "art_ground")
+COMMON = ("title", "label", "data_label", "eyebrow", "verdict_label", "variant", "art", "art_ground", "icons", "source")
 
 SPECS: dict[str, Spec] = {
-    "L-HERO-TITLE": Spec(lead=("sub", "subtitle"), meta=("meta", "author"),
+    "L-HERO-TITLE": Spec(lead=("sub", "subtitle"), meta=("meta", "author", "affiliation"),
                          shaped=("title_lines", "sub_lines"), shape=_hero),
     "L-FINALE-SUMMARY": Spec(title=("heading", "title"), lead=("onesentence", "verdict", "body"),
                              items=("points", "items"), styling=("points_align",),

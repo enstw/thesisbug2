@@ -34,6 +34,7 @@ engine    deck-svg       asset/deck.css + deck-font-controls.js + deck-theme-con
 | `template/asset/deck-font-controls.js` | Deck-wide font size: `+`/`=` and `-` step `--deck-font-scale` by 10% (80–150%), remembered per deck and synced across its windows. | No. |
 | `template/asset/deck-theme-controls.js` | Live colour: `c`/Shift+C cycle the fixed themes in `tokens.css`, `g`/Shift+G generate or step back through seeded palettes; `#theme=<id>` or `#theme=r<seed>` loads one. Remembered per deck and synced across its windows like the font size. Needs house-style's `deck-theme-rules.js` + `deck-palette.js` loaded before it. | No. |
 | `template/asset/deck-check.js` | The `deck.html#debug` self-check (type floor, overflow, rendered contrast, § Run & verify); does nothing without `#debug`. | No. |
+| `icons/lucide.json` | Lucide 1.77 (ISC, licence beside it): 2,410 line icons as one name → markup map. `deck-compile` writes the chosen ones into the slide, so a deck needs no icon file of its own. [`icons/README.md`](icons/README.md) says how to update it. |
 | `template/asset/gsap.min.js` | GSAP 3.15 core + Flip, DrawSVG, Text, SplitText, MorphSVG, MotionPath, ScrambleText, GSDevTools in one local file (free "no charge" licence, not MIT), so the lively mode works from `file://`. Update by concatenating the nine `dist/*.min.js` of a newer release (header comment says how). |
 | `template/asset/deck-motion.js` | The optional lively mode on GSAP (§ Motion and print): elements marked `data-beat` reveal one beat at a time with an effect — by themselves every 0.3 s by default, or one per key press after `A` — `data-id` glides an element from where it sat on an earlier slide, `data-enter` picks the slide's entrance, `data-along` rides an SVG path, `data-morph` morphs a path, `data-relayout` re-flows a container with Flip; `M` turns it off. |
 | `reference/slide-patterns.md` | Content shape → pattern (read **first**: the storyboard row names the shape), then the component cheat-sheet. | No. |
@@ -115,7 +116,7 @@ The storyboard arrives with every row's content decided and 版型 and 動態
 still `—`. This stage chooses how each row looks. It owns exactly three
 things in `storyboard.md`: the **版型** cell, the **動態** cell, and the
 layout slots inside 畫面內容 (`variant`, `title_lines`, `sub_lines`,
-`matrix_width`, `label_width`, `points_align`, `html`, `art`, `art_ground`). It may also rename a
+`matrix_width`, `label_width`, `points_align`, `html`, `art`, `art_ground`, `icons`). It may also rename a
 row's slots to the ones the chosen layout reads (`cards` to `stages`). It
 never rewords, shortens, merges or drops what a row says, and it never adds
 or removes a row, because how much the audience is shown was decided with the
@@ -159,11 +160,19 @@ For each row:
    choice for Jev and writes the picks back, a paid call that needs the
    author's acknowledgement (`--ack`); the catalogue explains both routes.
 1. **Add a picture only where the row leaves room.** `art: <file in the talk>`
-   puts a generated scene in the band below the content, drawn in the
-   chapter colour so it follows every theme. It is atmosphere and never
-   evidence: no map, chart, flag or lettering, because the audience reads a
-   picture on a slide as a claim. [`reference/art-plate.md`](reference/art-plate.md)
-   has the rules, the tested prompts and the source line 前提 must carry.
+   puts a generated scene or map in the band below the content (on the cover,
+   in the right half beside the title), drawn in the chapter colour so it
+   follows every theme. It shows a setting and never carries data: no chart
+   and no lettering, and a map is checked against a real one before use,
+   because the audience reads a picture on a slide as a claim.
+   [`reference/art-plate.md`](reference/art-plate.md) has the rules, the
+   tested prompts and the source line 前提 must carry.
+1. **Give cards an icon when it helps find them.** `icons: handshake, ship, -`
+   sets one pictogram per card, in order, on the card layouts; the names are
+   Lucide's and `./fw deck-compile --icons <keyword>` lists them. An icon marks
+   a card, it does not explain it: pick one that names the same thing as the
+   card's heading, and leave a card without one (`-`) when nothing fits,
+   because a vague icon reads as a second, wrong label.
 
 Run `./fw deck-compile <talk>` to compile the slides deterministically with
 seeded depth variants. The variants' styles live in `asset/deck.css`, so when

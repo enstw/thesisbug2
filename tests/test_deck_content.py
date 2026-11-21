@@ -228,6 +228,137 @@ class ArtPlateTests(unittest.TestCase):
         self.assertNotRegex(css, r"\.plate[^{]*\{[^}]*mask-image:\s*url")
 
 
+class SlideTextTests(unittest.TestCase):
+    """What a row may say beyond plain lines: emphasis, a card's own lines, where the material comes from."""
+
+    def test_emphasis_is_drawn_and_is_the_authors_to_change(self):
+        row = CARDS.replace("title: 三個機制", "title: 三個*機制*的**代價**")
+        html, warnings, losses = compile_row("L-3CARD-VERDICT", row)
+        self.assertEqual((warnings, losses), ([], []))
+        self.assertIn('<h2 class="kicker rise">三個<em>機制</em>的<strong>代價</strong></h2>', html)
+        self.assertIn('data-label="三個機制的代價"', html)
+        self.assertNotRegex(html, "[\ue000-\ue003]")
+        self.assertEqual(char_count(row), char_count(CARDS) + 3)
+        self.assertEqual(outline_row({"#": "1", "版型": "L-3CARD-VERDICT", "畫面內容": row}, 1).title, "三個機制的代價")
+        plain_board, marked = storyboard([("—", "—", CARDS)]), storyboard([("—", "—", CARDS.replace("成本上升", "*成本*上升"))])
+        self.assertNotEqual(content_digest(plain_board), content_digest(marked))
+        # a lone asterisk is not emphasis
+        html, _, losses = compile_row("L-3CARD-VERDICT", CARDS.replace("成本上升", "p < .05* 顯著"))
+        self.assertIn("p &lt; .05* 顯著", html)
+        self.assertEqual(losses, [])
+
+    PANELS = ("title: 現況與缺口<br>cards:<br>- [head: 美日、美菲：條約同盟]<br>-- 共同防禦承諾<br>-- 適用受限<br>"
+              "- [head: 功能合作]<br>-- 臺美：海巡協作<br>-- 臺日：海洋事務對話<br>- [甲] 深化: 三邊合作<br>- [乙] 連結: 尚待補足")
+
+    def test_a_card_holds_lines_of_its_own(self):
+        slots = deck_compile.parse_slot_payload(self.PANELS)
+        self.assertEqual([len(c.get("points", [])) for c in slots["cards"]], [2, 2, 0, 0])
+        self.assertEqual(slots["cards"][0]["head"], "美日、美菲：條約同盟")
+        for variant in CATALOG["L-4CARD-GRID"].allowed_variants:
+            html, warnings, losses = compile_row("L-4CARD-GRID", self.PANELS + f"<br>variant: {variant}")
+            self.assertEqual((warnings, losses), ([], []), variant)
+            self.assertIn('<ul class="card__points"><li>共同防禦承諾</li><li>適用受限</li></ul>', html)
+            self.assertIn("<li><strong>臺美</strong>：海巡協作</li>", html)
+        html, _, losses = compile_row("L-6CARD-GRID", self.PANELS)
+        self.assertEqual(losses, [])
+        self.assertIn("<li><strong>臺日</strong>：海洋事務對話</li>", html)
+        items = outline_row({"#": "1", "版型": "L-4CARD-GRID", "畫面內容": self.PANELS}, 1).items
+        self.assertEqual(items[1].body, "臺美：海巡協作；臺日：海洋事務對話")
+
+    def test_lines_a_layout_does_not_draw_are_reported(self):
+        _, _, losses = compile_row("L-FLOW-3STAGE", "title: t<br>stages:<br>- 巡航: 壓縮預警<br>-- 只有這裡才說的細節<br>- 宣示: 挑戰現狀<br>- 演練: 局部管制")
+        self.assertEqual(len(losses), 1, losses)
+        self.assertIn("只有這裡才說的細節", losses[0])
+
+    def test_any_layout_takes_a_source_line(self):
+        for layout, row in (("L-3CARD-VERDICT", CARDS), ("L-FINALE-SUMMARY", "heading: 結語<br>points:<br>- 一"),
+                            ("L-HERO-TITLE", "title: 題目")):
+            html, warnings, losses = compile_row(layout, row + "<br>source: 資料依第三節所引*官方*文件")
+            self.assertEqual((warnings, losses), ([], []), layout)
+            self.assertIn('<p class="source rise d4">資料依第三節所引<em>官方</em>文件</p>\n  </section>', html)
+        self.assertNotEqual(content_digest(storyboard([("—", "—", CARDS)])),
+                            content_digest(storyboard([("—", "—", CARDS + "<br>source: 某文件")])))
+
+
+class IconTests(unittest.TestCase):
+    """A card may carry a pictogram the design stage picks from the bundled set."""
+
+    def test_icons_follow_the_cards_in_order(self):
+        html, warnings, losses = compile_row("L-3CARD-VERDICT", CARDS + "<br>icons: handshake, -, ship")
+        self.assertEqual((warnings, losses), ([], []))
+        self.assertEqual(html.count('<svg class="icon" viewBox="0 0 24 24" aria-hidden="true">'), 2)
+        self.assertRegex(html, r'<h3><svg class="icon"[^>]*>.*?</svg>支出</h3>')
+        self.assertIn("<h3>聚落</h3>", html)
+        for layout in ("L-4CARD-GRID", "L-6CARD-GRID", "L-BANNER-6GRID"):
+            html, warnings, _ = compile_row(layout, CARDS + "<br>icons: database")
+            self.assertEqual(html.count('<svg class="icon"'), 1, layout)
+
+    def test_a_wrong_name_or_a_layout_without_icons_is_said(self):
+        html, warnings, _ = compile_row("L-3CARD-VERDICT", CARDS + "<br>icons: handshak")
+        self.assertNotIn('class="icon"', html)
+        self.assertTrue(any("沒有叫 'handshak' 的圖示" in w and "handshake" in w for w in warnings), warnings)
+        _, warnings, _ = compile_row("L-3CARD-VERDICT", CARDS + "<br>icons: ship, ship, ship, ship")
+        self.assertTrue(any("只有 3 張卡片" in w for w in warnings), warnings)
+        _, warnings, losses = compile_row("L-FLOW-3STAGE", "title: t<br>icons: ship<br>stages:<br>- 巡航: 壓縮<br>- 宣示: 挑戰<br>- 演練: 管制")
+        self.assertTrue(any("L-FLOW-3STAGE 不畫 icons:" in w for w in warnings), warnings)
+        self.assertEqual(losses, [])
+
+    def test_icons_are_a_design_choice(self):
+        self.assertEqual(content_digest(storyboard([("L-3CARD-VERDICT", "—", CARDS + "<br>icons: ship, anchor, radar")])),
+                         content_digest(storyboard([("L-3CARD-VERDICT", "—", CARDS)])))
+
+    def test_bundled_set_is_drawing_markup_with_its_licence(self):
+        import json
+        folder = SKILLS / "deck-svg/icons"
+        icons = json.loads((folder / "lucide.json").read_text(encoding="utf-8"))
+        self.assertGreater(len(icons), 1500)
+        allowed = {"path", "circle", "rect", "line", "polyline", "polygon", "ellipse"}
+        for name, markup in icons.items():
+            self.assertLessEqual(set(re.findall(r"<([a-zA-Z]+)", markup)), allowed, name)
+            self.assertNotRegex(markup, r"(?i)href|style=|\bon[a-z]+=", name)
+        self.assertIn("ISC License", (folder / "LICENSE-lucide").read_text(encoding="utf-8"))
+
+
+class CoverTests(unittest.TestCase):
+    def setUp(self):
+        self.talk = Path(tempfile.mkdtemp(prefix="thesisbug2-test-cover-"))
+        (self.talk / "art").mkdir()
+        (self.talk / "art" / "map.jpg").write_bytes(b"\xff\xd8\xff" + b"0" * 64)
+
+    def tearDown(self):
+        shutil.rmtree(self.talk, ignore_errors=True)
+
+    ROW = "title: 印太*安全合作*<br>sub: 可能路徑<br>author: 王小明<br>affiliation: 某某大學研究所"
+
+    def test_a_name_stands_over_its_affiliation(self):
+        html, warnings, losses = compile_row("L-HERO-TITLE", self.ROW)
+        self.assertEqual((warnings, losses), ([], []))
+        self.assertIn('<p class="hero__author rise d2">王小明</p>', html)
+        self.assertIn('<p class="hero__meta rise d3">某某大學研究所</p>', html)
+        self.assertIn("印太<em>安全合作</em>", html)
+        html, _, _ = compile_row("L-HERO-TITLE", "title: 題目<br>author: 王小明")
+        self.assertIn('<p class="hero__meta rise d2">王小明</p>', html)
+        self.assertNotIn("hero__author", html)
+
+    def test_a_picture_takes_the_other_half_and_the_title_fits_its_own(self):
+        lines = "<br>title_lines:<br>- 正式同盟限制下的<br>- 印太*安全合作*"
+        plain_html, _, _ = compile_row("L-HERO-TITLE", self.ROW + lines, self.talk)
+        html, warnings, losses = compile_row("L-HERO-TITLE", self.ROW + lines + "<br>art: art/map.jpg", self.talk)
+        self.assertEqual((warnings, losses), ([], []))
+        self.assertIn('<section class="slide has-art hero"', html)
+        self.assertIn('<img src="art/map.jpg" alt=""', html)
+        # eight characters fit the full-width title box at its default size, and need a smaller one in half the slide
+        self.assertIn('<h1 class="rise" style="white-space: nowrap;">', plain_html)
+        self.assertLess(int(re.search(r"<h1[^>]*font-size: calc\((\d+)px", html).group(1)), 108)
+        css = (SKILLS / "deck-svg/template/asset/deck.css").read_text(encoding="utf-8")
+        self.assertIn(".hero .plate { position: absolute; inset: 0 0 0 50%;", css)
+        self.assertIn(".hero.has-art .hero__inner { width: 50%;", css)
+
+    def test_check_does_not_read_a_clipped_title_gradient_as_a_background(self):
+        check = (SKILLS / "deck-svg/template/asset/deck-check.js").read_text(encoding="utf-8")
+        self.assertIn("=== 'text') continue;", check)
+
+
 class SignOffTests(unittest.TestCase):
     """The design stage may give a row a form; it may not change what the row says."""
 

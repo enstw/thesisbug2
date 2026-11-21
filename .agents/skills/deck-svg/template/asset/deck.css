@@ -361,10 +361,27 @@
   .plate--cols img { mask-image: linear-gradient(to right, transparent, #000 14%, #000 86%, transparent); }
   .plate svg { position: absolute; width: 0; height: 0; }
   .plate__tint { flood-color: var(--chapter, var(--accent)); }
-  .hero.has-art { justify-content: flex-start; }
-  .hero.has-art .hero__inner { flex: 0 0 auto; padding-top: 150px; }
-  .hero .plate { margin: 40px 0 0; position: relative; z-index: 1; }
-  .art-credit { flex: none; margin: 20px 0 0; color: var(--muted); font-size: calc(34px * var(--deck-font-scale, 1)); line-height: 1.4; }
+  /* On the cover the picture takes the right half and the text the left, so neither covers the other. */
+  .hero.has-art .hero__inner { width: 50%; box-sizing: border-box; padding: 0 40px 0 120px; align-items: flex-start; text-align: left; }
+  .hero.has-art h1 { font-size: calc(108px * var(--deck-font-scale, 1)); max-width: 800px; }
+  .hero.has-art .hero__sub { margin-left: 0; max-width: 800px; }
+  .hero .plate { position: absolute; inset: 0 0 0 50%; margin: 0; z-index: 1;
+    mask-image: linear-gradient(to right, transparent, #000 40%); }
+  .hero .plate img { object-position: center; }
+  .hero h1 em { color: var(--accent); }
+  .hero__author { margin: 48px 0 0; color: var(--accent); font-size: calc(48px * var(--deck-font-scale, 1)); font-weight: 700; line-height: 1.4; }
+  .hero__author + .hero__meta { margin-top: 8px; }
+  .hero__meta + .hero__meta { margin-top: 0; }
+
+  /* ---------- lines under the content: where the slide's material comes from, and the pictures' source ---------- */
+  .source, .art-credit { flex: none; margin: 10px 0 0; color: var(--muted); font-size: calc(34px * var(--deck-font-scale, 1)); line-height: 1.4; }
+
+  /* ---------- a card's own lines (`-- 子項`) and its icon (`icons:`) ---------- */
+  .card__points { list-style: none; margin: 0; padding: 0; font-size: calc(36px * var(--deck-font-scale, 1)); line-height: 1.45; }
+  .card__points li + li { margin-top: 2px; }
+  .axis__card .card__points { font-size: calc(34px * var(--deck-font-scale, 1)); line-height: 1.45; margin-top: 4px; }
+  .icon { width: 1.15em; height: 1.15em; flex: none; margin-right: .32em; vertical-align: -.2em;
+    fill: none; stroke: var(--chapter); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
   /* ---------- formula line (storyboard 公式 column → p.fx, typeset by asset/katex) ----------
      One line under the slide body, at body size, for an audience that reads the formula

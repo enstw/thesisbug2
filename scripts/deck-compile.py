@@ -5,6 +5,7 @@
     ./fw deck-compile [<talk>] --check  exit 1 if deck.html is out of sync with storyboard.md
     ./fw deck-compile [<talk>] --dry-run print compiled slides without writing deck.html
     ./fw deck-compile --explorer        build the layout explorer (every layout × variant) and print its address
+    ./fw deck-compile --icons <keyword> list the icon names for the icons: slot
 
 The compiler reads <talk>/storyboard.md, extracts the random seed from 前提,
 validates layout codes against the Layout Catalog, resolves visual rhythm
@@ -25,8 +26,8 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 from _deck import NOTES_FILE, deck_assets, notes_source, unmanaged_notes  # noqa: E402
-from _deck_catalog import (CATALOG, VisualRhythmResolver, art_names, get_layout,  # noqa: E402
-                           parse_slot_payload, with_art)
+from _deck_catalog import (CATALOG, ICON_LAYOUTS, VisualRhythmResolver, art_names,  # noqa: E402
+                           get_layout, icon_names, icon_set, parse_slot_payload, with_art)
 from _deck_content import (FLOORS, art_credit, lost_content, missing_required,  # noqa: E402
                            sign_problem, type_floor)
 from _deck_motion import apply_motion, split_codes  # noqa: E402
@@ -193,6 +194,8 @@ def render_row(row: dict[str, str], idx: int, total: int,
     # a 環節 column, so a storyboard without them compiles exactly as before.
     ctx.pmap = strip_html(row["環節"], steps) if steps and "環節" in row else ""
     rendered = with_art(layout_def.render_func(slots, chosen_variant, ctx), slots, talk, slide_num)
+    if icon_names(slots) and layout_def.id not in ICON_LAYOUTS:
+        warnings.append(f"投影片 #{slide_num}: {layout_def.id} 不畫 icons:（有圖示的版型：{'、'.join(ICON_LAYOUTS)}）")
     for msg in WARNING_RE.findall(rendered):
         warnings.append(f"投影片 #{slide_num}: {html_lib.unescape(msg)}")
     rendered = WARNING_RE.sub("", rendered)
@@ -339,9 +342,15 @@ def main() -> int:
     parser.add_argument("talk", nargs="?", help="the talk to compile (defaults to current)")
     parser.add_argument("--check", action="store_true", help="exit 1 if deck.html needs recompilation")
     parser.add_argument("--dry-run", action="store_true", help="print compiled output without writing")
+    parser.add_argument("--icons", metavar="KEYWORD", help="list the icon names that contain every word of KEYWORD (for the icons: slot)")
     parser.add_argument("--explorer", action="store_true", help="build the interactive layout explorer from the catalog examples and print its file:// URI")
     args = parser.parse_args()
 
+    if args.icons:
+        words = args.icons.lower().replace(",", " ").split()
+        names = [name for name in sorted(icon_set()) if all(w in name for w in words)]
+        print("\n".join(names) if names else f"no icon name contains {' and '.join(words)}; try one English word (ship, shield, users)")
+        return 0 if names else 1
     if args.explorer:
         from _deck_explorer import build_explorer
         print(build_explorer().resolve().as_uri())

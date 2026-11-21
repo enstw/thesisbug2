@@ -4,6 +4,9 @@
   if (!deck) return;
 
   const minimum = 80, maximum = 150, step = 10;
+  // 場地容許較小的字時（<html data-deck-type-floor="30" 或 "27">），整份的起始字級跟著降到 90%／80%，
+  // 34px 的標籤剛好落在那個下限；講者按 +／− 存下的選擇仍然優先。
+  const base = { 30: 90, 27: 80 }[Number(document.documentElement.dataset.deckTypeFloor)] || 100;
   const storageKey = `deck-font-size:${location.pathname}`;
   const thumbnail = new URLSearchParams(location.search).has('_snthumb');
   let percent = 100, timer;
@@ -18,7 +21,7 @@
   function apply(value, announce = false) {
     const parsed = Number(value);
     percent = Number.isFinite(parsed) && parsed >= minimum && parsed <= maximum
-      ? Math.round(parsed / step) * step : 100;
+      ? Math.round(parsed / step) * step : base;
     document.documentElement.style.setProperty('--deck-font-scale', percent / 100);
     deck.dataset.fontSize = String(percent);
     if (announce && !thumbnail) {
@@ -30,7 +33,7 @@
   }
 
   try { apply(localStorage.getItem(storageKey)); }
-  catch { apply(100); }
+  catch { apply(base); }
 
   function nudge(direction) {
     apply(Math.max(minimum, Math.min(maximum, percent + direction * step)), true);

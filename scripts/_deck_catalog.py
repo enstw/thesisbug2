@@ -1,6 +1,6 @@
 """The presentation layout catalog and slot parser for thesisbug2.
 
-Defines the 18 standard layout codes across 5 families, their slot schemas,
+Defines the 20 standard layout codes across 5 families, their slot schemas,
 seeded depth variants, and deterministic HTML renderers.
 
 A depth variant changes the form of a slide's containers (panel, open column, bubble,
@@ -16,6 +16,7 @@ Layout catalog v1.1:
   2. Parallel Expansion & Synthesis:
      - L-3CARD-VERDICT
      - L-4CARD-GRID
+     - L-6CARD-GRID
      - L-BENTO-FOCUS
      - L-BANNER-6GRID
      - L-SPLIT-ANCHOR
@@ -28,6 +29,7 @@ Layout catalog v1.1:
      - L-TIMELINE-RAIL
      - L-CASCADE-FUNNEL
      - L-CANVAS (standard frame around one free drawing area)
+     - L-CUSTOM (standard frame around a body written by hand, kept in the talk)
   5. Scholarly Critique & Evidence:
      - L-QUOTE-CRITIQUE
      - L-HYPOTHESIS-TEST
@@ -288,6 +290,7 @@ NO_LABEL = {"none", "無", "-", "—"}
 CLOSING_LABEL = {
     "L-3CARD-VERDICT": "結論",
     "L-4CARD-GRID": "定論",
+    "L-6CARD-GRID": "定論",
     "L-BENTO-FOCUS": "定論",
     "L-VS-CONFRONT": "裁決／提問",
     "L-SPECTRUM-POLES": "定論",
@@ -296,6 +299,7 @@ CLOSING_LABEL = {
     "L-CASCADE-FUNNEL": "核心焦點",
     "L-HYPOTHESIS-TEST": "理論謎題／意涵",
     "L-CANVAS": "重點",
+    "L-CUSTOM": "重點",
 }
 # How many list items each layout has room for; a row that lists more shows the
 # first ones. Here for the same reason as the words above: a derived View that
@@ -305,6 +309,7 @@ ITEM_CAP = {
     "L-4CARD-GRID": 4,
     "L-BENTO-FOCUS": 3,          # the focus card plus two side cards
     "L-BANNER-6GRID": 6,         # cards under the banner
+    "L-6CARD-GRID": 6,
     "L-SPLIT-ANCHOR": 3,
     "L-FLOW-3STAGE": 3,
     "L-TIMELINE-RAIL": 5,
@@ -434,7 +439,8 @@ def render_finale_summary(slots: dict[str, Any], variant: str, ctx: SlideContext
 
     pts_html = ""
     if pts:
-        li_items = "".join(f"<li>{esc(p.get('head', p) if isinstance(p, dict) else p)}</li>" for p in pts)
+        # the whole bullet: a point such as 「韌性：效率的代價」 lost everything after its colon when only the head was printed
+        li_items = "".join(f"<li>{esc((p.get('text') or p.get('head', '')) if isinstance(p, dict) else p)}</li>" for p in pts)
         # Long points wrap; centred wrapped lines are hard to follow, so a slide
         # may set `points_align: left` while the heading stays centred.
         align = ' style="text-align:left"' if str(slots.get("points_align") or "").strip().lower() == "left" else ""
@@ -1325,6 +1331,61 @@ def tag_accents(tags: list[str]) -> dict[str, str]:
     return colours
 
 
+def _card_grid(cards: list[dict[str, Any]], first_delay: int) -> str:
+    """Up to six cards in two or three columns, each with a category pill, a head, an optional
+    second name, a gloss and an optional citation; a row of the grid arrives together."""
+    colours = tag_accents([str(c.get("tag") or "").strip() for c in cards])
+    cols = 2 if len(cards) in (1, 2, 4) else 3
+    cards_html = []
+    for i, c in enumerate(cards):
+        tag = str(c.get("tag") or "").strip()
+        head = esc(c.get("head") or "")
+        sub = esc(c.get("sub") or "")
+        body = esc(c.get("body") or "")
+        cite = esc(c.get("cite") or "")
+        pill = f'<span class="pill" style="--chapter:{colours[tag]}">{esc(tag)}</span>' if tag else ""
+        sub_html = f'\n            <p class="axis__sub">{sub}</p>' if sub else ""
+        body_html = f"\n            <p>{body}</p>" if body else ""
+        cite_html = f'\n            <p class="axis__cite">{cite}</p>' if cite else ""
+        cards_html.append(f"""          <div class="axis__card rise d{min(first_delay + i // cols, 4)}">
+            <div class="axis__top"><h3>{head}</h3>{pill}</div>{sub_html}{body_html}{cite_html}
+          </div>""")
+    return f"""        <div class="axis__grid axis__grid--{cols}">
+{chr(10).join(cards_html)}
+        </div>"""
+
+
+def render_6card_grid(slots: dict[str, Any], variant: str, ctx: SlideContext) -> str:
+    """Five or six parallel items with a closing box: the grid of L-BANNER-6GRID without a banner.
+
+    At the default density a slide often carries more parallel items than the three- and
+    four-card layouts hold, and a row should not need a banner it does not have, or a
+    hand-written body, just to show six.
+    """
+    title = esc(slots.get("title") or "")
+    dlabel = _dlabel(slots, title)
+    lead = esc(slots.get("lead") or "")
+    verdict = esc(slots.get("verdict") or "")
+    cap = ITEM_CAP["L-6CARD-GRID"]
+    cards = (slots.get("cards") or slots.get("items") or [])[:cap]
+
+    lead_html = f'<p class="lead rise">{lead}</p>' if lead else ""
+    note_label = _note_label(slots, CLOSING_LABEL["L-6CARD-GRID"])
+    verdict_html = f'<div class="verdict box rise d4">{note_label}{verdict}</div>' if verdict else ""
+
+    return f"""  <section class="slide" style="--chapter:{ctx.accent}" data-label="{dlabel}">
+{_render_topbar(ctx)}
+    <div class="content">
+      <h2 class="kicker rise">{title}</h2>
+      {lead_html}
+      <div class="axis axis--{variant}">
+{_card_grid(cards, first_delay=1)}
+      </div>
+      {verdict_html}
+    </div>
+  </section>"""
+
+
 def render_banner_grid(slots: dict[str, Any], variant: str, ctx: SlideContext) -> str:
     """One banner for the idea that frames the slide, over a grid of up to six cards that hang from it.
 
@@ -1349,22 +1410,7 @@ def render_banner_grid(slots: dict[str, Any], variant: str, ctx: SlideContext) -
     b_sub_html = f"<small>{b_sub}</small>" if b_sub else ""
     b_body_html = f"<p>{b_body}</p>" if b_body else ""
 
-    colours = tag_accents([str(c.get("tag") or "").strip() for c in cards])
-    cols = 2 if len(cards) in (1, 2, 4) else 3
-    cards_html = []
-    for i, c in enumerate(cards):
-        tag = str(c.get("tag") or "").strip()
-        head = esc(c.get("head") or "")
-        sub = esc(c.get("sub") or "")
-        body = esc(c.get("body") or "")
-        cite = esc(c.get("cite") or "")
-        pill = f'<span class="pill" style="--chapter:{colours[tag]}">{esc(tag)}</span>' if tag else ""
-        sub_html = f'\n            <p class="axis__sub">{sub}</p>' if sub else ""
-        body_html = f"\n            <p>{body}</p>" if body else ""
-        cite_html = f'\n            <p class="axis__cite">{cite}</p>' if cite else ""
-        cards_html.append(f"""          <div class="axis__card rise d{2 + i // cols}">
-            <div class="axis__top"><h3>{head}</h3>{pill}</div>{sub_html}{body_html}{cite_html}
-          </div>""")
+    grid_html = _card_grid(cards, first_delay=2)
 
     return f"""  <section class="slide" style="--chapter:{ctx.accent}" data-label="{dlabel}">
 {_render_topbar(ctx)}
@@ -1378,10 +1424,60 @@ def render_banner_grid(slots: dict[str, Any], variant: str, ctx: SlideContext) -
             {b_body_html}
           </div>
         </div>
-        <div class="axis__grid axis__grid--{cols}">
-{chr(10).join(cards_html)}
-        </div>
+{grid_html}
       </div>{notes}
+    </div>
+  </section>"""
+
+
+def _talk_fragment(rel_path: str, base: Path | None) -> tuple[str, str]:
+    """(text, warning) of an HTML fragment named relative to the talk; files outside the talk are refused."""
+    if base is None:
+        return "", warn(f"html: {rel_path} 無法讀取（沒有 talk 目錄）")
+    path = (base / rel_path).resolve()
+    if base.resolve() not in path.parents:
+        return "", warn(f"html: {rel_path} 不在 talk 目錄裡")
+    if not path.is_file():
+        return "", warn(f"html: 找不到 {rel_path}")
+    text = path.read_text(encoding="utf-8").strip()
+    if re.search(r"<(section|deck-stage|script)\b", text):
+        return "", warn(f"html: {rel_path} 只寫投影片內文，不含 <section>、<deck-stage> 或 <script>；外框由 L-CUSTOM 產生")
+    return text, ""
+
+
+def render_custom(slots: dict[str, Any], variant: str, ctx: SlideContext) -> str:
+    """The standard frame (top bar, title, optional lead and closing box) around a body written by hand.
+
+    For a row no catalog layout can show whole. The body is a file in the talk
+    (`html: <path>`), kept across compiles, so adding a form does not need the framework,
+    which a course only has as a read-only submodule. What the row says stays in the
+    storyboard: `deck-compile` checks the body shows every piece of it, so the file holds
+    the form and never becomes a second place to edit the words.
+    """
+    title = esc(slots.get("title") or "")
+    dlabel = _dlabel(slots, title)
+    lead = esc(slots.get("lead") or "")
+    verdict = esc(slots.get("verdict") or "")
+    rel = slots.get("html")
+    if isinstance(rel, str) and rel.strip():
+        body, note = _talk_fragment(rel.strip(), ctx.base)
+    else:
+        body, note = "", warn("L-CUSTOM 要寫 html: <相對 talk 的檔名>，檔案內容是這一頁的內文 HTML")
+    if not body:
+        body = '<div class="canvas-empty">手寫版面待放</div>'
+
+    lead_html = f'<p class="lead rise d1">{lead}</p>' if lead else ""
+    verdict_html = f'<div class="verdict box rise d4">{_note_label(slots, CLOSING_LABEL["L-CUSTOM"])}{verdict}</div>' if verdict else ""
+
+    return f"""  <section class="slide" style="--chapter:{ctx.accent}" data-label="{dlabel}">
+{_render_topbar(ctx)}
+    <div class="content">
+      <h2 class="kicker rise">{title}</h2>
+      {lead_html}
+      <div class="custom">
+{body}
+      </div>
+      {verdict_html}{note}
     </div>
   </section>"""
 
@@ -1428,6 +1524,15 @@ CATALOG: dict[str, LayoutDefinition] = {
         required_slots=["title", "cards"],
         allowed_variants=["grid-2x2", "numbered-1-4", "pillars"],
         render_func=render_4card_grid,
+        optional_slots=["lead", "verdict"],
+    ),
+    "L-6CARD-GRID": LayoutDefinition(
+        id="L-6CARD-GRID",
+        family="Parallel",
+        name="五到六項均等網格",
+        required_slots=["title", "cards"],
+        allowed_variants=["soft-cards", "ruled-cells"],
+        render_func=render_6card_grid,
         optional_slots=["lead", "verdict"],
     ),
     "L-BENTO-FOCUS": LayoutDefinition(
@@ -1523,6 +1628,15 @@ CATALOG: dict[str, LayoutDefinition] = {
         render_func=render_canvas,
         optional_slots=["lead", "start", "lanes", "end", "svg", "caption", "verdict"],
     ),
+    "L-CUSTOM": LayoutDefinition(
+        id="L-CUSTOM",
+        family="Progression",
+        name="標準外框＋手寫版面",
+        required_slots=["title", "html"],
+        allowed_variants=["default"],
+        render_func=render_custom,
+        optional_slots=["lead", "verdict"],
+    ),
 
     # 5. Scholarly Critique & Evidence
     "L-QUOTE-CRITIQUE": LayoutDefinition(
@@ -1571,6 +1685,7 @@ ALIASES = {
     "finale": "L-FINALE-SUMMARY",
     "l-3card": "L-3CARD-VERDICT",
     "l-4card": "L-4CARD-GRID",
+    "l-6card": "L-6CARD-GRID",
     "l-bento": "L-BENTO-FOCUS",
     "l-banner": "L-BANNER-6GRID",
     "l-vs": "L-VS-CONFRONT",
@@ -1580,6 +1695,7 @@ ALIASES = {
     "l-timeline": "L-TIMELINE-RAIL",
     "l-funnel": "L-CASCADE-FUNNEL",
     "l-canvas": "L-CANVAS",
+    "l-custom": "L-CUSTOM",
     "l-quote": "L-QUOTE-CRITIQUE",
     "l-hypothesis": "L-HYPOTHESIS-TEST",
     "l-stat": "L-STAT-HERO",

@@ -41,6 +41,8 @@ sys.path.insert(0, str(HERE))
 from _paths import (course_root, find_talk, library, rel, resolve_unit,
                     talk_config, talk_model_files)  # noqa: E402
 from _deck import notes_source, unmanaged_notes  # noqa: E402
+from _deck_content import density  # noqa: E402
+from _deck_outline import extract_storyboard_rows  # noqa: E402
 
 PLACEHOLDERS = {
     "[論文標題]": "title", "[論文主標題]": "title", "[簡報標題]": "title", "[簡報主標題]": "title",
@@ -369,8 +371,10 @@ def deck_gate(unit: Path, talk: Path, root: Path) -> None:
             problems.append(f"storyboard has {len(rows)} rows but the deck has {len(slides)} slides — "
                             "one row per slide, so a slide added without a shape decision shows up here")
 
-        # When the storyboard uses layout catalog codes, the deck must be current:
-        if re.search(r"\bL-[A-Z0-9-]+\b", storyboard.read_text(encoding="utf-8")):
+        # When a row names a layout catalog code, the deck must be current. Only the 版型
+        # cells count: the scaffold's own comment names codes while explaining the two stages.
+        if any(re.match(r"`?L-[A-Z0-9-]+", row.get("版型", "").strip())
+               for row in extract_storyboard_rows(storyboard.read_text(encoding="utf-8"))):
             env = dict(os.environ, FW_COURSE_ROOT=str(root))
             r = subprocess.run([sys.executable, str(HERE / "deck-compile.py"), str(talk), "--check"],
                                env=env, capture_output=True, text=True)
@@ -407,10 +411,14 @@ def deck_gate(unit: Path, talk: Path, root: Path) -> None:
             problems.append(f"{tables} of {n} content slides use table.cmp — a comparison table is for "
                             "3+ items on shared attributes (shape 7); typologies, contrasts and spectra "
                             "have their own patterns (deck-plan reference/content-shapes.md)")
+        # More than six bare bullets is a document read aloud, but only where the deck is meant
+        # to be taken in while listening. A deck at the default high density is also read as a
+        # reference, and what bounds a slide there is whether it fits (deck.html#debug).
+        level = density(storyboard.read_text(encoding="utf-8"))[0] if storyboard.is_file() else "高"
         fat = [i for i, (_, b) in enumerate(body, 1) if len(re.findall(r"<li\b", b)) > 6]
-        if fat:
-            problems.append(f"slide(s) {fat} carry more than 6 bullets — move detail to speaker notes "
-                            "or split the slide")
+        if fat and level != "高":
+            problems.append(f"slide(s) {fat} carry more than 6 bullets at 密度：{level} — group them, or take the "
+                            "row back to the storyboard stage to split it or raise the deck's density")
 
     if problems:
         sys.exit("deck gate: " + "\n            ".join(problems) +

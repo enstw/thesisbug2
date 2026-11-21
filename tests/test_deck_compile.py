@@ -101,13 +101,13 @@ class VisualRhythmResolverTests(unittest.TestCase):
         for i in range(len(accents) - 1):
             self.assertNotEqual(accents[i], accents[i + 1], f"Slide {i} and {i+1} have the same accent {accents[i]}")
 
-    def test_all_18_layouts_exist(self):
-        self.assertEqual(len(CATALOG), 18)
+    def test_all_20_layouts_exist(self):
+        self.assertEqual(len(CATALOG), 20)
         for lid in (
-            "L-HERO-TITLE", "L-FINALE-SUMMARY", "L-3CARD-VERDICT", "L-4CARD-GRID",
+            "L-HERO-TITLE", "L-FINALE-SUMMARY", "L-3CARD-VERDICT", "L-4CARD-GRID", "L-6CARD-GRID",
             "L-BENTO-FOCUS", "L-BANNER-6GRID", "L-SPLIT-ANCHOR", "L-VS-CONFRONT", "L-MATRIX-DEEPDIVE",
             "L-SPECTRUM-POLES", "L-FLOW-3STAGE", "L-TIMELINE-RAIL", "L-CASCADE-FUNNEL",
-            "L-CANVAS",
+            "L-CANVAS", "L-CUSTOM",
             "L-QUOTE-CRITIQUE", "L-HYPOTHESIS-TEST", "L-STAT-HERO", "L-DEFN-EXAMPLE"
         ):
             self.assertIn(lid, CATALOG)

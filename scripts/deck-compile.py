@@ -26,6 +26,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 from _deck import NOTES_FILE, deck_assets, notes_source, unmanaged_notes  # noqa: E402
 from _deck_catalog import CATALOG, VisualRhythmResolver, get_layout, parse_slot_payload  # noqa: E402
+from _deck_content import FLOORS, lost_content, missing_required, sign_problem, type_floor  # noqa: E402
 from _deck_motion import apply_motion, split_codes  # noqa: E402
 from _deck_outline import ensure_seed, extract_seed, extract_storyboard_rows, row_eyebrow, row_title  # noqa: E402
 from _deck_steps import step_names, strip_html  # noqa: E402
@@ -127,18 +128,30 @@ def bind_notes(rendered: str, row: dict[str, str]) -> str:
     return re.sub(r"<section\b", lambda m: m.group(0) + attrs, rendered, count=1)
 
 
+NO_LAYOUT = {"", "—", "-", "–"}
+
+
 def render_row(row: dict[str, str], idx: int, total: int,
                resolver: VisualRhythmResolver, talk: Path | None = None,
-               steps: dict[str, str] | None = None) -> tuple[str | None, list[str]]:
+               steps: dict[str, str] | None = None,
+               losses: list[str] | None = None) -> tuple[str | None, list[str]]:
     """Render one storyboard row as a slide, or None with a warning when its layout is not a catalog code.
+
+    Content of the row that the slide does not show is reported in `losses` (in the
+    warnings when the caller passes none): a layout that cannot show what the row says
+    is the wrong layout, and trimming the row to fit is not the design stage's call.
 
     Shared with storyboard-review, which previews each row the way the deck will show it."""
     warnings: list[str] = []
     slide_num = int(row.get("#", idx))
-    layout_col = row.get("版型", "").strip()
+    layout_col = row.get("版型", "").strip().strip("`")
     content_col = row.get("畫面內容", "")
 
     # Try to resolve layout
+    if layout_col in NO_LAYOUT:
+        warnings.append(f"投影片 #{slide_num}: 還沒選版型（設計階段在「版型」欄填 L- 代碼；"
+                        "見 deck-svg 的 reference/layout-catalog.md）")
+        return None, warnings
     try:
         layout_def = get_layout(layout_col)
     except ValueError as e:
@@ -181,6 +194,10 @@ def render_row(row: dict[str, str], idx: int, total: int,
     for msg in WARNING_RE.findall(rendered):
         warnings.append(f"投影片 #{slide_num}: {html_lib.unescape(msg)}")
     rendered = WARNING_RE.sub("", rendered)
+    warnings.extend(f"投影片 #{slide_num}: {layout_def.id} 少了必填槽位 {name}"
+                    for name in missing_required(layout_def, slots))
+    lost = [f"投影片 #{slide_num}: {msg}" for msg in lost_content(layout_def.id, slots, rendered)]
+    (warnings if losses is None else losses).extend(lost)
     rendered = add_formula(rendered, row.get("公式", ""))
     rendered, motion_warnings = apply_motion(rendered, split_codes(row.get("動態", "")))
     rendered = bind_notes(rendered, row)
@@ -189,7 +206,14 @@ def render_row(row: dict[str, str], idx: int, total: int,
 
 
 def compile_storyboard(talk: Path) -> tuple[str, list[str]]:
-    """Compile storyboard.md of a talk into HTML slides block and warnings."""
+    """Compile storyboard.md of a talk into HTML slides block and warnings (lost content among them)."""
+    compiled, warnings, losses = compile_checked(talk)
+    return compiled, warnings + losses
+
+
+def compile_checked(talk: Path) -> tuple[str, list[str], list[str]]:
+    """(slides, warnings, problems): problems are what must be fixed before the deck is used —
+    content the slides do not show, and content changed after the author signed it off."""
     sb_file = talk / "storyboard.md"
     if not sb_file.is_file():
         sys.exit(f"storyboard.md missing at {sb_file}")
@@ -204,16 +228,20 @@ def compile_storyboard(talk: Path) -> tuple[str, list[str]]:
     steps = step_names(text)
     slides_html: list[str] = []
     warnings: list[str] = []
+    problems: list[str] = []
     total = len(rows)
 
     for idx, row in enumerate(rows):
-        rendered, row_warnings = render_row(row, idx, total, resolver, talk, steps)
+        rendered, row_warnings = render_row(row, idx, total, resolver, talk, steps, problems)
         warnings.extend(row_warnings)
         if rendered is not None:
             slides_html.append(rendered)
+    changed = sign_problem(text)
+    if changed:
+        problems.insert(0, changed)
 
     compiled_block = "\n\n".join(slides_html)
-    return compiled_block, warnings
+    return compiled_block, warnings, problems
 
 
 def apply_compilation(talk: Path, compiled_slides: str, dry_run: bool = False) -> bool:
@@ -270,6 +298,28 @@ def stale_deck_css(talk: Path, talk_arg: str) -> str:
     return ""
 
 
+def floor_problem(talk: Path) -> str:
+    """A warning when the room's type floor in 前提 is not the one deck.html declares, "" otherwise.
+
+    deck.html is the author's file, so the compiler does not edit its <html> tag; it says
+    what to write there, because the floor in 前提 changes nothing until the deck declares it.
+    """
+    sb_file, deck_file = talk / "storyboard.md", talk / "deck.html"
+    if not sb_file.is_file() or not deck_file.is_file():
+        return ""
+    floor = type_floor(sb_file.read_text(encoding="utf-8"))
+    if floor not in FLOORS:
+        return (f"前提的字級下限 {floor}px 不是支援的值（{'／'.join(str(f) for f in FLOORS)}px）；"
+                "它們各是 34px 標籤在 100%／90%／80% 字級的大小")
+    m = re.search(r'<html\b[^>]*\bdata-deck-type-floor="(\d+)"', deck_file.read_text(encoding="utf-8"))
+    declared = int(m.group(1)) if m else 34
+    if declared == floor:
+        return ""
+    fix = (f'在 deck.html 的 <html> 加上 data-deck-type-floor="{floor}"' if floor != 34
+           else "拿掉 deck.html <html> 上的 data-deck-type-floor")
+    return f"前提的字級下限是 {floor}px，deck.html 宣告的是 {declared}px；{fix}"
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("talk", nargs="?", help="the talk to compile (defaults to current)")
@@ -292,28 +342,35 @@ def main() -> int:
         if written:
             print(f"{rel(sb_file, root)}: 前提 had no Seed, wrote Seed: {seed} "
                   "(change the number for another mix of variants)")
-    stale_css = stale_deck_css(talk, rel(talk, root))
-    if stale_css:
-        print(f"warning: {stale_css}", file=sys.stderr)
+    for note in (stale_deck_css(talk, rel(talk, root)), floor_problem(talk)):
+        if note:
+            print(f"warning: {note}", file=sys.stderr)
 
-    compiled_slides, warnings = compile_storyboard(talk)
-    if warnings:
-        for w in warnings:
-            print(f"warning: {w}", file=sys.stderr)
+    compiled_slides, warnings, problems = compile_checked(talk)
+    for w in warnings:
+        print(f"warning: {w}", file=sys.stderr)
+    for p in problems:
+        print(f"error: {p}", file=sys.stderr)
+    if problems:
+        print(f"{len(problems)} problem(s): the slides must show everything the storyboard says. "
+              "Choose a layout that holds the row (deck-svg reference/layout-catalog.md), write one "
+              "(L-CUSTOM), or hand the row back to the storyboard stage; do not trim it here.", file=sys.stderr)
 
     deck_file = talk / "deck.html"
+    if not compiled_slides.strip() and not args.check:
+        print(f"{rel(talk, root)}: no row has a layout yet, so nothing was compiled and deck.html is untouched; "
+              "the design stage fills 版型 after the storyboard is signed off", file=sys.stderr)
+        return 1
     if args.check:
-        original = deck_file.read_text(encoding="utf-8") if deck_file.is_file() else ""
         # Check if applying would change it
         changed = apply_compilation(talk, compiled_slides, dry_run=True)
         if changed:
             print(f"{rel(deck_file, root)} is out of sync with storyboard.md; run ./fw deck-compile {rel(talk, root)}")
-            return 1
-        return 0
+        return 1 if changed or problems else 0
 
     if args.dry_run:
         print(compiled_slides)
-        return 0
+        return 1 if problems else 0
 
     changed = apply_compilation(talk, compiled_slides, dry_run=False)
     if changed:
@@ -342,7 +399,7 @@ def main() -> int:
     elif source == "none":
         print(f"note: {unmanaged_notes(rel(talk, root))}", file=sys.stderr)
 
-    return 0
+    return 1 if problems else 0
 
 
 if __name__ == "__main__":

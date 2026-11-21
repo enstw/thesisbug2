@@ -3,7 +3,9 @@
 <!-- 起始主題（選用）：場地燈光已知時在上面的 <html> 加 data-deck-theme-default，例如教室燈全開
      <html lang="zh-Hant" data-deck-theme-default="projector-light">；值是 tokens.css --deck-themes 的 id
      或種子 r4821。不改 tokens.css，因為 ./fw deck-refresh 會用框架版本覆蓋 asset/。
-     優先序：網址 #theme= ＞ 觀眾按 c／g 存下的選擇 ＞ 這個預設 ＞ 主題 1。 -->
+     優先序：網址 #theme= ＞ 觀眾按 c／g 存下的選擇 ＞ 這個預設 ＞ 主題 1。
+     字級下限（選用）：分鏡前提寫了比 34px 低的下限時（小會議室的大螢幕 30、線上分享畫面 27），在 <html> 加
+     data-deck-type-floor="30"（或 "27"）：整份起始字級降到 90%／80%，#debug 的字級檢查也改用這個下限。 -->
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />

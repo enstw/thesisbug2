@@ -1,7 +1,7 @@
 """The layout explorer page, built from the catalog document's examples and the compiler's renderers.
 
 `./fw deck-compile --explorer` writes the page and prints its address. Each layout's
-example comes from `deck-plan/reference/layout-catalog.md` and is rendered by the same
+example comes from `deck-svg/reference/layout-catalog.md` and is rendered by the same
 function `deck-compile` calls, once per variant, so the page shows exactly what a
 storyboard row compiles to. A hand-written copy of every layout used to live in the
 page and showed variants the compiler did not implement.
@@ -23,7 +23,7 @@ except ImportError:          # imported as scripts._deck_explorer (tests)
     from ._deck import FRAMEWORK, SKILLS
     from ._deck_catalog import CATALOG, SlideContext, parse_slot_payload
 
-CATALOG_DOC = SKILLS / "deck-plan" / "reference" / "layout-catalog.md"
+CATALOG_DOC = SKILLS / "deck-svg" / "reference" / "layout-catalog.md"
 TEMPLATE = FRAMEWORK / "docs" / "layout-explorer.html"
 STYLESHEETS = {
     "../.agents/skills/house-style/assets/css/tokens.css": SKILLS / "house-style" / "assets" / "css" / "tokens.css",

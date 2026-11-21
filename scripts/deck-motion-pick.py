@@ -8,7 +8,7 @@
 
 Each storyboard row with a layout code becomes one Choice question over the
 variations that `deck-compile` can apply to that layout (`_deck_motion.py`;
-documented in deck-plan/reference/motion-catalog.md). The questions share one
+documented in deck-svg/reference/motion-catalog.md). The questions share one
 state: the goal, the limits this script applies afterwards, the talk's
 premises and every slide in order, each with its facts — position, section,
 title length, lead sentence, item count, number (and whether the author marked
@@ -122,7 +122,9 @@ def page_facts(i: int, slides: list[dict], keys: list[str]) -> dict[str, str]:
     title = next((slots[k] for k in ("title", "heading") if isinstance(slots.get(k), str) and slots[k]), "")
     sentence = next((k for k in SENTENCE_SLOTS if isinstance(slots.get(k), str) and slots[k]), None)
     groups = {k: len(v) for k, v in slots.items() if isinstance(v, list) and v}
-    num = slots.get("num") if isinstance(slots.get("num"), str) else ""
+    # the slots L-STAT-HERO draws its number from; reading another name reported 「數字：無」 for every real row
+    raw_num = slots.get("stat_number") or slots.get("number")
+    num = raw_num if isinstance(raw_num, str) else ""
     section = s["shape"].startswith("14")
     after_section = i > 0 and slides[i - 1]["shape"].startswith("14")
     point, prev_point = s["point"], slides[i - 1]["point"] if i > 0 else ""

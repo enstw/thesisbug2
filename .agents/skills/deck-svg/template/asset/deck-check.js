@@ -18,7 +18,9 @@
 (() => {
   if (!/(^#|&)debug(&|$)/.test(location.hash)) return;
 
-  const FLOOR = 34;                        // 表格與標籤的下限；內文預設 40
+  // 下限由場地決定：<html data-deck-type-floor="30">（分鏡前提的「字級下限」，只有 34／30／27）；沒寫就是教室投影機的 34。
+  const declaredFloor = Number(document.documentElement.dataset.deckTypeFloor);
+  const FLOOR = [27, 30, 34].includes(declaredFloor) ? declaredFloor : 34;   // 表格與標籤的下限；內文預設 40
   const EXEMPT = '.hero__hint';            // 講者用的按鍵提示，觀眾不需要讀
   const results = new Map();               // 頁碼 → { small: [], overflow: [] }
 

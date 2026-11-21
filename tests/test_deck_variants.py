@@ -50,7 +50,7 @@ class VariantTests(unittest.TestCase):
                 self.assertTrue(styled, f"{layout_id} {v}: none of {sorted(own)} is styled in deck.css")
 
     def test_documented_variants_are_the_implemented_ones(self):
-        doc = (REPO / ".agents/skills/deck-plan/reference/layout-catalog.md").read_text(encoding="utf-8")
+        doc = (REPO / ".agents/skills/deck-svg/reference/layout-catalog.md").read_text(encoding="utf-8")
         for section in re.split(r"(?m)^### \d+\. ", doc)[1:]:
             layout_id = re.match(r"`(L-[A-Z0-9-]+)`", section).group(1)
             line = re.search(r"\*\*深度變體\*\*：(.*)", section)

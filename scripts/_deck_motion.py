@@ -3,7 +3,7 @@
 One catalogue, read by three users: `deck-compile` turns a code into the
 `data-beat`/`data-fx`/`data-enter` attributes deck-motion.js plays,
 `deck-motion-pick` offers the same codes to Jev (or to the author) as options,
-and `deck-plan/reference/motion-catalog.md` documents them for humans — a test
+and `deck-svg/reference/motion-catalog.md` documents them for humans — a test
 checks the document names every code here, so the three cannot drift.
 
 A code that `compile` cannot apply (it needs hand-drawn SVG or hand-placed
@@ -148,7 +148,7 @@ def apply_motion(html: str, codes: list[str]) -> tuple[str, list[str]]:
     codes = [c for c in codes if c]
     unknown = [c for c in codes if c not in VARIATIONS]
     for c in unknown:
-        warnings.append(f"動態 {c} 不在目錄裡（見 deck-plan/reference/motion-catalog.md）")
+        warnings.append(f"動態 {c} 不在目錄裡（見 deck-svg/reference/motion-catalog.md）")
     manual = [c for c in codes if c in VARIATIONS and not VARIATIONS[c]["compile"]]
     for c in manual:
         warnings.append(f"動態 {c} 要手寫屬性（{VARIATIONS[c]['cons']}），編譯時略過")

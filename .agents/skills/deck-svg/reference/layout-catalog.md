@@ -1,10 +1,15 @@
-# Layout Catalog — 簡報版型目錄 (v1.1)
+# Layout Catalog — 簡報版型目錄 (v1.2)
 
-本目錄列出 `thesisbug2` 支援的 18 種標準版型代碼（5 大族群）。在撰寫 `<talk>/storyboard.md` 時，「版型」欄位直接填入版型代碼，「畫面內容」欄位則填入對應的**槽位微語法（Slot Micro-syntax）**。
+本目錄列出 `thesisbug2` 的 20 種版型代碼（5 大族群）。它是**設計階段**的工具：分鏡稿的內容簽核之後，為每一列在「版型」欄填一個代碼，`./fw deck-compile <talk>` 就依前提的 `Seed` 挑深度變體，編出符合投影機字級的 `deck.html`。
 
-執行 `./fw deck-compile <talk>` 時，編譯腳本會讀取 `storyboard.md` 前提中的 `Seed`（隨機種子），以確定性（Deterministic）演算法自動挑選深度視覺變體（Variants）與色彩節奏，毫秒級編譯出語意結構精準、符合投影機字級規範的 `deck.html`。
+**設計階段不改內容。** 每個版型下面寫的項數與槽位，是用來判斷「這一列裝不裝得下」，不是用來要求分鏡稿只寫那麼多：
 
-> 💡 **互動展示工作台**：執行 `./fw deck-compile --explorer`，它用本目錄的範例和編譯器的同一套渲染程式產生展示頁並印出連結；在瀏覽器中切換 18 種版型、每個深度變體與 14 種主題，並一鍵複製分鏡語法。展示頁每次現產生，所以不會和實際編譯結果不一致。
+- 選一個槽位與容量都裝得下整列內容的版型。列的槽位名稱可以改成版型讀的名稱（例如 `cards` 改成 `stages`），文字一個字都不改、不刪、不併。
+- `./fw deck-compile` 逐列比對，列裡的每一段文字都要出現在投影片上；少了就報錯（超過版型容量的項目、版型不畫的欄位、版型沒有的槽位）。
+- 沒有版型裝得下時，用 `L-CUSTOM` 為這一列手寫版面，或用 `L-CANVAS` 放圖。
+- 在場地的字級下限仍然放不下時，把這一列連同 `deck.html#debug` 量到的溢出量交回分鏡階段，由作者決定；不在這裡拆頁、刪字或縮字。
+
+> 💡 **互動展示工作台**：執行 `./fw deck-compile --explorer`，它用本目錄的範例和編譯器的同一套渲染程式產生展示頁並印出連結；在瀏覽器中切換 20 種版型、每個深度變體與 14 種主題，並一鍵複製分鏡語法。展示頁每次現產生，所以不會和實際編譯結果不一致。
 
 ---
 
@@ -32,7 +37,7 @@ variant: top-rail
 
 ## 語意槽位微語法（Micro-syntax）
 
-在 `storyboard.md` 表格的「畫面內容」欄位中：
+分鏡階段寫內容時用的是 deck-plan 的 `reference/content-syntax.md`；這裡是同一套語法，加上各版型實際讀哪些槽位。在 `storyboard.md` 表格的「畫面內容」欄位中：
 - 欄位之間以 `<br>` 換行。
 - 鍵值格式為 `key: value`。
 - 清單項目以 `-` 或 `*` 開頭：
@@ -106,7 +111,17 @@ variant: top-rail
   title: 經濟脅迫的四大工具箱<br>cards:<br>- [關稅] 懲罰性關稅: 針對戰略產業精準加徵<br>- [封鎖] 出口管制: 限制雙用途核心零組件<br>- [審查] 外資限制: 嚴格過濾敏感領域跨境並購<br>- [標準] 監管壁壘: 設置資料在地化與合規門檻
   ```
 
-### 5. `L-BENTO-FOCUS`（便當盒非對稱焦點）
+### 5. `L-6CARD-GRID`（五到六項均等網格）
+- **使用情境**：5～6 個平行項目（面向、機制、學說），每項可以帶類別標籤、原文名稱與出處，下方可收束。項目少於 5 個時用三卡或四卡；有一個統攝全部的主軸時用 `L-BANNER-6GRID`。
+- **深度變體**：`soft-cards`（沒有邊框的色塊）、`ruled-cells`（沒有框、只有一條頂線的開放格）。
+- **槽位規格**：`title`、`lead` *(選填)*、`cards` *(必填，最多 6 項)*：`- [tag] 標題: 說明`，或一筆記錄 `- [tag: 類別, head: 名稱, sub: 原文名稱, body: 說明, cite: 出處]`；`verdict` *(選填)*。
+- **類別標籤的顏色**：同 `L-BANNER-6GRID`，同一個 `tag` 同一個顏色。
+- **畫面內容範例**：
+  ```text
+  title: 供應鏈在地化的五重摩擦<br>cards:<br>- [資本] 支出激增: 建廠資本支出攀升 40%<br>- [生態] 聚落斷層: 缺乏在地化學品與封測支援<br>- [人才] 治理文化: 跨國派駐與工會磨合<br>- [法規] 審查延宕: 環評與許可程序耗時<br>- [能源] 供電不足: 電網擴充落後於建廠<br>verdict: 在地化以三十年累積的效率換取地緣安全
+  ```
+
+### 6. `L-BENTO-FOCUS`（便當盒非對稱焦點）
 - **使用情境**：1 個最具衝擊力的核心焦點卡（佔較大版面）＋ 2 個次要衍生要點。
 - **深度變體**：`left-heavy`（左側大卡）、`top-heavy`（上方通欄大卡）。
 - **槽位規格**：`title`, `hero_card` `{tag, head, body}`, `sub_cards` *(2 項)*, `verdict` *(選填)*
@@ -115,7 +130,7 @@ variant: top-rail
   title: 戰略安全思維的主導轉變<br>hero_card: {tag: "典範轉移", head: "國家安全壓倒比較優勢", body: "自 2018 年起，主要大國經貿戰略已由追求生產效率全面轉向追求供應鏈去風險與戰略自主。"}<br>sub_cards:<br>- [防護] 友岸外包: 限縮於信任夥伴同盟圈<br>- [備援] 戰略囤儲: 關鍵礦物與晶片戰備存量倍增<br>verdict: 經貿政策已徹底武器化
   ```
 
-### 6. `L-BANNER-6GRID`（主軸橫幅＋六卡網格）
+### 7. `L-BANNER-6GRID`（主軸橫幅＋六卡網格）
 - **使用情境**：一個統攝全頁的主軸（主要理論、總命題）加上 4～6 個掛在它底下的子項，例如「以某理論為主軸的複合理論架構」。只有 2～3 個子項時用 `L-BENTO-FOCUS`。
 - **深度變體**：`soft-cards`（實心色帶橫幅，卡片是沒有邊框的色塊）、`ruled-cells`（左側粗色條的淺色橫幅，卡片沒有框、只有一條頂線）。
 - **槽位規格**：
@@ -129,7 +144,7 @@ variant: top-rail
   title: 理論架構：以相互依存武器化為主軸<br>banner: {tag: "主軸", head: "相互依存的武器化", sub: "Weaponized Interdependence", body: "Farrell 與 Newman (2019)：掌握網絡樞紐的國家能把相互依存變成強制力"}<br>cards:<br>- [tag: 樞紐國, head: 全景監控效應, sub: Panopticon Effect, body: 從樞紐取得對手的資訊流, cite: Farrell & Newman (2019)]<br>- [tag: 樞紐國, head: 咽喉點效應, sub: Chokepoint Effect, body: 切斷對手進入網絡的管道, cite: Farrell & Newman (2019)]<br>- [tag: 受制國, head: 經濟治國方略, sub: Economic Statecraft, body: 以經濟工具換取政策讓步, cite: Baldwin (1985)]<br>- [tag: 受制國, head: 避險, sub: Hedging, body: 同時保留合作與對抗選項, cite: Kuik (2008)]<br>- [tag: 第三方, head: 友岸外包, sub: Friend-shoring, body: 把供應鏈移往可信任夥伴, cite: Yellen (2022)]<br>- [tag: 第三方, head: 戰略自主, sub: Strategic Autonomy, body: 降低對單一樞紐的依賴, cite: EU Global Strategy (2016)]
   ```
 
-### 7. `L-SPLIT-ANCHOR`（1:2 概念錨點式）
+### 8. `L-SPLIT-ANCHOR`（1:2 概念錨點式）
 - **使用情境**：左側大字粗體核心金句／命題（Anchor），右側垂直列出 2~3 個具體支持條目。
 - **深度變體**：`card-list`（左側色條引文框，右側有框卡片）、`quote-style`（左側大引號加不帶框的大字，右側以細線分隔的開放條目）。
 - **槽位規格**：`title`, `anchor_statement` *(必填)*, `items` *(2~3 項)*, `footer_cite` *(選填)*, `qr`、`qr_label` *(選填，放在左欄出處下方)*
@@ -143,7 +158,7 @@ variant: top-rail
 
 ## 三、 關係、分類與對抗類（Relational & Contrast）
 
-### 8. `L-VS-CONFRONT`（兩造交鋒對峙）
+### 9. `L-VS-CONFRONT`（兩造交鋒對峙）
 - **使用情境**：兩派學說、理論對立或政策辯論（中間帶有 VS 徽章）。
 - **深度變體**：`card-versus`（兩張有框卡片）、`split-rail`（沒有框，中央一條軌道，陣營名是膠囊）、`speech-bubbles`（兩個對話氣泡，尾巴指向對方）。
 - **槽位規格**：`title`, `issue` *(選填)*, `side_a` `{camp, points}`, `side_b` `{camp, points}`, `ask_or_verdict`
@@ -152,7 +167,7 @@ variant: top-rail
   title: 避險還是制衡？台灣戰略抉擇<br>issue: 面對台海局勢升溫，小型行為者的最優戰略為何？<br>side_a: {camp: "全面對美結盟", points: ["獲取最高階安全承諾", "技術標準深度綁定"]}<br>side_b: {camp: "雙重避險策略", points: ["保留市場多元迴旋空間", "避免過早承擔邊緣戰略風險"]}<br>ask_or_verdict: 當安全保證與經濟利益不可兼得時，政策底線在哪裡？
   ```
 
-### 9. `L-MATRIX-DEEPDIVE`（2×2 矩陣＋焦點象限引出）
+### 10. `L-MATRIX-DEEPDIVE`（2×2 矩陣＋焦點象限引出）
 - **使用情境**：雙維度分類法（Typology），並特別將特定象限放大拉出解讀。
 - **深度變體**：`split-note`（左矩陣、右解讀卡）、`floating-callout`（矩陣占滿寬度，解讀是下方指向矩陣的氣泡；`matrix_width` 在這個變體沒有作用）。
 - **槽位規格**：`title`, `axis_x` `{name, low, high}`, `axis_y` `{name, low, high}`, `cells` *(4 項)*, `focus_quadrant` (1..4，或 `none`), `deepdive_note`, `note_label` *(選填)*, `matrix_width` *(選填，`wide`)*
@@ -163,7 +178,7 @@ variant: top-rail
   title: 威懾政策矩陣分類<br>axis_x: {name: "承諾明確度", low: "戰略模糊", high: "戰略清晰"}<br>axis_y: {name: "軍事部署烈度", low: "前沿威懾", high: "縱深防衛"}<br>cells:<br>- Q1: 傳統模糊平衡 (現狀)<br>- Q2: 延伸威懾強化<br>- Q3: 刺蝟防衛島鏈<br>- Q4: 全面安全條約<br>focus_quadrant: 3<br>deepdive_note: 本研究聚焦第 3 象限：在維持政治彈性的同時，大幅提升不對稱拒止能力的有效性。
   ```
 
-### 10. `L-SPECTRUM-POLES`（光譜軸線＋端點案例錨定）
+### 11. `L-SPECTRUM-POLES`（光譜軸線＋端點案例錨定）
 - **使用情境**：非二元對立的概念連續體，標記多個案例在此軸線上的相對位置。
 - **深度變體**：`gradient-bar`（漸層軌道，案例是軌道上的圓點）、`step-pills`（分段軌道，案例是尾巴指向軌道的氣泡，兩端是膠囊）。
 - **槽位規格**：`title`, `pole_left`, `pole_right`, `markers` *(2~4 項)*, `verdict` *(選填)*
@@ -176,7 +191,7 @@ variant: top-rail
 
 ## 四、 歷時演進與因果推進類（Temporal & Causal Progression）
 
-### 11. `L-FLOW-3STAGE`（三階段機制推演鏈）
+### 12. `L-FLOW-3STAGE`（三階段機制推演鏈）
 - **使用情境**：A 導致 B，B 再觸發 C 的邏輯因果推演。
 - **深度變體**：`node-arrow`（有框節點與箭頭）、`chevron-step`（相扣的燕尾色帶放階段名，說明在下方）、`disc-rail`（軌道上的編號圓點，沒有框）。
 - **槽位規格**：`title`, `lead` *(選填)*, `stages` *(3 項)*, `verdict` *(選填)*
@@ -185,7 +200,7 @@ variant: top-rail
   title: 灰色地帶侵擾的升級機制<br>stages:<br>- 常態化海空巡航: 壓縮預警反應時間與防空識別區心理界線<br>- 法律戰與管轄宣示: 發布海警執法規定，實質挑戰既有現狀權限<br>- 隔離性封控演練: 以演習名義實施局部海空管制與航道干擾<br>verdict: 以切香腸戰術在不跨越戰爭門檻的前提下重塑戰略邊界
   ```
 
-### 12. `L-TIMELINE-RAIL`（軌道式大事記時間軸）
+### 13. `L-TIMELINE-RAIL`（軌道式大事記時間軸）
 - **使用情境**：依歷史順序梳理 3～5 個關鍵歷史轉折點。
 - **深度變體**：`top-rail`（軌道在上，事件並排在下）、`alternating`（軌道在中間，事件是上下交錯的氣泡；每個氣泡有兩欄寬，五個事件時較不擠）。
 - **槽位規格**：`title`, `events` *(3~5 項)*, `takeaway` *(選填)*
@@ -194,7 +209,7 @@ variant: top-rail
   title: 美中科技競爭的升級軌跡<br>events:<br>- [2018 年] 實體清單祭出: 中興與華為通訊業務受限<br>- [2020 年] 外國直接產品規則: 切斷台積電晶片代工管道<br>- [2022 年] 1007 出口管制新規: 全面限制高階運算晶片與設備銷往中國<br>- [2024 年] 同盟多邊協調機制: 荷蘭與日本同步跟進先進光刻機管制<br>takeaway: 管制手段由點狀個別企業懲罰走向體系級全面圍堵
   ```
 
-### 13. `L-CASCADE-FUNNEL`（漏斗層層收斂）
+### 14. `L-CASCADE-FUNNEL`（漏斗層層收斂）
 - **使用情境**：宏觀到微觀、或多層次分析框架（體系層 → 國內層 → 決策層）。
 - **深度變體**：`stacked-tiers`（三列等寬階層）、`concentric-cards`（一層包一層的巢狀框，最後一層在最裡面）。
 - **槽位規格**：`title`, `levels` *(3 項)*, `core_focus` *(選填)*, `label_width` *(選填，`narrow`)*
@@ -204,7 +219,7 @@ variant: top-rail
   title: 外交政策決策的三層分析架構<br>levels:<br>- 體系層 (Systemic): 大國實力對比結構與無政府狀態下的相對獲益競爭<br>- 國內層 (Domestic): 選民偏好、國會立法約束與關鍵產業利益遊說團體<br>- 領導層 (Individual): 決策者歷史經驗、危機認知基模與風險偏好特質<br>core_focus: 本文聚焦國內層政治如何扭曲體系層的結構性壓力傳導
   ```
 
-### 14. `L-CANVAS`（標準外框＋自由畫布）
+### 15. `L-CANVAS`（標準外框＋自由畫布）
 - **使用情境**：理科的機制圖、流程示意、自己畫的圖。外框（標題列、頁碼、標題、選填的說明與收束框）照常，中間一大塊畫布自由發揮；固定的卡片版型裝不下的圖都放這裡。
 - **深度變體**：`default`。
 - **槽位規格**：`title`；畫布二選一：
@@ -218,11 +233,28 @@ variant: top-rail
   title: 兩種欄位分開處理，最後一起訓練<br>start: 原始資料<br>lanes:<br>- [數值欄位] 補缺值 → *標準化* → 選特徵<br>- [文字欄位] 斷詞 → 向量化 → *降維*<br>end: 模型訓練<br>verdict: 標準化與降維是這次新加的兩步
   ```
 
+
+### 16. `L-CUSTOM`（標準外框＋手寫版面）
+- **使用情境**：沒有任何版型裝得下這一列的內容時，為它寫一個版面。外框（標題列、頁碼、標題、選填的說明與收束框）照常，中間的內文是 talk 裡的一個 HTML 檔，每次編譯都原樣放進去，所以不會被重編蓋掉，也不需要改框架（課程裡框架是唯讀的子模組）。
+- **深度變體**：`default`。
+- **槽位規格**：`title`、`html: <相對 talk 的檔名>`（例如 `html: slides/theory-map.html`）；選填 `lead`、`verdict`（預設標籤「重點」）。其餘槽位照內容本來的結構寫，名稱不限。
+- **內容仍然寫在分鏡稿。** HTML 檔只決定怎麼排；這一列每個槽位的每一段文字都要出現在檔案裡，`./fw deck-compile` 會比對，少了就報錯。所以改字是改分鏡稿（並重新簽核），再把檔案跟著改，不會出現兩份內容各改各的。
+- **檔案怎麼寫**：
+  - 只寫內文，不含 `<section>`、`<deck-stage>`、`<script>`。
+  - 用 `deck.css` 既有的 class（`reference/slide-patterns.md`）；缺的樣式寫在檔案開頭的 `<style>` 裡，每條規則都掛在這一頁自己的 class 底下（例如 `.theory-map .cell { … }`），才不會改到別頁。
+  - 字級一律寫成 `calc(34px * var(--deck-font-scale, 1))` 這種形式，最小 34；顏色只用 token（`var(--chapter)`、`var(--text)`、`var(--ink-2)`……），換主題才跟得上。
+  - 要逐拍出現的區塊加 `class="rise d1"` 到 `d4`，「動態」欄的代碼會照這個順序分拍。
+- **做完之後**：開 `deck.html#debug` 看這一頁的字級、溢出與對比。這個版面如果別的簡報也用得上，告訴框架的維護者，讓它成為目錄裡的版型。
+- **畫面內容範例**：
+  ```text
+  title: 三種制度在三個面向上的比較<br>html: slides/regime-compare.html<br>rows:<br>- [regime: 總統制, executive: 民選總統, legislature: 與行政分立, accountability: 固定任期]<br>- [regime: 內閣制, executive: 國會多數黨, legislature: 與行政融合, accountability: 不信任投票]<br>- [regime: 半總統制, executive: 總統與總理, legislature: 視多數而定, accountability: 兩者並存]<br>verdict: 問責的方式跟著行政權的來源走
+  ```
+
 ---
 
 ## 五、 學術批判、文本與實證類（Scholarly Critique & Evidence）
 
-### 15. `L-QUOTE-CRITIQUE`（文獻原話引述＋三重解構）
+### 17. `L-QUOTE-CRITIQUE`（文獻原話引述＋三重解構）
 - **使用情境**：展示原作者經典引文（附頁碼），並從三個面向批判其漏洞。
 - **深度變體**：`quote-top`（上方引文框、下方三張卡）、`quote-left`（左側引文是對話氣泡、出處在尾巴下，右側三列批判各帶膠囊標籤）。
 - **槽位規格**：`title`, `quote` *(必填)*, `citation` *(必填)*, `critiques` *(必填，3 項；`- [tag] 要點` 或 `- [tag] 標題: 說明`，後者標題與說明都上畫面)*
@@ -231,7 +263,7 @@ variant: top-rail
   title: 對「攻勢現實主義」核心假說的批判<br>quote: 無政府狀態迫使所有大國最大化其相對權力，因為這是確保自身生存的唯一安全途徑。<br>citation: Mearsheimer (2001), p. 29<br>critiques:<br>- [前提] 單一偏好假設: 忽略國家除生存外可能追求的經濟繁榮與制度合法性<br>- [實證] 歐洲統合反例: 無法解釋後冷戰歐洲安全共同體內部的自願去武裝化<br>- [邏輯] 螺旋困境忽視: 最大化權力的行動往往加速引發周邊制衡聯盟
   ```
 
-### 16. `L-HYPOTHESIS-TEST`（理論假設 vs 實證落差）
+### 18. `L-HYPOTHESIS-TEST`（理論假設 vs 實證落差）
 - **使用情境**：理論預期 vs 實證發現的衝突對比（理論謎題）。
 - **深度變體**：`contrast-pillars`（兩張並排卡片）、`conflict-flow`（假說是虛線框、發現是實心氣泡，中間一個 ≠）。
 - **槽位規格**：`title`, `hypothesis`, `finding`, `theoretical_puzzle`
@@ -241,7 +273,7 @@ variant: top-rail
   title: 貿易相互依存與衝突機率檢驗<br>hypothesis: {label: "古典自由主義假說", head: "雙邊貿易依存度越高，武力衝突機率越低", logic: "戰爭帶來的經貿損失高於潛在領土收益"}<br>finding: {head: "在特定高技術依賴領域，經濟制裁與衝突頻率顯著上升", status: "實證結果與假說背馳"}<br>theoretical_puzzle: 相互依存並未消除衝突，反而提供了非對稱打擊的新弱點槓桿。
   ```
 
-### 17. `L-STAT-HERO`（單一震撼數據指標）
+### 19. `L-STAT-HERO`（單一震撼數據指標）
 - **使用情境**：單一巨大數據（110px 大字）配上背景說明與兩大現實意涵。
 - **深度變體**：`stat-left`（左側大數字、右側兩張卡）、`stat-band`（數字與說明放在橫跨全寬的圓角色帶裡，兩項意涵在下方並排、沒有框）。
 - **槽位規格**：`title`, `stat_number`, `stat_label`, `context`, `implications` *(2 項)*
@@ -250,7 +282,7 @@ variant: top-rail
   title: 全球高階製程的集中度風險<br>stat_number: 92%<br>stat_label: 台灣佔全球 10 奈米以下先進晶片代工市佔率<br>context: 數據來源：波士頓諮詢公司 (BCG) 2021 年全球半導體供應鏈脆弱性報告<br>implications:<br>- 戰略不可替代性: 全球主要經濟體在技術上高度依賴單一地理節點的安全<br>- 供應鏈脆弱樞紐: 任何局部海空封鎖將引發全球電子產業的即時斷鏈危機
   ```
 
-### 18. `L-DEFN-EXAMPLE`（概念界定與典型例證）
+### 20. `L-DEFN-EXAMPLE`（概念界定與典型例證）
 - **使用情境**：術語或新概念界定，同時給出正向典型例證與邊界反例。
 - **深度變體**：`side-notes`（左定義、右側兩則帶色條的例子）、`dict-card`（一張詞典條目式的直角框，例子在框內虛線下方並排）、`split-cards`（定義在上，下方例證是實心氣泡、反例是虛線框）。
 - **槽位規格**：`title`, `term`, `etymology`, `formal_definition`, `positive_example`, `negative_boundary`

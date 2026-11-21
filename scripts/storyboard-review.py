@@ -9,6 +9,9 @@ text and the premises, the points and the layouts live in other files. This
 page puts everything the sign-off needs on one scrollable page, each part read
 from the file that owns it, so nothing here is a second copy to keep in sync:
 
+    密度與簽核   the density the content was written at and its reason (前提 密度, 高 when
+                 not stated), characters per slide, the type floor, and whether the
+                 content still matches the author's sign-off (./fw storyboard-sign)
     審閱說明     the storyboard's opening comment
     待選         the 〈待選〉 section as radio choices; a button copies the picks
                  as one line the author pastes back to the agent
@@ -48,6 +51,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 from _deck import SKILLS  # noqa: E402
 from _deck_catalog import VisualRhythmResolver  # noqa: E402
+from _deck_content import char_count, density, sign_problem, signed_digest, type_floor  # noqa: E402
 from _deck_steps import premise_value, section, step_names, steps_decl, steps_of  # noqa: E402  (shared with deck-compile)
 from _paths import (course_root, find_talk, included_files, manuscript_files, rel,  # noqa: E402
                     resolve_unit, talk_model_files)
@@ -78,6 +82,11 @@ h2 { font-size:21px; margin:44px 0 12px; padding-bottom:6px; border-bottom:1px s
 h3 { font-size:17px; margin:24px 0 8px; }
 p.note { color:var(--mute); font-size:15px; margin:4px 0 10px; }
 ul.premise { padding-left:1.2em; } ul.premise li { margin:6px 0; }
+.brief { border:1px solid var(--line); border-left:6px solid var(--accent); border-radius:8px; background:var(--card);
+  padding:10px 18px; margin:18px 0; }
+.brief p { margin:4px 0; } .brief b { display:inline-block; min-width:5.5em; }
+.brief .bad, p.lost { color:var(--warn); font-weight:600; }
+p.lost { margin:8px 0 0; font-size:15px; }
 code { font:0.88em ui-monospace,"SF Mono",Menlo,monospace; background:var(--chip); padding:1px 5px; border-radius:4px; }
 nav.toc { position:sticky; top:0; z-index:5; background:var(--bg); padding:8px 0; border-bottom:1px solid var(--line);
   display:flex; flex-wrap:wrap; gap:6px; }
@@ -318,9 +327,11 @@ def sketch(layout: str, shape: str, tok: dict[str, str]) -> str:
 
 def preview(row: dict[str, str], idx: int, total: int, resolver: VisualRhythmResolver,
             css_hrefs: list[str], tok: dict[str, str], talk: Path | None = None,
-            steps: dict[str, str] | None = None) -> tuple[str, str]:
-    """(preview html, caption): the compiled slide when 版型 is a catalog code."""
-    rendered, _ = deck_compile.render_row(row, idx, total, resolver, talk, steps)
+            steps: dict[str, str] | None = None, losses: list[str] | None = None) -> tuple[str, str]:
+    """(preview html, caption): the compiled slide when 版型 is a catalog code.
+
+    Content the slide does not show is added to `losses`, so the card can say it."""
+    rendered, _ = deck_compile.render_row(row, idx, total, resolver, talk, steps, losses)
     if rendered:
         rendered = re.sub(r'<section\b', '<section data-deck-active=""', rendered, count=1)
         doc = ("<!doctype html><html><head><meta charset='utf-8'>"
@@ -331,6 +342,9 @@ def preview(row: dict[str, str], idx: int, total: int, resolver: VisualRhythmRes
         return (f'<div class="preview"><iframe loading="lazy" srcdoc="{html.escape(doc)}"></iframe></div>',
                 "版型預覽：deck-compile 會畫出的投影片")
     svg = sketch(row.get("版型", ""), row.get("內容形狀", ""), tok)
+    if row.get("版型", "").strip() in deck_compile.NO_LAYOUT:
+        return (f'<div class="preview"><svg viewBox="0 0 192 108">{svg}</svg></div>',
+                "還沒選版型：內容簽核後由設計階段決定，這裡只審內容")
     return f'<div class="preview"><svg viewBox="0 0 192 108">{svg}</svg></div>', "版型示意：只畫結構，不是實際畫面"
 
 
@@ -386,6 +400,28 @@ def build(unit: Path, talk: Path, root: Path) -> tuple[Path, int]:
             f'<p class="sub">{html.escape(rel(talk, root))} · {len(rows)} 頁 · 由 ./fw storyboard-review 產生；'
             "改內容請改 storyboard.md（或 points.md、Model）再重產</p>",
             f'<nav class="toc">{nav}</nav>']
+
+    # What the author is told at every sign-off: how dense the content was written and why,
+    # how small the type may go, how much each slide carries, and whether the content
+    # still is what was signed off. The agent may choose the density; it may not choose it unseen.
+    level, stated = density(md)
+    reason = premise_value(md, "密度") or ""
+    counts = [(char_count(s.get("畫面內容", "")), s["#"]) for s in rows]
+    ordered = sorted(c for c, _ in counts)
+    most = max(counts)
+    signed = signed_digest(md)
+    sign = ("尚未簽核（作者同意後執行 <code>./fw storyboard-sign</code>）" if signed is None
+            else '<span class="bad">簽核後內容改過，要重新簽核</span>' if sign_problem(md)
+            else "內容與簽核時相同")
+    undesigned = [s["#"] for s in rows if s.get("版型", "").strip() in deck_compile.NO_LAYOUT]
+    body.append('<div class="brief">'
+                f"<p><b>密度</b>{html.escape(reason) if stated else level + '（前提沒寫，採預設）'}</p>"
+                f"<p><b>各頁字數</b>中位數 {ordered[len(ordered) // 2]}，最多 {most[0]}"
+                f'（<a href="#s{most[1]}">#{most[1]}</a>），最少 {ordered[0]}</p>'
+                f"<p><b>字級下限</b>{type_floor(md)}px</p>"
+                f"<p><b>簽核</b>{sign}</p>"
+                + (f"<p><b>版型</b>{len(undesigned)} 頁還沒選（設計階段）</p>" if undesigned else "")
+                + "</div>")
 
     note = re.search(r"<!--(.*?)-->", md, re.S)
     if note:
@@ -458,7 +494,8 @@ def build(unit: Path, talk: Path, root: Path) -> tuple[Path, int]:
         backup = s.get("講") == "備用"
         chips = [f'<span class="chip">{inline(s.get(k, ""))}</span>' for k in ("內容形狀", "版型")]
         chips += [f'<span class="chip{" tag" if backup else ""}">{inline(s.get("講", ""))}</span>',
-                  f'<span class="chip">{inline(s.get("來源論點", ""))}</span>']
+                  f'<span class="chip">{inline(s.get("來源論點", ""))}</span>',
+                  f'<span class="chip">{char_count(s.get("畫面內容", ""))} 字</span>']
         dl = ""
         for k in fields:
             dl += f"<dt>{html.escape(k)}</dt><dd>{inline(s.get(k, ''))}</dd>"
@@ -468,7 +505,9 @@ def build(unit: Path, talk: Path, root: Path) -> tuple[Path, int]:
         det = ("<details><summary>論點原文（points.md）</summary>"
                + "".join(f'<p class="point"><b>{r}</b> {inline(pts.get(r, "（points.md 沒有這一點）"))}</p>' for r in refs)
                + "</details>") if refs and pts else ""
-        pv, cap = preview(s, idx, len(rows), resolver, css_hrefs, tok, talk, step_names(md))
+        lost: list[str] = []
+        pv, cap = preview(s, idx, len(rows), resolver, css_hrefs, tok, talk, step_names(md), lost)
+        lost_html = "".join(f'<p class="lost">內容沒有上畫面：{html.escape(m.split(": ", 1)[-1])}</p>' for m in lost)
         side = ""
         if keys:
             st = steps_of(s.get("環節", ""), keys)
@@ -478,7 +517,7 @@ def build(unit: Path, talk: Path, root: Path) -> tuple[Path, int]:
         body.append(f'<section class="card{" backup" if backup else ""}" id="s{s["#"]}">'
                     f'<div class="head"><span class="num">#{s["#"]}</span>{"".join(chips)}</div>'
                     f'<div class="top"><div>{pv}<small>{cap}</small></div>{side}</div>'
-                    f"<dl>{dl}</dl>{det}</section>")
+                    f"{lost_html}<dl>{dl}</dl>{det}</section>")
 
     if pts:
         body.append('<h2 id="points">論點（points.md）</h2><p class="note">每點後面是引用它的投影片；橘色編號＝沒有投影片引用。</p>'

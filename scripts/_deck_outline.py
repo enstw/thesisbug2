@@ -48,13 +48,12 @@ def extract_seed(storyboard_text: str, default_seed: int = 42) -> int:
     return default_seed
 
 
-def with_seed(storyboard_text: str, seed: int) -> str:
-    """The storyboard with `- Seed: <seed>` as the last 前提 bullet.
+def with_premise(storyboard_text: str, line: str) -> str:
+    """The storyboard with `line` as the last 前提 bullet.
 
     A bullet, never a table row, because `./fw build` counts table rows as slides. A
     storyboard without a 前提 section gets one in front of its first other section.
     """
-    line = f"- Seed: {seed}{SEED_NOTE}"
     lines = storyboard_text.splitlines()
     head = next((i for i, ln in enumerate(lines) if re.match(r"##\s*前提\s*$", ln)), None)
     if head is None:
@@ -71,6 +70,11 @@ def with_seed(storyboard_text: str, seed: int) -> str:
         else:
             lines[head + 1:head + 1] = ["", line]
     return "\n".join(lines) + "\n"
+
+
+def with_seed(storyboard_text: str, seed: int) -> str:
+    """The storyboard with `- Seed: <seed>` as the last 前提 bullet."""
+    return with_premise(storyboard_text, f"- Seed: {seed}{SEED_NOTE}")
 
 
 def ensure_seed(storyboard: Path) -> tuple[int, bool]:
@@ -222,24 +226,50 @@ def _bento(o: Outline, slots: dict[str, Any]) -> None:
         o.items[0].focus = True
 
 
-def _banner(o: Outline, slots: dict[str, Any]) -> None:
-    """The banner as the slide's one large term (like a definition's), the cards as its items;
-    a card's second name and citation ride in its text."""
-    raw = slots.get("banner")
-    banner = raw if isinstance(raw, dict) else {"head": raw}
+def _named(part: dict[str, Any]) -> str:
+    """A card's or banner's name with its second name: 「避險（Hedging）」."""
+    head, sub = _text(part.get("head") or part.get("raw")), _text(part.get("sub"))
+    return f"{head}（{sub}）" if head and sub else head or sub
 
-    def named(part: dict[str, Any]) -> str:
-        head, sub = _text(part.get("head") or part.get("raw")), _text(part.get("sub"))
-        return f"{head}（{sub}）" if head and sub else head or sub
 
-    o.big, o.big_label, o.lead = named(banner), _text(banner.get("tag")), _text(banner.get("body"))
+def _cards(o: Outline, slots: dict[str, Any]) -> None:
+    """Cards that may carry a second name and a citation, which ride in the item's text."""
     cards = _first(slots, ("cards", "items"))
     for card in cards if isinstance(cards, list) else []:
         if isinstance(card, dict):
             body, cite = _text(card.get("body")), _text(card.get("cite"))
-            o.items.append(Item(head=named(card), body=f"{body}（{cite}）" if body and cite else body or cite,
+            o.items.append(Item(head=_named(card), body=f"{body}（{cite}）" if body and cite else body or cite,
                                 tag=_text(card.get("tag"))))
     o.items = [it for it in o.items if it.head or it.body or it.tag]
+
+
+def _banner(o: Outline, slots: dict[str, Any]) -> None:
+    """The banner as the slide's one large term (like a definition's), the cards as its items."""
+    raw = slots.get("banner")
+    banner = raw if isinstance(raw, dict) else {"head": raw}
+    o.big, o.big_label, o.lead = _named(banner), _text(banner.get("tag")), _text(banner.get("body"))
+    _cards(o, slots)
+
+
+def _custom(o: Outline, slots: dict[str, Any]) -> None:
+    """A hand-written slide has no fixed slots, so every other slot's text becomes an item, lists item by item."""
+    placed = {"title", "lead", "verdict", "html", *COMMON}
+    for key, value in slots.items():
+        if key in placed:
+            continue
+        if isinstance(value, list):
+            for raw in value:
+                item = _item(raw)
+                if not (item.head or item.body or item.tag) and isinstance(raw, dict):
+                    # a record with field names of its own: its values, in order
+                    item = Item(head="；".join(_text(v) for k, v in raw.items() if k not in ("text", "point") and _text(v)))
+                if item.head or item.body or item.tag:
+                    o.items.append(item)
+        elif isinstance(value, dict):
+            o.items.append(Item(head="；".join(_text(v) if not isinstance(v, list) else "、".join(map(str, v))
+                                              for v in value.values() if v)))
+        elif _text(value):
+            o.items.append(Item(head=_text(value)))
 
 
 def _vs(o: Outline, slots: dict[str, Any]) -> None:
@@ -343,6 +373,7 @@ SPECS: dict[str, Spec] = {
                              meta=("qr_label",), dropped=("qr",)),
     "L-3CARD-VERDICT": Spec(lead=("lead",), items=("cards", "items"), closing=("verdict",)),
     "L-4CARD-GRID": Spec(lead=("lead",), items=("cards", "items"), closing=("verdict",)),
+    "L-6CARD-GRID": Spec(lead=("lead",), closing=("verdict",), shaped=("cards", "items"), shape=_cards),
     "L-BENTO-FOCUS": Spec(lead=("lead",), closing=("verdict",),
                           shaped=("hero_card", "sub_cards", "cards"), shape=_bento),
     "L-BANNER-6GRID": Spec(shaped=("banner", "cards", "items"), shape=_banner),
@@ -360,6 +391,7 @@ SPECS: dict[str, Spec] = {
                              styling=("label_width",), ordered=True),
     "L-CANVAS": Spec(lead=("lead",), closing=("verdict",),
                      dropped=("start", "lanes", "end", "svg", "caption")),
+    "L-CUSTOM": Spec(lead=("lead",), closing=("verdict",), styling=("html",), shape=_custom),
     "L-QUOTE-CRITIQUE": Spec(quote=("quote", "body"), cite=("citation", "cite"),
                              items=("critiques", "items")),
     "L-HYPOTHESIS-TEST": Spec(closing=("theoretical_puzzle", "puzzle"),

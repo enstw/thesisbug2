@@ -1,13 +1,13 @@
 ---
 name: deck-svg
 description: >
-  Renders a talk's signed-off deck-plan storyboard as live SVG/HTML slides
-  (selectable text, entrance animations, speaker notes) for Traditional
-  Chinese seminar, thesis, and reading-guide talks. Use to build, extend, or
-  edit a slide deck / 簡報 once its storyboard exists. Scaffolds a
-  self-contained, offline, no-build deck from a fixed component vocabulary on
-  the house-style look and deck-runtime shell, instead of reveal.js, Marp, or
-  raw HTML. For slide-as-image decks use deck-image.
+  Gives a talk's signed-off deck-plan storyboard its form as live SVG/HTML
+  slides (selectable text, entrance animations, speaker notes) for Traditional
+  Chinese seminar, thesis and reading-guide talks. Its design stage picks or
+  adds a layout and a reveal for each row and never changes what the row
+  says; deck-compile checks every word reaches the slide. Use to build or
+  edit a slide deck / 簡報 once its storyboard is signed off. Offline,
+  no-build. For slide-as-image decks use deck-image.
 ---
 
 # deck-svg — vector, hand-authored decks (engine layer)
@@ -109,18 +109,75 @@ before this skill starts; without a signed-off storyboard, plan first. The
 split exists because choosing what to say while laying out slides is how a
 deck ends up saying things the declared Model does not.
 
-- The row's content shape picks the pattern (`reference/slide-patterns.md`
-  § Shape → pattern) or a layout catalog code (`L-*` from `deck-plan`'s
-  `reference/layout-catalog.md`). **If no pattern fits, add a component to `deck.css`;
-  never bend the content**, because an agent choosing from the class list
-  takes the easiest pattern and trims the content to fit — a 3×3 typology
-  becomes a list and the examples disappear.
-- When using layout catalog codes with slot micro-syntax in `storyboard.md`, run
-  `./fw deck-compile <talk>` to compile the slides automatically and deterministically
-  with seeded depth variants (preview all combinations live with `./fw deck-compile --explorer`).
-  The variants' styles live in `asset/deck.css`, so when `deck-compile` warns that the
-  talk's copy differs from the framework's, run `./fw deck-refresh <talk>` before judging the result.
-  You can still hand-edit or extend `deck.html` afterwards.
+### The design stage: give each row a form, change no word
+
+The storyboard arrives with every row's content decided and 版型 and 動態
+still `—`. This stage chooses how each row looks. It owns exactly three
+things in `storyboard.md`: the **版型** cell, the **動態** cell, and the
+layout slots inside 畫面內容 (`variant`, `title_lines`, `sub_lines`,
+`matrix_width`, `label_width`, `points_align`, `html`). It may also rename a
+row's slots to the ones the chosen layout reads (`cards` to `stages`). It
+never rewords, shortens, merges or drops what a row says, and it never adds
+or removes a row, because how much the audience is shown was decided with the
+author and signed off.
+
+Two checks hold that line, so work against them rather than around them:
+
+- `./fw deck-compile <talk>` compares every row with its compiled slide and
+  reports each piece of text the slide does not show (an item past what the
+  layout holds, a field the layout does not draw, a slot it does not have).
+- It also refuses a storyboard whose content differs from the author's
+  sign-off (`./fw storyboard-sign`). Do not re-sign to clear it; a content
+  change goes back to deck-plan and the author.
+
+For each row:
+
+1. **Choose the layout from the content.** Read the row's content shape and
+   its 畫面內容, then pick from [`reference/layout-catalog.md`](reference/layout-catalog.md)
+   the layout whose slots and capacity hold all of it
+   (`./fw deck-compile --explorer` shows every layout in every variant). Write
+   its code in 版型.
+1. **If none holds it, add a form; do not shrink the row.** Write the slide
+   body by hand as `L-CUSTOM` (catalogue § L-CUSTOM): a file in the talk that
+   survives every compile and needs nothing from the framework, which a course
+   has only as a read-only submodule. A drawing goes in `L-CANVAS`. In the
+   framework repository itself, a form more than one talk will need becomes a
+   layout in the catalogue instead.
+1. **If it cannot fit at the type floor, hand it back.** `deck.html#debug`
+   reports overflow in pixels. Try the other variants and a custom form
+   first; when the row still does not fit, give deck-plan the row and the
+   measured overflow and stop there. Splitting it, cutting it, shrinking type
+   below the floor or moving text to the notes changes what the author signed.
+1. **Choose the reveal.** Fill 動態 with one code from [`reference/motion-catalog.md`](reference/motion-catalog.md)
+   (`M-STEP`, `M-POP`, `M-COUNT`, …), optionally plus a transition, or leave
+   `—` for a static slide. On a dense slide the reveal is what keeps it
+   readable: the audience meets one group at a time and the whole stays
+   visible afterwards. Choose with every row in view, because the deck-wide
+   restraint (one scramble, at most two zooms, no push after push) only shows
+   there; the premise bullet `關鍵數字` names the one figure `M-SCRAMBLE` may
+   take. `./fw deck-motion-pick <talk>` instead turns each row into a bounded
+   choice for Jev and writes the picks back, a paid call that needs the
+   author's acknowledgement (`--ack`); the catalogue explains both routes.
+
+Run `./fw deck-compile <talk>` to compile the slides deterministically with
+seeded depth variants. The variants' styles live in `asset/deck.css`, so when
+the compiler warns that the talk's copy differs from the framework's, run
+`./fw deck-refresh <talk>` before judging the result. A compiled deck is
+rewritten whole on every compile, so a slide edited by hand in `deck.html` is
+lost; what must be written by hand goes in an `L-CUSTOM` file.
+
+When the room's type floor in 前提 is below 34px, declare it on the deck:
+`<html data-deck-type-floor="30">` (or `"27"`) starts the whole deck at 90%
+(80%) type and makes `#debug` check against that floor. `deck-compile` says
+when the storyboard and the deck disagree.
+
+A deck written by hand from `reference/slide-patterns.md` (no catalogue
+codes) follows the same rule by review instead of by check: the row's
+content shape picks the pattern (§ Shape → pattern), and **if no pattern
+fits, add a component; never bend the content**, because an agent choosing
+from the class list takes the easiest pattern and trims the content to fit —
+a 3×3 typology becomes a list and the examples disappear.
+
 - Give every slide the row's 講者備註 numbers as `data-notes="K3 K7 Q1"`
   (`data-notes="—"` when it needs none; `deck-compile` writes it for catalog
   rows), and `data-time` from 講 when known. The speaker note is the
@@ -142,11 +199,11 @@ Compose the body from the pattern the storyboard names, using the classes in
 `reference/slide-patterns.md` (claim, defn, matrix, spectrum, timeline, tiers,
 debate, cards, grids, `table.cmp`, `blockquote.pull`, stats, `ul.clean`,
 flowdiag, inline `svg.art`). Stagger entrance with
-`class="rise d1|d2|d3|d4"`. Keep one idea per slide, graspable in about ten
-seconds, because the audience is listening while it reads; detail goes to the
-knowledge points the slide names, and a prose-heavy passage becomes a short
-on-slide statement with the full detail in those points. Time never justifies cramming or
-pre-cutting — the presenter adjusts pace or skips slides live. Condensing
+`class="rise d1|d2|d3|d4"`. How much a slide carries was set by the deck's
+density in 前提 (deck-plan `reference/content-shapes.md` § 密度) and written
+into the row; render what the row says and leave the amount alone. Time never
+justifies cramming or pre-cutting — the presenter adjusts pace or skips
+slides live. Where the storyboard stage condensed a passage, condensing
 cuts words, never the event: every line keeps who did what to whom, and a
 qualifier (單方, 未證實, 推估) comes after the claim it qualifies, on its own
 line when it is a different kind of statement — a cut that keeps the
@@ -173,7 +230,9 @@ deck, because a new name reads as a new thing. The comprehension test
   is lost at the next refresh, and other decks never get the component.
 - Keep body text at 40px and nothing the audience reads below 34px (tables,
   labels, captions; the stock components already comply), because type that
-  reads on a laptop washes out on a classroom projector. Only presenter chrome
+  reads on a laptop washes out on a classroom projector. A room that allows
+  smaller type is declared once on `<html>` (§ The design stage), which scales
+  every size together; never by writing smaller sizes into a slide. Only presenter chrome
   such as the title slide's key hints is smaller.
 - Write every text size as `calc(<n>px * var(--deck-font-scale, 1))`, in
   `deck.css` and in any inline style, because a bare `px` size ignores the
@@ -182,8 +241,9 @@ deck, because a new name reads as a new thing. The comprehension test
 **Design for the projector, not the laptop.** Spend free space on larger
 type, a diagram, a primary-evidence screenshot, or a small table (about four
 columns × five rows at most) rather than on whitespace, because the back row
-reads size, not elegance. When content does not fit, split the slide rather
-than cramming it or shrinking the type. Keep contrast high — no muted-grey
+reads size, not elegance. When a row does not fit, try another form and then
+hand it back to the storyboard stage (§ The design stage); never cram it or
+shrink the type below the room's floor. Keep contrast high — no muted-grey
 secondary text, no thin weights — since projectors wash out low-contrast text;
 in a lit classroom a light theme usually projects better than a dark one, so
 before the talk project one dark and one light slide from the back row and

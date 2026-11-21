@@ -35,7 +35,7 @@ SLIDE = """  <section class="slide" style="--chapter:x" data-label="t">
 
 class CatalogueTests(unittest.TestCase):
     def test_every_code_is_documented(self):
-        doc = (REPO / ".agents/skills/deck-plan/reference/motion-catalog.md").read_text(encoding="utf-8")
+        doc = (REPO / ".agents/skills/deck-svg/reference/motion-catalog.md").read_text(encoding="utf-8")
         for code in VARIATIONS:
             self.assertIn(f"`{code}`", doc, f"{code} missing from motion-catalog.md")
 
@@ -118,8 +118,8 @@ STORYBOARD = """# 分鏡稿
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | 0 | — | 14 章節／封面 | L-HERO-TITLE | 0.5 min | title: 半導體戰略<br>sub: 大國博弈下的地緣邏輯 | 開場致詞 | — | — |
 | 1 | P1 | 3 Theory primer | L-3CARD-VERDICT | 2 min | title: 核心困境<br>lead: 逆全球化浪潮<br>cards:<br>- [資本] 支出膨脹: 成本上升 40%<br>- [聚落] 支援斷鏈: 缺乏化學品配套<br>- [人才] 勞動文化: 管理磨合困難<br>verdict: 區域化代價高昂 | 口說要點 | 晶片、Q1 | — |
-| 2 | P2 | 11 Numbers | L-STAT-HERO | 1 min | title: 規模<br>num: 5,380<br>label: 個帳號<br>context: 代理網路 | 數字 | — | — |
-| 3 | P2 | 11 Numbers | L-STAT-HERO | 1 min | title: 規模二<br>num: 2,300 萬<br>label: 筆問答<br>context: 觀測 | 數字 | — | — |
+| 2 | P2 | 11 Numbers | L-STAT-HERO | 1 min | title: 規模<br>stat_number: 5,380<br>label: 個帳號<br>context: 代理網路<br>implications:<br>- 集中: 少數帳號帶動多數聲量<br>- 可追: 帳號之間有共同特徵 | 數字 | — | — |
+| 3 | P2 | 11 Numbers | L-STAT-HERO | 1 min | title: 規模二<br>stat_number: 2,300 萬<br>label: 筆問答<br>context: 觀測<br>implications:<br>- 量大: 足以看出趨勢<br>- 可比: 同一口徑 | 數字 | — | — |
 | 4 | P3 | 14 結論 | L-FINALE-SUMMARY | 1 min | heading: 結語<br>onesentence: 戰略安全與經濟效率不可兼得 | 總結觀點 | — | — |
 """
 

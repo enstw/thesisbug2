@@ -1,0 +1,49 @@
+# Content syntax — 分鏡稿「畫面內容」的寫法
+
+「畫面內容」寫的是**這一頁要讓台下看到的全部文字與它的結構**。寫的時候不看有哪些版型，因為版型是下一個階段（設計）的事：設計階段為每一列選一個裝得下它的版型，裝不下就新增一個，不會回頭改這裡的字。`./fw deck-compile` 會逐列比對，這裡寫的每一段文字都要出現在投影片上，少一段就報錯。
+
+所以這裡只有兩個問題：這一頁要說什麼、這些內容彼此是什麼關係。要放幾項、每項幾個欄位，由內容與密度（見 [`content-shapes.md`](content-shapes.md) § 密度）決定，不由版面決定。
+
+## 微語法
+
+- 欄位之間以 `<br>` 換行，鍵值寫成 `key: value`。
+- 清單：先寫 `key:`，下面每項以 `-` 開頭。
+  - `- 標題: 說明`
+  - `- [標籤] 標題: 說明`
+  - `- 一句要點`
+  - 一項有三個以上的欄位時寫成一筆記錄：`- [tag: 類別, head: 名稱, sub: 原文名稱, body: 說明, cite: 出處]`。欄位名稱用小寫英文（`year`、`actor`、`source`……），因為方括號裡以中文或大寫開頭的會被當成標籤（`[H1: 假說]`）；自己取的名稱在整份分鏡裡要一致。
+- 一組固定欄位寫成字典：`side_a: {camp: "現實主義", points: ["要點 1", "要點 2"]}`。
+- 每一頁都有 `title`。
+
+## 依內容形狀寫
+
+槽位名稱照下表。它們描述的是內容的結構，同一個結構可以由好幾種版型呈現，所以這張表不列版型。
+
+| 內容形狀 | 槽位 |
+| :--- | :--- |
+| 1 一個主張 | `title`、`anchor`（那一句話）、`items`（支持它的條目，可省）、`footer_cite`（出處） |
+| 2 定義 | `term`、`etymology`（語源或出處）、`formal_definition`、`positive_example`、`negative_boundary` |
+| 3 理論入門 | `title`、`lead`、`cards`（每項 `[標籤] 標題: 說明`）、`verdict` |
+| 4 兩軸類型學 | `axis_x`、`axis_y`（各為 `{name, low, high}`）、`cells`（每格 `- 標籤: 說明`，依序為左下、左上、右下、右上）、`focus_quadrant`（1–4 或 `none`）、`deepdive_note` |
+| 5 光譜 | `pole_left`、`pole_right`、`markers`（每項 `[label: 名稱, pct: 位置, desc: 說明]`）、`verdict` |
+| 6 兩造對比、13 討論問題 | `issue`、`side_a`、`side_b`（各為 `{camp, points}`）、`ask_or_verdict` |
+| 7 多項比較 | `title`、`cards`（每項一筆記錄，欄位就是比較的屬性）、`verdict` |
+| 8 流程／因果鏈 | `stages`（每項 `- 階段: 說明`）、`verdict`；有分支或平行路線時寫 `start`、`lanes`（`- [路線名] 節點 → *強調的節點* → 節點`）、`end` |
+| 9 時間軸 | `events`（每項 `- [時間] 事件: 說明`）、`takeaway` |
+| 10 層級 | `levels`（每項 `- [層級名] 標題: 說明`）、`core_focus` |
+| 11 數字 | `stat_number`、`stat_label`、`context`（來源與口徑）、`implications`（每項 `- 標題: 說明`） |
+| 12 引文 | `quote`、`citation`（含頁碼）、`critiques`（每項 `- [面向] 標題: 說明`） |
+| 14 封面、章節、結語 | 封面與章節：`title`、`sub`、`meta`；結語：`heading`、`onesentence`、`points` |
+| 15 架構總覽 | `banner`（`{tag, head, sub, body}`，統攝全頁的主軸）、`cards`（每項一筆記錄：`tag` 類別、`head`、`sub`、`body`、`cite`） |
+
+收束框（`verdict`、`takeaway`、`core_focus`、`ask_or_verdict`、`theoretical_puzzle`）前面會印一個預設標籤（「結論」「歷史啟示」……）。內容不是那個意思時寫 `verdict_label: 機制意涵` 換掉，或 `verdict_label: none` 拿掉，因為錯的標籤會替內容下錯判斷。
+
+## 內容放不進上面任何一種結構時
+
+照內容本來的結構寫，槽位名稱自己取（小寫英文），並在「內容形狀」欄寫下它是什麼（例如「3×3 類型學」「兩層比較表」）。不要為了套進既有槽位而刪欄位、合併項目或改寫成條列：設計階段可以為這一列寫一個新版面（`L-CUSTOM`），但它補不回這裡沒寫的內容。
+
+## 這裡不寫的東西
+
+- **版型與動態**：「版型」「動態」兩欄留 `—`，由設計階段填。
+- **版面調整**：`variant`、斷行（`title_lines`）、欄寬（`matrix_width`、`label_width`）、對齊（`points_align`）是設計階段的槽位。
+- **圖檔**：`svg:`、`qr:` 指向 talk 裡的檔案時照寫，因為那是內容。

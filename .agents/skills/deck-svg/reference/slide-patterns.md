@@ -22,9 +22,12 @@ its content, which the storyboard row names (deck-plan
 | 12 | Quotation | `blockquote.pull` + `cite` with page |
 | 13 | Discussion question | `.debate` (`.claim`, `.sides` > `.side`, `.ask`) |
 | 14 | Section break | `.slide` with `.kicker` only; `.hero` for the title, `.finale` for the close |
+| 15 | Framework overview | `.axis` (`.axis__banner` over an `.axis__grid` of `.axis__card`; catalogue code `L-BANNER-6GRID`, or `L-6CARD-GRID` for the grid alone) |
 
 No pattern for a shape → add a component class to `template/asset/deck.css`
 and run `./fw deck-refresh`, never bend the content into the nearest class.
+In a course, where the framework is a read-only submodule, write the slide
+body as an `L-CUSTOM` file in the talk instead (layout catalogue § L-CUSTOM).
 
 Every class below is defined in `template/asset/deck.css`. Colours come from
 house-style tokens — drive accents off `var(--chapter)` (set per slide via

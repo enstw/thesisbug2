@@ -345,6 +345,11 @@
     font-size: calc(40px * var(--deck-font-scale, 1)); }
   .canvas-frame .verdict { margin-top: 24px; }
 
+  /* ---------- L-CUSTOM: standard frame around a body written by hand (a file in the talk) ----------
+     The body lays itself out; a <style> inside it carries what deck.css lacks, with every
+     selector under a class of its own so it cannot restyle another slide. */
+  .custom { margin-top: 28px; min-height: 0; }
+
   /* ---------- formula line (storyboard 公式 column → p.fx, typeset by asset/katex) ----------
      One line under the slide body, at body size, for an audience that reads the formula
      faster than the prose; .sep separates several formulas, small is a gloss. */
@@ -621,7 +626,9 @@
   .axis--ruled-cells .axis__banner { background: color-mix(in srgb, var(--chapter) 14%, transparent); border-left: 16px solid var(--chapter); border-radius: 0 24px 24px 0; }
   .axis--ruled-cells .axis__banner h3 small { color: var(--chapter); }
   .axis--ruled-cells .axis__tag { background: var(--chapter); color: var(--on-chapter, #07090f); }
+  /* L-6CARD-GRID is the same grid without the banner, under an optional lead and over a closing box. */
   .axis__grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px 24px; }
+  .lead + .axis { margin-top: 24px; }
   .axis__grid--2 { grid-template-columns: 1fr 1fr; }
   .axis__card { padding: 18px 26px 20px; border-radius: 22px; }
   .axis--soft-cards .axis__card { background: var(--ink-2); }

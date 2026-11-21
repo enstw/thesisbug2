@@ -129,7 +129,8 @@ def options_for(layout: str) -> dict[str, dict]:
 
 _TAG_RE = re.compile(r"<(h1|h2|h3|p|div|ul|blockquote|section)\b([^>]*)>")
 _CLASS_RE = re.compile(r'\bclass="([^"]*)"')
-_BLOCKS = re.compile(r"\b(card|tl|flownode|tier|stat-hero__stat|term|example|confront__side|confront__vs|marks|matrix-deepdive__note|split-anchor__hero|bento__hero)\b")
+_BLOCKS = re.compile(r"\b(card|tl|flownode|tier|stat-hero__stat|term|example|confront__side|confront__vs|marks|matrix-deepdive__note|split-anchor__hero|bento__hero"
+                     r"|numrow|pillar|openitem|chev|discstep|nest__box|critrow|quote-critique__say|hypo-box|hypo-clash|dict|defn__pair|axis__banner|axis__card)\b")
 _LEADS = re.compile(r"\b(lead|hero__sub|onesentence)\b")
 _TITLES = re.compile(r"\b(kicker|rise)\b")
 

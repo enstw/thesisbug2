@@ -85,11 +85,16 @@ range → author → arguments → synthesis → concepts → critique → quest
   Model sentence.
 - **內容形狀** is a number from [`reference/content-shapes.md`](reference/content-shapes.md);
   read it while writing rows. **版型** is chosen from [`reference/layout-catalog.md`](reference/layout-catalog.md)
-  (e.g. `L-3CARD-VERDICT`, `L-BENTO-FOCUS`, `L-VS-CONFRONT`), which collects the 16
-  standard layouts, or legacy classes from `reference/slide-patterns.md`. The interactive
-  workbench at [`docs/layout-explorer.html`](file:///Users/j/homework/thesisbug2/docs/layout-explorer.html)
-  (`./fw deck-compile --explorer`) lets authors explore all layouts, depth variants and themes live
-  and copy storyboard rows with one click. Naming both before
+  (e.g. `L-3CARD-VERDICT`, `L-BENTO-FOCUS`, `L-VS-CONFRONT`), which collects the 18
+  standard layouts, or legacy classes from `reference/slide-patterns.md`.
+  `./fw deck-compile --explorer` builds the interactive workbench from the catalog's
+  examples and prints its address: every layout in every depth variant and theme, with
+  the storyboard row to copy. A layout's depth variants differ in the form of its
+  containers (panel, open column, bubble, pill, disc), and the `Seed` bullet in 前提
+  decides which slide gets which; leave `Seed` out of a new storyboard, because
+  `deck-compile` and `storyboard-review` write a random one on first run, and a number
+  an agent picks tends to be the same number every time. Add `variant: <name>` to a
+  row only when the drawn variant does not fit that row's content. Naming both before
   the slide exists makes an unfitting choice visible at review instead of as
   oddly reshaped content on a finished deck.
 - **動態** names how the slide reveals in the deck's lively mode (deck-svg

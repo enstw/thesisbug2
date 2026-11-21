@@ -4,10 +4,14 @@
     ./fw deck-compile [<talk>]          compile storyboard.md into deck.html
     ./fw deck-compile [<talk>] --check  exit 1 if deck.html is out of sync with storyboard.md
     ./fw deck-compile [<talk>] --dry-run print compiled slides without writing deck.html
+    ./fw deck-compile --explorer        build the layout explorer (every layout × variant) and print its address
 
 The compiler reads <talk>/storyboard.md, extracts the random seed from 前提,
 validates layout codes against the Layout Catalog, resolves visual rhythm
 (accents, depth variants), generates valid HTML slides, and updates deck.html.
+A storyboard without a `Seed` bullet gets a random one written into 前提 on the
+first compile, so each deck has its own mix of variants and compiles to the same
+deck every time after; --check and --dry-run never write.
 """
 
 from __future__ import annotations
@@ -20,10 +24,10 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
-from _deck import NOTES_FILE, notes_source, unmanaged_notes  # noqa: E402
+from _deck import NOTES_FILE, deck_assets, notes_source, unmanaged_notes  # noqa: E402
 from _deck_catalog import CATALOG, VisualRhythmResolver, get_layout, parse_slot_payload  # noqa: E402
 from _deck_motion import apply_motion, split_codes  # noqa: E402
-from _deck_outline import extract_seed, extract_storyboard_rows, row_eyebrow, row_title  # noqa: E402
+from _deck_outline import ensure_seed, extract_seed, extract_storyboard_rows, row_eyebrow, row_title  # noqa: E402
 from _deck_steps import step_names, strip_html  # noqa: E402
 from _paths import course_root, rel, resolve_talk  # noqa: E402
 
@@ -149,13 +153,21 @@ def render_row(row: dict[str, str], idx: int, total: int,
     slots.setdefault("title", row_title(row, slots, slide_num))
     resolved_eyebrow = row_eyebrow(row, slots)
 
-    # Resolve context and depth variant
+    # Resolve context and depth variant; `variant: <name>` pins one when the drawn
+    # variant does not suit the row's content (a long text that only fits the other form).
+    pinned = slots.get("variant")
+    pinned = pinned.strip() if isinstance(pinned, str) else ""
+    if pinned and pinned not in layout_def.allowed_variants:
+        warnings.append(f"投影片 #{slide_num}: {layout_def.id} 沒有變體 '{pinned}'"
+                        f"（可用：{'、'.join(layout_def.allowed_variants)}），改用種子選的")
+        pinned = ""
     ctx, chosen_variant = resolver.resolve(
         layout=layout_def,
         slide_num=slide_num,
         total_slides=total - 1 if total > 1 else 1,
         eyebrow=resolved_eyebrow,
         title=slots.get("label") or slots.get("data_label") or slots.get("title", ""),
+        pinned=pinned,
     )
 
     # Render slide HTML, then the 動態 column's motion codes (deck-motion.js attributes).
@@ -245,21 +257,44 @@ def apply_compilation(talk: Path, compiled_slides: str, dry_run: bool = False) -
     return True
 
 
+def stale_deck_css(talk: Path, talk_arg: str) -> str:
+    """A warning when the talk's copy of deck.css is not the framework's, "" otherwise.
+
+    The renderers and deck.css change together, and a talk keeps its own copy of the
+    stylesheet: slides compiled against an older copy carry classes it does not style.
+    """
+    mine, current = talk / "asset" / "deck.css", deck_assets()["asset/deck.css"]
+    if mine.is_file() and mine.read_bytes() != current.read_bytes():
+        return (f"{mine.parent.name}/deck.css differs from the framework's, so new layout variants may be "
+                f"unstyled; run ./fw deck-refresh {talk_arg}")
+    return ""
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("talk", nargs="?", help="the talk to compile (defaults to current)")
     parser.add_argument("--check", action="store_true", help="exit 1 if deck.html needs recompilation")
     parser.add_argument("--dry-run", action="store_true", help="print compiled output without writing")
-    parser.add_argument("--explorer", action="store_true", help="print file:// URI to open the interactive layout explorer")
+    parser.add_argument("--explorer", action="store_true", help="build the interactive layout explorer from the catalog examples and print its file:// URI")
     args = parser.parse_args()
 
     if args.explorer:
-        explorer_path = HERE.parent / "docs" / "layout-explorer.html"
-        print(f"file://{explorer_path.resolve()}")
+        from _deck_explorer import build_explorer
+        print(build_explorer().resolve().as_uri())
         return 0
 
     root = course_root()
     unit, talk = resolve_talk(args.talk)
+
+    sb_file = talk / "storyboard.md"
+    if sb_file.is_file() and not (args.check or args.dry_run):
+        seed, written = ensure_seed(sb_file)
+        if written:
+            print(f"{rel(sb_file, root)}: 前提 had no Seed, wrote Seed: {seed} "
+                  "(change the number for another mix of variants)")
+    stale_css = stale_deck_css(talk, rel(talk, root))
+    if stale_css:
+        print(f"warning: {stale_css}", file=sys.stderr)
 
     compiled_slides, warnings = compile_storyboard(talk)
     if warnings:

@@ -17,6 +17,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+import secrets
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable
@@ -31,9 +32,13 @@ except ImportError:          # imported as scripts._deck_outline (tests)
 
 # ---------- the storyboard table ----------
 
+SEED_LINE = re.compile(r"(?im)^[-*]\s*(?:\*\*)?Seed(?:\*\*)?\s*[:：]\s*(\w+)")
+SEED_NOTE = "（版型變體的亂數種子，由 ./fw 自動填入；換一個數字就換一組變體）"
+
+
 def extract_seed(storyboard_text: str, default_seed: int = 42) -> int:
     """Extract Seed from storyboard premises: - **Seed:** 42 or - Seed: 42."""
-    m = re.search(r"(?im)^[-*]\s*(?:\*\*)?Seed(?:\*\*)?\s*[:：]\s*(\w+)", storyboard_text)
+    m = SEED_LINE.search(storyboard_text)
     if m:
         val = m.group(1).strip()
         if val.isdigit():
@@ -41,6 +46,45 @@ def extract_seed(storyboard_text: str, default_seed: int = 42) -> int:
         # If it's a string like "2026-autumn" or "r4821", hash it deterministically
         return int(hashlib.md5(val.encode("utf-8")).hexdigest()[:8], 16)
     return default_seed
+
+
+def with_seed(storyboard_text: str, seed: int) -> str:
+    """The storyboard with `- Seed: <seed>` as the last 前提 bullet.
+
+    A bullet, never a table row, because `./fw build` counts table rows as slides. A
+    storyboard without a 前提 section gets one in front of its first other section.
+    """
+    line = f"- Seed: {seed}{SEED_NOTE}"
+    lines = storyboard_text.splitlines()
+    head = next((i for i, ln in enumerate(lines) if re.match(r"##\s*前提\s*$", ln)), None)
+    if head is None:
+        at = next((i for i, ln in enumerate(lines) if ln.startswith("## ")), len(lines))
+        lines[at:at] = ["## 前提", "", line, ""]
+    else:
+        end = next((i for i in range(head + 1, len(lines)) if lines[i].startswith("## ")), len(lines))
+        bullets = [i for i in range(head + 1, end) if re.match(r"[-*]\s", lines[i])]
+        if bullets:
+            at = bullets[-1] + 1
+            while at < end and re.match(r"\s+\S", lines[at]):   # the last bullet's continuation lines
+                at += 1
+            lines[at:at] = [line]
+        else:
+            lines[head + 1:head + 1] = ["", line]
+    return "\n".join(lines) + "\n"
+
+
+def ensure_seed(storyboard: Path) -> tuple[int, bool]:
+    """(seed, written): the storyboard's seed, written into it first when it has none.
+
+    Without a recorded seed every deck compiled with the same default and looked alike;
+    a random one that is not written down could not be compiled the same way twice.
+    """
+    text = storyboard.read_text(encoding="utf-8")
+    if SEED_LINE.search(text):
+        return extract_seed(text), False
+    seed = 1000 + secrets.randbelow(9000)
+    storyboard.write_text(with_seed(text, seed), encoding="utf-8")
+    return seed, True
 
 
 def extract_storyboard_rows(storyboard_text: str) -> list[dict[str, str]]:
@@ -178,6 +222,26 @@ def _bento(o: Outline, slots: dict[str, Any]) -> None:
         o.items[0].focus = True
 
 
+def _banner(o: Outline, slots: dict[str, Any]) -> None:
+    """The banner as the slide's one large term (like a definition's), the cards as its items;
+    a card's second name and citation ride in its text."""
+    raw = slots.get("banner")
+    banner = raw if isinstance(raw, dict) else {"head": raw}
+
+    def named(part: dict[str, Any]) -> str:
+        head, sub = _text(part.get("head") or part.get("raw")), _text(part.get("sub"))
+        return f"{head}（{sub}）" if head and sub else head or sub
+
+    o.big, o.big_label, o.lead = named(banner), _text(banner.get("tag")), _text(banner.get("body"))
+    cards = _first(slots, ("cards", "items"))
+    for card in cards if isinstance(cards, list) else []:
+        if isinstance(card, dict):
+            body, cite = _text(card.get("body")), _text(card.get("cite"))
+            o.items.append(Item(head=named(card), body=f"{body}（{cite}）" if body and cite else body or cite,
+                                tag=_text(card.get("tag"))))
+    o.items = [it for it in o.items if it.head or it.body or it.tag]
+
+
 def _vs(o: Outline, slots: dict[str, Any]) -> None:
     for name in ("side_a", "side_b"):
         side = slots.get(name) if isinstance(slots.get(name), dict) else {}
@@ -268,7 +332,8 @@ class Spec:
                                 self.dropped) for n in group}
 
 
-COMMON = ("title", "label", "data_label", "eyebrow", "verdict_label")
+# `variant` pins a slide's depth variant; it steers the HTML layout only, so no outline carries it.
+COMMON = ("title", "label", "data_label", "eyebrow", "verdict_label", "variant")
 
 SPECS: dict[str, Spec] = {
     "L-HERO-TITLE": Spec(lead=("sub", "subtitle"), meta=("meta", "author"),
@@ -280,6 +345,7 @@ SPECS: dict[str, Spec] = {
     "L-4CARD-GRID": Spec(lead=("lead",), items=("cards", "items"), closing=("verdict",)),
     "L-BENTO-FOCUS": Spec(lead=("lead",), closing=("verdict",),
                           shaped=("hero_card", "sub_cards", "cards"), shape=_bento),
+    "L-BANNER-6GRID": Spec(shaped=("banner", "cards", "items"), shape=_banner),
     "L-SPLIT-ANCHOR": Spec(lead=("anchor_statement", "anchor"), items=("items", "cards"),
                            cite=("footer_cite", "cite"), meta=("qr_label",), dropped=("qr",)),
     "L-VS-CONFRONT": Spec(lead=("issue", "claim"), closing=("ask_or_verdict", "ask", "verdict"),

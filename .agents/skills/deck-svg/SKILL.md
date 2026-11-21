@@ -118,6 +118,8 @@ deck ends up saying things the declared Model does not.
 - When using layout catalog codes with slot micro-syntax in `storyboard.md`, run
   `./fw deck-compile <talk>` to compile the slides automatically and deterministically
   with seeded depth variants (preview all combinations live with `./fw deck-compile --explorer`).
+  The variants' styles live in `asset/deck.css`, so when `deck-compile` warns that the
+  talk's copy differs from the framework's, run `./fw deck-refresh <talk>` before judging the result.
   You can still hand-edit or extend `deck.html` afterwards.
 - Give every slide the row's 講者備註 numbers as `data-notes="K3 K7 Q1"`
   (`data-notes="—"` when it needs none; `deck-compile` writes it for catalog

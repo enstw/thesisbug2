@@ -26,7 +26,9 @@ from the file that owns it, so nothing here is a second copy to keep in sync:
     論點         every point in points.md with the slides that cite it
 
 The page is a build product under the git-ignored _output/; edit the
-storyboard (or points, Model) and run this again. Standard library only; KaTeX
+storyboard (or points, Model) and run this again. The one thing written outside
+_output/ is a `Seed` bullet in the storyboard's 前提 when it has none, because the
+previews must use the seed `./fw deck-compile` will, or they show other variants. Standard library only; KaTeX
 and Mermaid load from jsDelivr at pinned versions, so offline the formulas and
 the diagram show as source.
 """
@@ -515,6 +517,10 @@ def main() -> int:
         unit = talk = resolve_unit(args.target)
     if not (talk / "storyboard.md").is_file():
         sys.exit(f"no storyboard.md in {rel(talk, root)}")
+    # The previews are the real slides, so they need the seed the deck will compile with.
+    seed, written = deck_compile.ensure_seed(talk / "storyboard.md")
+    if written:
+        print(f"{rel(talk / 'storyboard.md', root)}: 前提 had no Seed, wrote Seed: {seed}")
     out, n = build(unit, talk, root)
     print(f"{rel(out, root)}: {n} slides")
     if args.open:

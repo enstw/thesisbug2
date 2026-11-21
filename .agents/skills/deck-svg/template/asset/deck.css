@@ -363,26 +363,25 @@
   /* the tint lifts the card toward the accent, so an accent-coloured tag on it loses contrast
      (4.3:1 on projector-dark); pulling the tag toward --text restores it in light and dark themes */
   .card--tint-elevated .tag { color: color-mix(in srgb, var(--chapter) 78%, var(--text)); }
-  .card--side-border { border-left: 8px solid var(--chapter); border-top: 1px solid var(--hair); }
 
-  /* 2x2 grid & 4-card variations: compact card density to fit within 1080px */
-  .card--grid-2x2, .card--numbered-1-4 {
+  /* 2x2 grid: compact card density to fit within 1080px */
+  .card--grid-2x2 {
     padding: 22px 28px;
     display: flex;
     flex-direction: column;
     justify-content: center;
   }
-  .card--grid-2x2 h3, .card--numbered-1-4 h3 {
+  .card--grid-2x2 h3 {
     font-size: calc(38px * var(--deck-font-scale, 1));
     line-height: 1.35;
     margin: 0 0 8px;
   }
-  .card--grid-2x2 p, .card--numbered-1-4 p {
+  .card--grid-2x2 p {
     font-size: calc(34px * var(--deck-font-scale, 1));
     line-height: 1.45;
     margin: 0;
   }
-  .card--grid-2x2 .tag, .card--numbered-1-4 .tag {
+  .card--grid-2x2 .tag {
     font-size: calc(34px * var(--deck-font-scale, 1));
     margin-bottom: 6px;
   }
@@ -450,6 +449,190 @@
   .stat-hero { display: grid; grid-template-columns: 1fr 1.3fr; gap: 40px; align-items: center; }
   .stat-hero__num { font-size: calc(110px * var(--deck-font-scale, 1)); font-weight: 800; color: var(--chapter); line-height: 1; }
   .stat-hero__body { display: flex; flex-direction: column; gap: 20px; }
+
+  /* ============================================================
+     LAYOUT CATALOG — depth variants (scripts/_deck_catalog.py)
+     A variant changes the FORM of a slide's containers: panel, open column, bubble,
+     pill, disc, chevron. It never changes only the colour, because colour already
+     varies per slide (--chapter) and per deck (the c / g theme keys).
+     Fills stay on grounds deck-theme-rules.js verifies: a bubble is the chapter colour
+     at 14% over the slide (quote/C), a nested box 4.5% a level (three levels stay under
+     14%), a pill, disc, cap or chevron the chapter colour itself with --on-chapter text.
+     ============================================================ */
+
+  /* ---------- shared shapes ---------- */
+  .pill { display: inline-block; padding: 2px 22px; border-radius: 999px; background: var(--chapter); color: var(--on-chapter, #07090f);
+    font-size: calc(34px * var(--deck-font-scale, 1)); font-weight: 700; letter-spacing: .08em; line-height: 1.5; }
+  .pill--line { background: none; color: var(--text); box-shadow: inset 0 0 0 3px var(--chapter); }
+  .disc { flex: none; width: 84px; height: 84px; border-radius: 50%; display: grid; place-items: center;
+    background: var(--chapter); color: var(--on-chapter, #07090f); font-weight: 800; font-size: calc(40px * var(--deck-font-scale, 1)); line-height: 1; }
+  .bubble { position: relative; background: color-mix(in srgb, var(--chapter) 14%, transparent); border-radius: 36px; padding: 28px 34px; }
+  .bubble--plain { background: var(--ink-2); }
+  /* The tail sits beside the bubble, not under it: two layers of a translucent fill would show as a darker patch. */
+  .bubble--tail-down::after, .bubble--tail-up::after, .bubble--tail-left::after, .bubble--tail-right::after {
+    content: ""; position: absolute; background: inherit; }
+  .bubble--tail-down::after { top: 100%; left: 48px; width: 36px; height: 22px; clip-path: polygon(0 0, 100% 0, 50% 100%); }
+  .bubble--tail-up::after { bottom: 100%; left: 48px; width: 36px; height: 22px; clip-path: polygon(50% 0, 100% 100%, 0 100%); }
+  .bubble--tail-right::after { left: 100%; top: calc(50% - 28px); width: 32px; height: 56px; clip-path: polygon(0 0, 100% 50%, 0 100%); }
+  .bubble--tail-left::after { right: 100%; top: calc(50% - 28px); width: 32px; height: 56px; clip-path: polygon(100% 0, 100% 100%, 0 50%); }
+  /* a small accent label over a head, where the item has no box to carry a .card .tag */
+  .numrow .tag, .openitem .tag { display: block; font-size: calc(34px * var(--deck-font-scale, 1)); letter-spacing: .12em; color: var(--chapter); font-weight: 700; line-height: 1.3; margin-bottom: 4px; }
+
+  /* ---------- L-3CARD-VERDICT: top-rail (panel) | open-rule (no box) | bubble ---------- */
+  .card--open-rule { background: none; border: 0; border-top: 8px solid var(--chapter); border-radius: 0; box-shadow: none; padding: 24px 12px 0 0; overflow: visible; }
+  .card--bubble { background: color-mix(in srgb, var(--chapter) 14%, transparent); border: 0; border-radius: 44px; box-shadow: none; padding: 34px 38px; }
+  .card--open-rule::before, .card--bubble::before { content: none; }
+  .card--bubble .tag { padding: 2px 22px; border-radius: 999px; background: var(--chapter); color: var(--on-chapter, #07090f); letter-spacing: .08em; line-height: 1.5; margin-bottom: 14px; }
+
+  /* ---------- L-4CARD-GRID: grid-2x2 (panels) | numbered-1-4 (discs, no boxes) | pillars (four capped columns) ---------- */
+  .grid.four { grid-template-columns: repeat(4, 1fr); gap: 24px; }
+  .numrow { display: grid; grid-template-columns: auto 1fr; gap: 26px; align-items: start; padding-top: 20px; border-top: 1px solid var(--hair); }
+  .numrow h3, .pillar h3 { font-size: calc(38px * var(--deck-font-scale, 1)); line-height: 1.35; margin: 0 0 8px; }
+  .numrow p, .pillar p { font-size: calc(34px * var(--deck-font-scale, 1)); line-height: 1.45; margin: 0; }
+  .pillar { display: flex; flex-direction: column; border-radius: 22px; overflow: hidden; background: var(--ink-2); }
+  .pillar__cap { padding: 10px 24px; text-align: center; background: var(--chapter); color: var(--on-chapter, #07090f);
+    font-size: calc(34px * var(--deck-font-scale, 1)); font-weight: 700; letter-spacing: .1em; line-height: 1.4; }
+  .pillar__body { flex: 1; padding: 24px 26px 28px; }
+
+  /* ---------- L-SPLIT-ANCHOR: card-list (pull quote + panels) | quote-style (bare statement + open list) ---------- */
+  /* a decorative mark, so it takes a serif whose curly quote is large; the deck font draws it small */
+  .bigquote { height: calc(150px * var(--deck-font-scale, 1)); margin-bottom: 18px; font-family: Georgia, 'Times New Roman', serif; font-size: calc(360px * var(--deck-font-scale, 1)); line-height: 1; font-weight: 700; color: var(--chapter); }
+  .anchorline { margin: 0; font-size: calc(56px * var(--deck-font-scale, 1)); line-height: 1.4; font-weight: 700; color: var(--text); }
+  .split-anchor--quote-style .split-anchor__list { gap: 0; }
+  .openitem { padding: 22px 0; border-top: 1px solid var(--hair); }
+  .openitem:first-child { border-top: 0; }
+  .openitem h3 { font-size: calc(44px * var(--deck-font-scale, 1)); margin: 0 0 6px; }
+  .openitem p { font-size: calc(38px * var(--deck-font-scale, 1)); line-height: 1.5; margin: 0; }
+
+  /* ---------- L-VS-CONFRONT: card-versus (panels) | split-rail (no boxes, a rail between) | speech-bubbles ---------- */
+  .confront--split-rail { gap: 44px; }
+  .confront__side--open { padding: 8px 0; }
+  .confront__vs--rail::before { content: ""; position: absolute; top: 0; bottom: 0; left: calc(50% - 2px); width: 4px; border-radius: 2px; background: var(--chapter); opacity: .45; }
+  .confront__vs--rail .confront__badge { position: relative; }
+  .confront--speech-bubbles { gap: 40px; }
+
+  /* ---------- L-MATRIX-DEEPDIVE: split-note (note beside) | floating-callout (full-width matrix, callout under it) ---------- */
+  .matrix-deepdive--floating-callout { grid-template-columns: 1fr; gap: 36px; }
+  .matrix-deepdive--floating-callout .matrix-deepdive__note { display: flex; gap: 26px; align-items: flex-start; padding: 22px 34px; }
+  .matrix-deepdive--floating-callout .matrix-deepdive__note p { margin: 0; font-size: calc(38px * var(--deck-font-scale, 1)); line-height: 1.5; color: var(--text); }
+  .matrix-deepdive--floating-callout .pill { flex: none; margin-top: 3px; white-space: nowrap; }
+
+  /* ---------- L-SPECTRUM-POLES: gradient-bar (dots on a bar) | step-pills (bubbles over a stepped track, poles as pills) ---------- */
+  .spectrum--step-pills .mark { width: 380px; }
+  .spectrum--step-pills .mark::after { content: none; }
+  .spectrum--step-pills .mark .bubble { padding: 14px 18px 16px; border-radius: 26px; margin-bottom: 30px; }
+  .spectrum--step-pills .mark .bubble::after { left: calc(50% - 18px); }
+  .spectrum .bar--steps { height: 16px; border-radius: 0;
+    background: repeating-linear-gradient(90deg, var(--chapter) 0 calc(10% - 8px), transparent calc(10% - 8px) 10%); }
+  .spectrum--step-pills .ends { margin-top: 20px; }
+
+  /* ---------- L-FLOW-3STAGE: node-arrow (panels and arrows) | chevron-step | disc-rail (numbered discs on a rail) ---------- */
+  .flowdiag--chevron-step { gap: 0; align-items: flex-start; }
+  .chev { flex: 1 1 0; min-width: 0; }
+  .chev + .chev { margin-left: -26px; }
+  .chev__head { min-height: 156px; display: flex; align-items: center; padding: 20px 70px 20px 78px; background: var(--chapter);
+    clip-path: polygon(0 0, calc(100% - 46px) 0, 100% 50%, calc(100% - 46px) 100%, 0 100%, 46px 50%); }
+  .chev:first-child .chev__head { padding-left: 40px; clip-path: polygon(0 0, calc(100% - 46px) 0, 100% 50%, calc(100% - 46px) 100%, 0 100%); }
+  .chev__head h3 { color: var(--on-chapter, #07090f); font-size: calc(40px * var(--deck-font-scale, 1)); line-height: 1.3; margin: 0; }
+  .chev p { margin: 22px 56px 0 78px; font-size: calc(38px * var(--deck-font-scale, 1)); line-height: 1.5; color: var(--body); }
+  .chev:first-child p { margin-left: 40px; }
+  .flowdiag--disc-rail { position: relative; gap: 44px; align-items: flex-start; }
+  .flowdiag--disc-rail::before { content: ""; position: absolute; left: 0; right: 22px; top: 40px; height: 4px; background: var(--chapter); opacity: .5; }
+  .flowdiag--disc-rail::after { content: ""; position: absolute; right: 0; top: 28px; width: 24px; height: 28px; background: var(--chapter); opacity: .5; clip-path: polygon(0 0, 100% 50%, 0 100%); }
+  .discstep { flex: 1 1 0; min-width: 0; position: relative; }
+  .discstep h3 { font-size: calc(44px * var(--deck-font-scale, 1)); margin: 22px 0 10px; }
+  .discstep p { margin: 0; font-size: calc(38px * var(--deck-font-scale, 1)); line-height: 1.5; color: var(--body); }
+
+  /* ---------- L-TIMELINE-RAIL: top-rail (columns under a rail) | alternating (bubbles above and below it) ----------
+     The renderer sets n+1 columns and has each event span two, alternating rows, so a
+     bubble is two columns wide and never meets its neighbour, which is on the other side. */
+  .timeline--alternating { grid-auto-flow: row; grid-template-rows: 1fr 40px 1fr; padding-top: 0; }
+  .timeline--alternating::before { top: calc(50% - 2px); }
+  .timeline--alternating .tl { padding: 0 18px 0 0; }
+  .timeline--alternating .tl--up { grid-row: 1; align-self: end; padding-bottom: 22px; }
+  .timeline--alternating .tl--down { grid-row: 3; align-self: start; padding-top: 22px; }
+  .timeline--alternating .tl::before { left: 53px; z-index: 1; }
+  .timeline--alternating .tl--up::before { top: auto; bottom: -33px; }
+  .timeline--alternating .tl--down::before { top: -33px; }
+  .timeline--alternating .bubble { padding: 14px 24px 16px; border-radius: 26px; }
+  .timeline--alternating .tl p { line-height: 1.35; }
+
+  /* ---------- L-CASCADE-FUNNEL: stacked-tiers (rows) | concentric-cards (each level a box inside the one above) ---------- */
+  .nest__box { border: 3px solid color-mix(in srgb, var(--chapter) 60%, transparent); border-radius: 30px; padding: 16px 26px;
+    background: color-mix(in srgb, var(--chapter) 4.5%, transparent); }
+  .nest__box .nest__box { margin-top: 16px; }
+  .nest__row { display: grid; grid-template-columns: 300px 1fr; gap: 24px; align-items: baseline; }
+  .nest--narrow .nest__row { grid-template-columns: 180px 1fr; }
+  .nest__name { font-weight: 700; color: var(--chapter); font-size: calc(36px * var(--deck-font-scale, 1)); }
+  .nest__row h3 { font-size: calc(40px * var(--deck-font-scale, 1)); margin: 0 0 4px; }
+  .nest__row p { margin: 0; font-size: calc(36px * var(--deck-font-scale, 1)); line-height: 1.45; color: var(--body); }
+
+  /* ---------- L-QUOTE-CRITIQUE: quote-top (pull quote over three panels) | quote-left (speech bubble beside three rows) ---------- */
+  .quote-critique--quote-left { display: grid; grid-template-columns: 1fr 1.25fr; gap: 52px; align-items: center; }
+  .bubble--quote { padding: 32px 38px; font-size: calc(44px * var(--deck-font-scale, 1)); line-height: 1.45; font-weight: 700; color: var(--text); }
+  .quote-critique__who { margin: 36px 0 0 36px; font-size: calc(34px * var(--deck-font-scale, 1)); line-height: 1.4; color: var(--body); }
+  .critrow { display: grid; grid-template-columns: auto 1fr; gap: 24px; align-items: start; padding: 20px 0; border-top: 1px solid var(--hair); }
+  .critrow:first-child { border-top: 0; }
+  .critrow .pill { margin-top: 4px; white-space: nowrap; }
+  .critrow h3 { font-size: calc(40px * var(--deck-font-scale, 1)); margin: 0 0 6px; }
+  .critrow p { margin: 0; font-size: calc(36px * var(--deck-font-scale, 1)); line-height: 1.45; }
+
+  /* ---------- L-HYPOTHESIS-TEST: contrast-pillars (two panels) | conflict-flow (dashed expectation ≠ filled finding) ---------- */
+  .hypo-test--conflict-flow { grid-template-columns: 1fr auto 1fr; gap: 22px; }
+  .hypo-box { border-radius: 32px; padding: 28px 34px; }
+  .hypo-box--expect { border: 4px dashed color-mix(in srgb, var(--chapter) 65%, transparent); }
+  .hypo-box h3 { font-size: calc(44px * var(--deck-font-scale, 1)); margin: 16px 0 0; }
+  .hypo-box p { font-size: calc(38px * var(--deck-font-scale, 1)); line-height: 1.5; margin: 14px 0 0; }
+  .hypo-clash { align-self: center; width: 92px; height: 92px; border-radius: 50%; display: grid; place-items: center;
+    background: var(--chapter); color: var(--on-chapter, #07090f); font-size: calc(60px * var(--deck-font-scale, 1)); font-weight: 800; line-height: 1; }
+
+  /* ---------- L-STAT-HERO: stat-left (number beside panels) | stat-band (number in a lozenge over open columns) ---------- */
+  .stat-hero--stat-band { grid-template-columns: 1fr; gap: 34px; }
+  .stat-hero--stat-band .stat-hero__stat { display: flex; align-items: center; gap: 52px; padding: 26px 100px; border-radius: 999px;
+    background: color-mix(in srgb, var(--chapter) 14%, transparent); }
+  .stat-hero--stat-band .stat-hero__num { flex: none; }
+  .stat-hero__ctx { margin: 6px 0 0; font-size: calc(36px * var(--deck-font-scale, 1)); line-height: 1.45; color: var(--body); }
+  .stat-hero--stat-band .stat-hero__body { flex-direction: row; gap: 44px; }
+  .stat-hero--stat-band .stat-hero__body .card { flex: 1 1 0; min-width: 0; }
+
+  /* ---------- L-DEFN-EXAMPLE: side-notes | dict-card (one bordered entry) | split-cards (bubble example, dashed boundary) ---------- */
+  .defn--dict-card, .defn--split-cards { display: block; }
+  .dict { margin-right: 16px; padding: 30px 44px 34px; border: 3px solid var(--text); border-radius: 6px; background: var(--ink-2);
+    box-shadow: 16px 16px 0 color-mix(in srgb, var(--chapter) 45%, transparent); }
+  .dict__ex { display: grid; grid-template-columns: 1fr 1fr; gap: 44px; margin-top: 26px; padding-top: 24px; border-top: 2px dashed var(--muted); }
+  .defn--split-cards .term { margin-bottom: 30px; }
+  .defn__pair { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; align-items: stretch; }
+  .defn__pair > div { border-radius: 36px; padding: 26px 34px; }
+  .defn__neg { border: 4px dashed color-mix(in srgb, var(--chapter) 65%, transparent); }
+  .defn__pair p { margin: 14px 0 0; font-size: calc(40px * var(--deck-font-scale, 1)); line-height: 1.5; color: var(--body); }
+
+  /* ---------- L-BANNER-6GRID: one framing banner over up to six cards ----------
+     soft-cards: a filled banner over borderless boxes | ruled-cells: a barred, tinted banner over open cells under a rule.
+     A card's pill takes its category's chapter colour (set inline), not the slide's. */
+  .axis { display: flex; flex-direction: column; gap: 24px; }
+  .axis__banner { display: flex; align-items: center; gap: 30px; padding: 22px 38px; border-radius: 24px; }
+  .axis__banner h3 { font-size: calc(46px * var(--deck-font-scale, 1)); margin: 0; }
+  .axis__banner h3 small { margin-left: 18px; font-size: calc(36px * var(--deck-font-scale, 1)); font-weight: 700; letter-spacing: .02em; }
+  .axis__banner p { margin: 4px 0 0; font-size: calc(36px * var(--deck-font-scale, 1)); line-height: 1.45; }
+  .axis__tag { flex: none; padding: 4px 24px; border-radius: 999px; font-size: calc(34px * var(--deck-font-scale, 1)); font-weight: 700; letter-spacing: .1em; line-height: 1.5; white-space: nowrap; }
+  .axis--soft-cards .axis__banner, .axis--soft-cards .axis__banner h3 { color: var(--on-chapter, #07090f); }
+  .axis--soft-cards .axis__banner { background: var(--chapter); }
+  .axis--soft-cards .axis__tag { box-shadow: inset 0 0 0 3px var(--on-chapter, #07090f); }
+  .axis--ruled-cells .axis__banner { background: color-mix(in srgb, var(--chapter) 14%, transparent); border-left: 16px solid var(--chapter); border-radius: 0 24px 24px 0; }
+  .axis--ruled-cells .axis__banner h3 small { color: var(--chapter); }
+  .axis--ruled-cells .axis__tag { background: var(--chapter); color: var(--on-chapter, #07090f); }
+  .axis__grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px 24px; }
+  .axis__grid--2 { grid-template-columns: 1fr 1fr; }
+  .axis__card { padding: 18px 26px 20px; border-radius: 22px; }
+  .axis--soft-cards .axis__card { background: var(--ink-2); }
+  .axis--ruled-cells .axis__grid { gap: 22px 44px; }
+  .axis--ruled-cells .axis__card { padding: 16px 0 0; border-radius: 0; border-top: 3px solid var(--muted); }
+  .axis__top { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; }
+  .axis__top h3 { font-size: calc(38px * var(--deck-font-scale, 1)); line-height: 1.3; margin: 0; }
+  .axis__top .pill { flex: none; padding: 0 18px; letter-spacing: .04em; white-space: nowrap; }
+  .axis__card p { margin: 2px 0 0; font-size: calc(34px * var(--deck-font-scale, 1)); line-height: 1.35; }
+  .axis__card .axis__sub { font-weight: 700; color: var(--chapter); }
+  .axis__card .axis__cite { color: var(--muted); }
 
   /* ---------- numbered list (ol.num) — used by reading-guide 討論問題 ---------- */
   ol.num { list-style:none; padding:0; margin:0; counter-reset:q; display:grid; gap:20px; }

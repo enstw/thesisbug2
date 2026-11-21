@@ -1,9 +1,15 @@
 """The presentation layout catalog and slot parser for thesisbug2.
 
-Defines the 17 standard layout codes across 5 families, their slot schemas,
+Defines the 18 standard layout codes across 5 families, their slot schemas,
 seeded depth variants, and deterministic HTML renderers.
 
-Layout catalog v1.0:
+A depth variant changes the form of a slide's containers (panel, open column, bubble,
+pill, disc, chevron), never only its colour: colour already varies per slide through the
+chapter accent and per deck through the theme keys. Every name in a layout's
+`allowed_variants` must render differently; a test compiles each catalog example in every
+variant and compares.
+
+Layout catalog v1.1:
   1. Declarative & Thesis:
      - L-HERO-TITLE
      - L-FINALE-SUMMARY
@@ -11,6 +17,7 @@ Layout catalog v1.0:
      - L-3CARD-VERDICT
      - L-4CARD-GRID
      - L-BENTO-FOCUS
+     - L-BANNER-6GRID
      - L-SPLIT-ANCHOR
   3. Relational, Contrast & Typology:
      - L-VS-CONFRONT
@@ -214,7 +221,9 @@ class VisualRhythmResolver:
     def __init__(self, seed: int):
         self.rng = random.Random(seed)
         self.prev_accent: str | None = None
-        self.prev_variant: str | None = None
+        # layout id → its variants in this deck's order, and how many slides have used it
+        self.orders: dict[str, list[str]] = {}
+        self.used: dict[str, int] = {}
 
     def resolve(
         self,
@@ -223,20 +232,25 @@ class VisualRhythmResolver:
         total_slides: int,
         eyebrow: str,
         title: str,
+        pinned: str = "",
     ) -> tuple[SlideContext, str]:
         # 1. Accent cycling: choose from --c1..--c4, never repeat previous
         accents = [f"var(--c{i})" for i in range(1, 5) if f"var(--c{i})" != self.prev_accent]
         chosen_accent = self.rng.choice(accents)
         self.prev_accent = chosen_accent
 
-        # 2. Variant selection: choose from allowed variants
-        variants = layout.allowed_variants
-        if len(variants) > 1 and self.prev_variant in variants:
-            cands = [v for v in variants if v != self.prev_variant]
-            chosen_variant = self.rng.choice(cands)
-        else:
-            chosen_variant = self.rng.choice(variants) if variants else "default"
-        self.prev_variant = chosen_variant
+        # 2. Variant: each layout walks its variants in an order the seed shuffles, so a
+        # layout used three times shows three forms before any repeats. Independent draws
+        # gave the same form twice in a row about as often as not. A pinned slide still
+        # takes its turn, so pinning one slide leaves every other slide as it was.
+        variants = layout.allowed_variants or ["default"]
+        if layout.id not in self.orders:
+            self.orders[layout.id] = self.rng.sample(variants, len(variants))
+            self.used[layout.id] = 0
+        chosen_variant = self.orders[layout.id][self.used[layout.id] % len(variants)]
+        self.used[layout.id] += 1
+        if pinned in variants:
+            chosen_variant = pinned
 
         ctx = SlideContext(
             slide_num=slide_num,
@@ -250,7 +264,7 @@ class VisualRhythmResolver:
 
 
 # =========================================================================
-# Renderers for the 16 Standard Layouts
+# Renderers for the standard layouts
 # =========================================================================
 
 def _render_topbar(ctx: SlideContext) -> str:
@@ -290,6 +304,7 @@ ITEM_CAP = {
     "L-3CARD-VERDICT": 3,
     "L-4CARD-GRID": 4,
     "L-BENTO-FOCUS": 3,          # the focus card plus two side cards
+    "L-BANNER-6GRID": 6,         # cards under the banner
     "L-SPLIT-ANCHOR": 3,
     "L-FLOW-3STAGE": 3,
     "L-TIMELINE-RAIL": 5,
@@ -485,16 +500,35 @@ def render_4card_grid(slots: dict[str, Any], variant: str, ctx: SlideContext) ->
     verdict = esc(slots.get("verdict") or "")
 
     lead_html = f'<p class="lead rise">{lead}</p>' if lead else ""
-    card_class = f"card card--{variant}"
 
     cards_html = []
     for i, c in enumerate(cards[:ITEM_CAP["L-4CARD-GRID"]]):
-        tag = esc(c.get("tag") or (f"0{i+1}" if variant == "numbered-1-4" else ""))
+        tag = esc(c.get("tag") or "")
         head = esc(c.get("head") or "")
         body = esc(c.get("body") or "")
         tag_html = f'<span class="tag">{tag}</span>' if tag else ""
         delay = f"d{i+1}"
-        cards_html.append(f"""        <div class="{card_class} rise {delay}">
+        if variant == "numbered-1-4":
+            # The ordinal is the renderer's, not the author's text, so it stays out of what is read as slide text.
+            cards_html.append(f"""        <div class="numrow rise {delay}">
+          <div class="disc" aria-hidden="true">{i+1}</div>
+          <div>
+            {tag_html}
+            <h3>{head}</h3>
+            <p>{body}</p>
+          </div>
+        </div>""")
+        elif variant == "pillars":
+            cap = f'<div class="pillar__cap">{tag}</div>' if tag else f'<div class="pillar__cap" aria-hidden="true">0{i+1}</div>'
+            cards_html.append(f"""        <div class="pillar rise {delay}">
+          {cap}
+          <div class="pillar__body">
+            <h3>{head}</h3>
+            <p>{body}</p>
+          </div>
+        </div>""")
+        else:
+            cards_html.append(f"""        <div class="card card--grid-2x2 rise {delay}">
           {tag_html}
           <h3>{head}</h3>
           <p>{body}</p>
@@ -502,13 +536,14 @@ def render_4card_grid(slots: dict[str, Any], variant: str, ctx: SlideContext) ->
 
     note_label = _note_label(slots, CLOSING_LABEL["L-4CARD-GRID"])
     verdict_html = f'<div class="verdict box rise d4">{note_label}{verdict}</div>' if verdict else ""
+    grid = "grid four" if variant == "pillars" else "grid two"
 
     return f"""  <section class="slide" style="--chapter:{ctx.accent}" data-label="{dlabel}">
 {_render_topbar(ctx)}
     <div class="content">
       <h2 class="kicker rise">{title}</h2>
       {lead_html}
-      <div class="grid two mt">
+      <div class="{grid} mt">
 {''.join(cards_html)}
       </div>
       {verdict_html}
@@ -568,14 +603,16 @@ def render_split_anchor(slots: dict[str, Any], variant: str, ctx: SlideContext) 
     anchor = esc(slots.get("anchor_statement") or slots.get("anchor") or "")
     items = slots.get("items") or slots.get("cards") or []
     cite = esc(slots.get("footer_cite") or slots.get("cite") or "")
+    quote_style = variant == "quote-style"
 
+    item_class = "openitem" if quote_style else "card"
     items_html = []
     for i, item in enumerate(items[:ITEM_CAP["L-SPLIT-ANCHOR"]]):
         head = esc(item.get("head") or "")
         body = esc(item.get("body") or "")
         tag = esc(item.get("tag") or "")
         tag_span = f'<span class="tag">{tag}</span>' if tag else ""
-        items_html.append(f"""          <div class="card rise d{i+2}">
+        items_html.append(f"""          <div class="{item_class} rise d{i+2}">
             {tag_span}
             <h3>{head}</h3>
             <p>{body}</p>
@@ -583,16 +620,21 @@ def render_split_anchor(slots: dict[str, Any], variant: str, ctx: SlideContext) 
 
     cite_html = f'<div class="muted mt">出處：{cite}</div>' if cite else ""
     qr_html = _qr_figure(slots, ctx, size=220, style="margin:24px 0 0")
+    if quote_style:
+        statement = f"""<div class="bigquote" aria-hidden="true">“</div>
+          <p class="anchorline">{anchor}</p>"""
+    else:
+        statement = f"""<blockquote class="pull">
+            {anchor}
+          </blockquote>"""
 
     return f"""  <section class="slide" style="--chapter:{ctx.accent}" data-label="{dlabel}">
 {_render_topbar(ctx)}
     <div class="content">
       <h2 class="kicker rise">{title}</h2>
-      <div class="split-anchor mt">
+      <div class="split-anchor split-anchor--{variant} mt">
         <div class="split-anchor__hero rise d1">
-          <blockquote class="pull">
-            {anchor}
-          </blockquote>
+          {statement}
           {cite_html}
           {qr_html}
         </div>
@@ -624,23 +666,39 @@ def render_vs_confront(slots: dict[str, Any], variant: str, ctx: SlideContext) -
     note_label = _note_label(slots, CLOSING_LABEL["L-VS-CONFRONT"])
     verdict_html = f'<div class="verdict box rise d3">{note_label}{verdict}</div>' if verdict else ""
 
+    # (side A's box, side B's box, A's camp name, B's camp name, the VS column) per variant
+    if variant == "split-rail":
+        box_a = box_b = "confront__side confront__side--open"
+        name_a, name_b = f'<span class="pill">{camp_a}</span>', f'<span class="pill pill--line">{camp_b}</span>'
+        vs = "confront__vs confront__vs--rail"
+    elif variant == "speech-bubbles":
+        box_a = "confront__side bubble bubble--tail-right"
+        box_b = "confront__side bubble bubble--plain bubble--tail-left"
+        name_a, name_b = f'<span class="pill">{camp_a}</span>', f'<span class="pill pill--line">{camp_b}</span>'
+        vs = "confront__vs"
+    else:
+        box_a = box_b = "card confront__side"
+        name_a = f'<span class="tag">{camp_a}</span>'
+        name_b = f'<span class="tag" style="color:var(--text)">{camp_b}</span>'
+        vs = "confront__vs"
+
     return f"""  <section class="slide" style="--chapter:{ctx.accent}" data-label="{dlabel}">
 {_render_topbar(ctx)}
     <div class="content">
       <h2 class="kicker rise">{title}</h2>
       {issue_html}
-      <div class="confront mt">
-        <div class="card confront__side rise d1">
-          <span class="tag">{camp_a}</span>
+      <div class="confront confront--{variant} mt">
+        <div class="{box_a} rise d1">
+          {name_a}
           <ul class="clean lead-size mt">
             {pts_a_html}
           </ul>
         </div>
-        <div class="confront__vs rise d2">
+        <div class="{vs} rise d2">
           <div class="confront__badge" aria-hidden="true">VS</div>
         </div>
-        <div class="card confront__side rise d1">
-          <span class="tag" style="color:var(--text)">{camp_b}</span>
+        <div class="{box_b} rise d1">
+          {name_b}
           <ul class="clean lead-size mt">
             {pts_b_html}
           </ul>
@@ -660,12 +718,14 @@ def render_matrix_deepdive(slots: dict[str, Any], variant: str, ctx: SlideContex
     focus = matrix_focus(slots)
     note = esc(slots.get("deepdive_note") or "")
     note_tag = esc(matrix_note_label(slots, focus))
+    callout = variant == "floating-callout"
     # `matrix_width: wide` gives the matrix most of the row: cell text wraps
-    # every few characters at the default split, burying the typology.
-    wide = " matrix-deepdive--wide" if str(slots.get("matrix_width") or "").strip().lower() == "wide" else ""
+    # every few characters at the default split, burying the typology. The
+    # callout variant already gives the matrix the full width.
+    wide = (" matrix-deepdive--wide"
+            if not callout and str(slots.get("matrix_width") or "").strip().lower() == "wide" else "")
 
     # Format 2x2 cells
-    cell_map = {1: ("低", "低"), 2: ("低", "高"), 3: ("高", "低"), 4: ("高", "高")}
     tds = {}
     for i in range(1, 5):
         c = cells[i-1] if i <= len(cells) else {}
@@ -688,16 +748,24 @@ def render_matrix_deepdive(slots: dict[str, Any], variant: str, ctx: SlideContex
           <div class="axis-x">{esc(axis_x.get('name'))}</div>
         </div>"""
 
+    if callout:
+        note_html = f"""<div class="bubble bubble--tail-up matrix-deepdive__note rise d2">
+          <span class="pill">{note_tag}</span>
+          <p>{note}</p>
+        </div>"""
+    else:
+        note_html = f"""<div class="card card--tint-elevated matrix-deepdive__note rise d2">
+          <span class="tag">{note_tag}</span>
+          <p class="lead-size mt">{note}</p>
+        </div>"""
+
     return f"""  <section class="slide" style="--chapter:{ctx.accent}" data-label="{dlabel}">
 {_render_topbar(ctx)}
     <div class="content">
       <h2 class="kicker rise">{title}</h2>
-      <div class="matrix-deepdive{wide} mt">
+      <div class="matrix-deepdive matrix-deepdive--{variant}{wide} mt">
         {matrix_table}
-        <div class="card card--tint-elevated matrix-deepdive__note rise d2">
-          <span class="tag">{note_tag}</span>
-          <p class="lead-size mt">{note}</p>
-        </div>
+        {note_html}
       </div>
     </div>
   </section>"""
@@ -710,32 +778,37 @@ def render_spectrum_poles(slots: dict[str, Any], variant: str, ctx: SlideContext
     pole_r = esc(slots.get("pole_right") or "極端 B")
     markers = slots.get("markers") or slots.get("items") or []
     verdict = esc(slots.get("verdict") or "")
+    pills = variant == "step-pills"
 
     marks_html = []
     for m in markers:
         pct = m.get("position_pct") or m.get("pct") or 50
         lbl = esc(m.get("label") or m.get("head") or "")
         desc = esc(m.get("desc") or m.get("body") or "")
+        inner = f"<b>{lbl}</b>\n          <span>{desc}</span>"
+        if pills:
+            inner = f'<div class="bubble bubble--tail-down">{inner}</div>'
         marks_html.append(f"""        <div class="mark" style="left:{pct}%">
-          <b>{lbl}</b>
-          <span>{desc}</span>
+          {inner}
         </div>""")
 
     note_label = _note_label(slots, CLOSING_LABEL["L-SPECTRUM-POLES"])
     verdict_html = f'<div class="verdict box rise d3 mt">{note_label}{verdict}</div>' if verdict else ""
+    pole_class = ' class="pill pill--line"' if pills else ""
+    bar_class = "bar bar--steps" if pills else "bar"
 
     return f"""  <section class="slide" style="--chapter:{ctx.accent}" data-label="{dlabel}">
 {_render_topbar(ctx)}
     <div class="content">
       <h2 class="kicker rise">{title}</h2>
-      <div class="spectrum mt">
+      <div class="spectrum spectrum--{variant} mt">
         <div class="marks rise d1">
 {''.join(marks_html)}
         </div>
-        <div class="bar"></div>
+        <div class="{bar_class}"></div>
         <div class="ends">
-          <span>{pole_l}</span>
-          <span>{pole_r}</span>
+          <span{pole_class}>{pole_l}</span>
+          <span{pole_class}>{pole_r}</span>
         </div>
       </div>
       {verdict_html}
@@ -756,12 +829,24 @@ def render_flow_3stage(slots: dict[str, Any], variant: str, ctx: SlideContext) -
     for i, s in enumerate(stages[:ITEM_CAP["L-FLOW-3STAGE"]]):
         head = esc(s.get("head") or f"階段 {i+1}")
         body = esc(s.get("body") or "")
-        flow_nodes.append(f"""        <div class="flownode rise d{i+1}">
+        if variant == "chevron-step":
+            flow_nodes.append(f"""        <div class="chev rise d{i+1}">
+          <div class="chev__head"><h3>{head}</h3></div>
+          <p>{body}</p>
+        </div>""")
+        elif variant == "disc-rail":
+            flow_nodes.append(f"""        <div class="discstep rise d{i+1}">
+          <div class="disc" aria-hidden="true">{i+1}</div>
           <h3>{head}</h3>
           <p>{body}</p>
         </div>""")
-        if i < 2 and i < len(stages) - 1:
-            flow_nodes.append('        <div class="flowarrow">→</div>')
+        else:
+            flow_nodes.append(f"""        <div class="flownode rise d{i+1}">
+          <h3>{head}</h3>
+          <p>{body}</p>
+        </div>""")
+            if i < 2 and i < len(stages) - 1:
+                flow_nodes.append('        <div class="flowarrow">→</div>')
 
     note_label = _note_label(slots, CLOSING_LABEL["L-FLOW-3STAGE"])
     verdict_html = f'<div class="verdict box rise d4 mt">{note_label}{verdict}</div>' if verdict else ""
@@ -771,7 +856,7 @@ def render_flow_3stage(slots: dict[str, Any], variant: str, ctx: SlideContext) -
     <div class="content">
       <h2 class="kicker rise">{title}</h2>
       {lead_html}
-      <div class="flowdiag mt">
+      <div class="flowdiag flowdiag--{variant} mt">
 {''.join(flow_nodes)}
       </div>
       {verdict_html}
@@ -782,28 +867,41 @@ def render_flow_3stage(slots: dict[str, Any], variant: str, ctx: SlideContext) -
 def render_timeline_rail(slots: dict[str, Any], variant: str, ctx: SlideContext) -> str:
     title = esc(slots.get("title") or "")
     dlabel = _dlabel(slots, title)
-    events = slots.get("events") or slots.get("items") or []
+    events = (slots.get("events") or slots.get("items") or [])[:ITEM_CAP["L-TIMELINE-RAIL"]]
     takeaway = esc(slots.get("takeaway") or slots.get("verdict") or "")
+    alternating = variant == "alternating"
 
     tls = []
-    for i, ev in enumerate(events[:ITEM_CAP["L-TIMELINE-RAIL"]]):
+    for i, ev in enumerate(events):
         time_str = esc(ev.get("time") or ev.get("tag") or "")
         head = esc(ev.get("head") or "")
         body = esc(ev.get("body") or "")
-        tls.append(f"""        <div class="tl rise d{i+1}">
-          <time>{time_str}</time>
+        inner = f"""<time>{time_str}</time>
           <b>{head}</b>
-          <p>{body}</p>
+          <p>{body}</p>"""
+        if alternating:
+            # Each event spans two of the n+1 columns and alternates sides of the rail, so
+            # a bubble is twice as wide as a column and its neighbours are on the other side.
+            side, tail = ("up", "down") if i % 2 == 0 else ("down", "up")
+            tls.append(f"""        <div class="tl tl--{side} rise d{min(i+1, 4)}" style="grid-column:{i+1} / span 2">
+          <div class="bubble bubble--tail-{tail}">
+          {inner}
+          </div>
+        </div>""")
+        else:
+            tls.append(f"""        <div class="tl rise d{i+1}">
+          {inner}
         </div>""")
 
     note_label = _note_label(slots, CLOSING_LABEL["L-TIMELINE-RAIL"])
     takeaway_html = f'<div class="verdict box rise d4 mt">{note_label}{takeaway}</div>' if takeaway else ""
+    columns = f' style="grid-template-columns:repeat({len(events) + 1}, 1fr)"' if alternating else ""
 
     return f"""  <section class="slide" style="--chapter:{ctx.accent}" data-label="{dlabel}">
 {_render_topbar(ctx)}
     <div class="content">
       <h2 class="kicker rise">{title}</h2>
-      <div class="timeline mt">
+      <div class="timeline timeline--{variant} mt"{columns}>
 {''.join(tls)}
       </div>
       {takeaway_html}
@@ -814,25 +912,49 @@ def render_timeline_rail(slots: dict[str, Any], variant: str, ctx: SlideContext)
 def render_cascade_funnel(slots: dict[str, Any], variant: str, ctx: SlideContext) -> str:
     title = esc(slots.get("title") or "")
     dlabel = _dlabel(slots, title)
-    levels = slots.get("levels") or slots.get("items") or []
+    levels = (slots.get("levels") or slots.get("items") or [])[:ITEM_CAP["L-CASCADE-FUNNEL"]]
     verdict = esc(slots.get("core_focus") or slots.get("verdict") or "")
 
-    # `label_width: narrow` shrinks the 400px level-name column for short names
+    # `label_width: narrow` shrinks the level-name column for short names
     # such as 條約／組織／協議, so the description gets the width.
-    narrow = " tiers--narrow" if str(slots.get("label_width") or "").strip().lower() == "narrow" else ""
+    is_narrow = str(slots.get("label_width") or "").strip().lower() == "narrow"
 
-    tiers = []
-    for i, lv in enumerate(levels[:ITEM_CAP["L-CASCADE-FUNNEL"]]):
-        lvl_name = esc(lv.get("level_name") or lv.get("tag") or f"層級 {i+1}")
-        head = esc(lv.get("head") or "")
-        body = esc(lv.get("body") or "")
-        tiers.append(f"""        <div class="tier rise d{i+1}">
-          <div style="font-weight:700;color:var(--chapter);font-size:36px">{lvl_name}</div>
+    def parts(i: int, lv: dict[str, Any]) -> tuple[str, str, str]:
+        return (esc(lv.get("level_name") or lv.get("tag") or f"層級 {i+1}"),
+                esc(lv.get("head") or ""), esc(lv.get("body") or ""))
+
+    if variant == "concentric-cards":
+        # Each level is a box inside the level above it, so the last level sits at the core.
+        body_html = ""
+        for i in reversed(range(len(levels))):
+            name, head, body = parts(i, levels[i])
+            body_html = f"""<div class="nest__box rise d{i+1}">
+          <div class="nest__row">
+            <div class="nest__name">{name}</div>
+            <div>
+              <h3>{head}</h3>
+              <p>{body}</p>
+            </div>
+          </div>
+          {body_html}
+        </div>"""
+        block = f"""<div class="nest{' nest--narrow' if is_narrow else ''} mt">
+        {body_html}
+      </div>"""
+    else:
+        tiers = []
+        for i, lv in enumerate(levels):
+            name, head, body = parts(i, lv)
+            tiers.append(f"""        <div class="tier rise d{i+1}">
+          <div style="font-weight:700;color:var(--chapter);font-size:36px">{name}</div>
           <div>
             <h3 style="font-size:42px;margin:0 0 6px">{head}</h3>
             <p style="margin:0;font-size:36px;color:var(--body)">{body}</p>
           </div>
         </div>""")
+        block = f"""<div class="tiers{' tiers--narrow' if is_narrow else ''} mt">
+{''.join(tiers)}
+      </div>"""
 
     note_label = _note_label(slots, CLOSING_LABEL["L-CASCADE-FUNNEL"])
     verdict_html = f'<div class="verdict box rise d4 mt">{note_label}{verdict}</div>' if verdict else ""
@@ -841,9 +963,7 @@ def render_cascade_funnel(slots: dict[str, Any], variant: str, ctx: SlideContext
 {_render_topbar(ctx)}
     <div class="content">
       <h2 class="kicker rise">{title}</h2>
-      <div class="tiers{narrow} mt">
-{''.join(tiers)}
-      </div>
+      {block}
       {verdict_html}
     </div>
   </section>"""
@@ -855,12 +975,22 @@ def render_quote_critique(slots: dict[str, Any], variant: str, ctx: SlideContext
     quote = esc(slots.get("quote") or slots.get("body") or "")
     cite = esc(slots.get("citation") or slots.get("cite") or "")
     critiques = slots.get("critiques") or slots.get("items") or []
+    left = variant == "quote-left"
 
     cards_html = []
     for i, c in enumerate(critiques[:ITEM_CAP["L-QUOTE-CRITIQUE"]]):
         tag = esc(c.get("tag") or f"批判 {i+1}")
         head = esc(c.get("head") or c.get("point") or "")
         body = esc(c.get("body") or "")
+        if left:
+            text_html = f"<h3>{head}</h3>\n              <p>{body}</p>" if body else f"<p>{head}</p>"
+            cards_html.append(f"""          <div class="critrow rise d{i+2}">
+            <span class="pill">{tag}</span>
+            <div>
+              {text_html}
+            </div>
+          </div>""")
+            continue
         # `- [tag] head: body` used to drop the body silently; show both.
         text_html = (f'<h3 class="mt">{head}</h3>\n            <p>{body}</p>' if body
                      else f'<p class="lead-size mt">{head}</p>')
@@ -869,11 +999,19 @@ def render_quote_critique(slots: dict[str, Any], variant: str, ctx: SlideContext
             {text_html}
           </div>""")
 
-    return f"""  <section class="slide" style="--chapter:{ctx.accent}" data-label="{dlabel}">
-{_render_topbar(ctx)}
-    <div class="content">
-      <h2 class="kicker rise">{title}</h2>
-      <div class="quote-critique mt">
+    if left:
+        # The quotation is what someone said, so it sits in a speech bubble with the speaker under its tail.
+        body_html = f"""<div class="quote-critique quote-critique--quote-left mt">
+        <div class="quote-critique__say rise d1">
+          <div class="bubble bubble--tail-down bubble--quote">{quote}</div>
+          <p class="quote-critique__who">— {cite}</p>
+        </div>
+        <div class="quote-critique__rows">
+{''.join(cards_html)}
+        </div>
+      </div>"""
+    else:
+        body_html = f"""<div class="quote-critique mt">
         <blockquote class="pull rise d1">
           {quote}
           <cite>— {cite}</cite>
@@ -881,7 +1019,13 @@ def render_quote_critique(slots: dict[str, Any], variant: str, ctx: SlideContext
         <div class="quote-critique__cards mt">
 {''.join(cards_html)}
         </div>
-      </div>
+      </div>"""
+
+    return f"""  <section class="slide" style="--chapter:{ctx.accent}" data-label="{dlabel}">
+{_render_topbar(ctx)}
+    <div class="content">
+      <h2 class="kicker rise">{title}</h2>
+      {body_html}
     </div>
   </section>"""
 
@@ -902,11 +1046,23 @@ def render_hypothesis_test(slots: dict[str, Any], variant: str, ctx: SlideContex
     f_stat = esc(finding.get("status") or DEFAULT_WORDS["finding_status"])
     f_lbl = esc(finding.get("label") or DEFAULT_WORDS["finding"])
 
-    return f"""  <section class="slide" style="--chapter:{ctx.accent}" data-label="{dlabel}">
-{_render_topbar(ctx)}
-    <div class="content">
-      <h2 class="kicker rise">{title}</h2>
-      <div class="hypo-test mt">
+    if variant == "conflict-flow":
+        # The expectation is drawn as a dashed outline (not observed), the finding as a filled
+        # bubble (observed), with the mismatch between them.
+        pair = f"""<div class="hypo-test hypo-test--conflict-flow mt">
+        <div class="hypo-box hypo-box--expect rise d1">
+          <span class="pill pill--line">{h_lbl}</span>
+          <h3>{h_text}</h3>
+          <p>{h_logic}</p>
+        </div>
+        <div class="hypo-clash rise d2" aria-hidden="true">≠</div>
+        <div class="bubble hypo-box hypo-box--found rise d2">
+          <span class="pill">{f_lbl}：{f_stat}</span>
+          <h3>{f_ev}</h3>
+        </div>
+      </div>"""
+    else:
+        pair = f"""<div class="hypo-test mt">
         <div class="card rise d1">
           <span class="tag">{h_lbl}</span>
           <h3>{h_text}</h3>
@@ -916,7 +1072,13 @@ def render_hypothesis_test(slots: dict[str, Any], variant: str, ctx: SlideContex
           <span class="tag" style="color:var(--text)">{f_lbl}：{f_stat}</span>
           <h3>{f_ev}</h3>
         </div>
-      </div>
+      </div>"""
+
+    return f"""  <section class="slide" style="--chapter:{ctx.accent}" data-label="{dlabel}">
+{_render_topbar(ctx)}
+    <div class="content">
+      <h2 class="kicker rise">{title}</h2>
+      {pair}
       <div class="verdict box rise d3 mt">{puzzle_label}{puzzle}</div>
     </div>
   </section>"""
@@ -929,26 +1091,41 @@ def render_stat_hero(slots: dict[str, Any], variant: str, ctx: SlideContext) -> 
     lbl = esc(slots.get("stat_label") or slots.get("label") or "")
     context = esc(slots.get("context") or "")
     implications = slots.get("implications") or slots.get("items") or []
+    band = variant == "stat-band"
 
+    card_class = "card card--open-rule" if band else "card"
     imp_html = []
     for i, imp in enumerate(implications[:ITEM_CAP["L-STAT-HERO"]]):
         head = esc(imp.get("head") or "")
         body = esc(imp.get("body") or "")
-        imp_html.append(f"""          <div class="card rise d{i+2}">
+        imp_html.append(f"""          <div class="{card_class} rise d{i+2}">
             <h3>{head}</h3>
             <p>{body}</p>
           </div>""")
+
+    # `<div class="stat-hero__num">` is written the same in both variants: M-COUNT and
+    # M-SCRAMBLE find the number by that exact tag.
+    if band:
+        stat = f"""<div class="stat-hero__stat rise d1">
+          <div class="stat-hero__num">{num}</div>
+          <div>
+            <div class="lead" style="font-weight:700">{lbl}</div>
+            <p class="stat-hero__ctx">{context}</p>
+          </div>
+        </div>"""
+    else:
+        stat = f"""<div class="stat-hero__stat rise d1">
+          <div class="stat-hero__num">{num}</div>
+          <div class="lead" style="font-weight:700;margin-top:12px">{lbl}</div>
+          <p class="muted mt">{context}</p>
+        </div>"""
 
     return f"""  <section class="slide" style="--chapter:{ctx.accent}" data-label="{dlabel}">
 {_render_topbar(ctx)}
     <div class="content">
       <h2 class="kicker rise">{title}</h2>
-      <div class="stat-hero mt">
-        <div class="stat-hero__stat rise d1">
-          <div class="stat-hero__num">{num}</div>
-          <div class="lead" style="font-weight:700;margin-top:12px">{lbl}</div>
-          <p class="muted mt">{context}</p>
-        </div>
+      <div class="stat-hero stat-hero--{variant} mt">
+        {stat}
         <div class="stat-hero__body">
 {''.join(imp_html)}
         </div>
@@ -969,21 +1146,55 @@ def render_defn_example(slots: dict[str, Any], variant: str, ctx: SlideContext) 
     etym_html = f'<small>{etym}</small>' if etym else ""
     pos_html = f'<div class="example"><b>{DEFAULT_WORDS["positive"]}</b><p>{pos}</p></div>' if pos else ""
     neg_html = f'<div class="example mt" style="border-left-color:var(--hair)"><b>{DEFAULT_WORDS["negative"]}</b><p>{neg}</p></div>' if neg else ""
+    term_html = f"""<h3>{term}{etym_html}</h3>
+          <p>{defn}</p>"""
 
-    return f"""  <section class="slide" style="--chapter:{ctx.accent}" data-label="{dlabel}">
-{_render_topbar(ctx)}
-    <div class="content">
-      <h2 class="kicker rise">{title}</h2>
-      <div class="defn mt">
+    if variant == "dict-card":
+        # One bordered entry, as in a dictionary: headword, definition, then the two examples under a rule.
+        neg_cell = neg_html.replace('class="example mt"', 'class="example"')
+        examples = f"""
+          <div class="dict__ex rise d2">
+            {pos_html}
+            {neg_cell}
+          </div>""" if pos or neg else ""
+        block = f"""<div class="defn defn--dict-card mt">
+        <div class="dict rise d1">
+          <div class="term">
+          {term_html}
+          </div>{examples}
+        </div>
+      </div>"""
+    elif variant == "split-cards":
+        # The example is a filled bubble (inside the concept), the boundary case a dashed outline (outside it).
+        pos_card = (f'<div class="bubble defn__pos"><span class="pill">{DEFAULT_WORDS["positive"]}</span>'
+                    f'<p>{pos}</p></div>') if pos else ""
+        neg_card = (f'<div class="defn__neg"><span class="pill pill--line">{DEFAULT_WORDS["negative"]}</span>'
+                    f'<p>{neg}</p></div>') if neg else ""
+        block = f"""<div class="defn defn--split-cards mt">
         <div class="term rise d1">
-          <h3>{term}{etym_html}</h3>
-          <p>{defn}</p>
+          {term_html}
+        </div>
+        <div class="defn__pair rise d2">
+          {pos_card}
+          {neg_card}
+        </div>
+      </div>"""
+    else:
+        block = f"""<div class="defn mt">
+        <div class="term rise d1">
+          {term_html}
         </div>
         <div class="rise d2">
           {pos_html}
           {neg_html}
         </div>
-      </div>
+      </div>"""
+
+    return f"""  <section class="slide" style="--chapter:{ctx.accent}" data-label="{dlabel}">
+{_render_topbar(ctx)}
+    <div class="content">
+      <h2 class="kicker rise">{title}</h2>
+      {block}
     </div>
   </section>"""
 
@@ -1098,6 +1309,83 @@ def render_canvas(slots: dict[str, Any], variant: str, ctx: SlideContext) -> str
   </section>"""
 
 
+def tag_accents(tags: list[str]) -> dict[str, str]:
+    """Each distinct tag's chapter colour, in order of first appearance.
+
+    On L-BANNER-6GRID a tag names the card's category, so cards of one category must share a
+    colour whatever the slide's own accent is. The order is 1, 4, 2, 3 because --c2 and --c3
+    are neighbouring hues in several themes (turquoise and emerald in the default one), and
+    a slide rarely has more than three categories.
+    """
+    order = (1, 4, 2, 3)
+    colours: dict[str, str] = {}
+    for tag in tags:
+        if tag and tag not in colours:
+            colours[tag] = f"var(--c{order[len(colours) % 4]})"
+    return colours
+
+
+def render_banner_grid(slots: dict[str, Any], variant: str, ctx: SlideContext) -> str:
+    """One banner for the idea that frames the slide, over a grid of up to six cards that hang from it.
+
+    A card carries a category pill, a head, an optional second name (`sub`, the term in its
+    original language), a one-line gloss and an optional `cite`: the shape of a theory
+    framework, where one main theory organises several supporting ones.
+    """
+    title = esc(slots.get("title") or "")
+    dlabel = _dlabel(slots, title)
+    raw_banner = slots.get("banner")
+    banner = raw_banner if isinstance(raw_banner, dict) else {"head": raw_banner or ""}
+    all_cards = slots.get("cards") or slots.get("items") or []
+    cap = ITEM_CAP["L-BANNER-6GRID"]
+    cards = all_cards[:cap]
+    notes = warn(f"L-BANNER-6GRID 最多 {cap} 張卡，第 {cap + 1} 張起不會上畫面；拆成兩頁") if len(all_cards) > cap else ""
+
+    b_tag = esc(banner.get("tag") or "")
+    b_head = esc(banner.get("head") or banner.get("raw") or "")
+    b_sub = esc(banner.get("sub") or "")
+    b_body = esc(banner.get("body") or "")
+    b_tag_html = f'<span class="axis__tag">{b_tag}</span>' if b_tag else ""
+    b_sub_html = f"<small>{b_sub}</small>" if b_sub else ""
+    b_body_html = f"<p>{b_body}</p>" if b_body else ""
+
+    colours = tag_accents([str(c.get("tag") or "").strip() for c in cards])
+    cols = 2 if len(cards) in (1, 2, 4) else 3
+    cards_html = []
+    for i, c in enumerate(cards):
+        tag = str(c.get("tag") or "").strip()
+        head = esc(c.get("head") or "")
+        sub = esc(c.get("sub") or "")
+        body = esc(c.get("body") or "")
+        cite = esc(c.get("cite") or "")
+        pill = f'<span class="pill" style="--chapter:{colours[tag]}">{esc(tag)}</span>' if tag else ""
+        sub_html = f'\n            <p class="axis__sub">{sub}</p>' if sub else ""
+        body_html = f"\n            <p>{body}</p>" if body else ""
+        cite_html = f'\n            <p class="axis__cite">{cite}</p>' if cite else ""
+        cards_html.append(f"""          <div class="axis__card rise d{2 + i // cols}">
+            <div class="axis__top"><h3>{head}</h3>{pill}</div>{sub_html}{body_html}{cite_html}
+          </div>""")
+
+    return f"""  <section class="slide" style="--chapter:{ctx.accent}" data-label="{dlabel}">
+{_render_topbar(ctx)}
+    <div class="content">
+      <h2 class="kicker rise">{title}</h2>
+      <div class="axis axis--{variant}">
+        <div class="axis__banner rise d1">
+          {b_tag_html}
+          <div>
+            <h3>{b_head}{b_sub_html}</h3>
+            {b_body_html}
+          </div>
+        </div>
+        <div class="axis__grid axis__grid--{cols}">
+{chr(10).join(cards_html)}
+        </div>
+      </div>{notes}
+    </div>
+  </section>"""
+
+
 # =========================================================================
 # Layout Catalog Registry
 # =========================================================================
@@ -1129,7 +1417,7 @@ CATALOG: dict[str, LayoutDefinition] = {
         family="Parallel",
         name="三子項展開＋底部定論",
         required_slots=["title", "cards", "verdict"],
-        allowed_variants=["top-rail", "tint-elevated", "side-border"],
+        allowed_variants=["top-rail", "open-rule", "bubble"],
         render_func=render_3card_verdict,
         optional_slots=["lead"],
     ),
@@ -1138,7 +1426,7 @@ CATALOG: dict[str, LayoutDefinition] = {
         family="Parallel",
         name="四象限／四支柱均等網格",
         required_slots=["title", "cards"],
-        allowed_variants=["grid-2x2", "numbered-1-4"],
+        allowed_variants=["grid-2x2", "numbered-1-4", "pillars"],
         render_func=render_4card_grid,
         optional_slots=["lead", "verdict"],
     ),
@@ -1151,12 +1439,20 @@ CATALOG: dict[str, LayoutDefinition] = {
         render_func=render_bento_focus,
         optional_slots=["lead", "hero_card", "sub_cards", "cards", "verdict"],
     ),
+    "L-BANNER-6GRID": LayoutDefinition(
+        id="L-BANNER-6GRID",
+        family="Parallel",
+        name="主軸橫幅＋六卡網格",
+        required_slots=["title", "banner", "cards"],
+        allowed_variants=["soft-cards", "ruled-cells"],
+        render_func=render_banner_grid,
+    ),
     "L-SPLIT-ANCHOR": LayoutDefinition(
         id="L-SPLIT-ANCHOR",
         family="Parallel",
         name="1:2 概念錨點式",
         required_slots=["title", "items"],
-        allowed_variants=["quote-style", "card-list"],
+        allowed_variants=["card-list", "quote-style"],
         render_func=render_split_anchor,
         optional_slots=["anchor_statement", "anchor", "cite", "footer_cite", "qr", "qr_label"],
     ),
@@ -1167,7 +1463,7 @@ CATALOG: dict[str, LayoutDefinition] = {
         family="Relational",
         name="兩造交鋒對峙",
         required_slots=["title", "side_a", "side_b"],
-        allowed_variants=["split-rail", "card-versus"],
+        allowed_variants=["card-versus", "split-rail", "speech-bubbles"],
         render_func=render_vs_confront,
         optional_slots=["issue", "claim", "ask_or_verdict", "ask", "verdict"],
     ),
@@ -1196,7 +1492,7 @@ CATALOG: dict[str, LayoutDefinition] = {
         family="Progression",
         name="三階段機制推演鏈",
         required_slots=["title", "stages"],
-        allowed_variants=["node-arrow", "chevron-step"],
+        allowed_variants=["node-arrow", "chevron-step", "disc-rail"],
         render_func=render_flow_3stage,
         optional_slots=["lead", "verdict"],
     ),
@@ -1252,7 +1548,7 @@ CATALOG: dict[str, LayoutDefinition] = {
         family="Critique",
         name="單一震撼數據指標",
         required_slots=["title", "stat_number", "context", "implications"],
-        allowed_variants=["stat-left", "stat-center"],
+        allowed_variants=["stat-left", "stat-band"],
         render_func=render_stat_hero,
         optional_slots=["stat_label", "number", "label"],
     ),
@@ -1261,7 +1557,7 @@ CATALOG: dict[str, LayoutDefinition] = {
         family="Critique",
         name="概念界定與典型例證",
         required_slots=["title", "term"],
-        allowed_variants=["dict-card", "split-cards"],
+        allowed_variants=["side-notes", "dict-card", "split-cards"],
         render_func=render_defn_example,
         optional_slots=["formal_definition", "defn", "body", "positive_example", "pos_example", "negative_boundary", "neg_example", "etymology", "context"],
     ),
@@ -1276,6 +1572,7 @@ ALIASES = {
     "l-3card": "L-3CARD-VERDICT",
     "l-4card": "L-4CARD-GRID",
     "l-bento": "L-BENTO-FOCUS",
+    "l-banner": "L-BANNER-6GRID",
     "l-vs": "L-VS-CONFRONT",
     "l-matrix": "L-MATRIX-DEEPDIVE",
     "l-spectrum": "L-SPECTRUM-POLES",

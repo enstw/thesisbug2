@@ -32,7 +32,8 @@ except ImportError:          # imported as scripts._deck_content (tests)
     from ._deck_steps import premise_value, section
 
 # Slots and columns the design stage owns: they steer the form and carry no content.
-DESIGN_SLOTS = {"variant", "html", "matrix_width", "label_width", "points_align", "title_lines", "sub_lines"}
+DESIGN_SLOTS = {"variant", "html", "matrix_width", "label_width", "points_align", "title_lines", "sub_lines",
+                "art", "art_ground"}
 DESIGN_COLUMNS = {"版型", "動態"}
 # Slots whose value is shown as a label or names a file, so it is not text to find on the slide.
 UNCHECKED_SLOTS = DESIGN_SLOTS | {"verdict_label", "label", "data_label", "eyebrow"}
@@ -48,6 +49,7 @@ DEFAULT_FLOOR = 34
 FLOORS = {34: 100, 30: 90, 27: 80}
 
 SIGN_KEY = "內容簽核"
+ART_KEY = "情境圖"
 SIGN_LINE = re.compile(rf"(?m)^[-*]\s*(?:\*\*)?{SIGN_KEY}(?:\*\*)?\s*[:：]\s*(.*)$")
 DIGEST = re.compile(r"\b[0-9a-f]{12}\b")
 
@@ -195,14 +197,15 @@ def type_floor(storyboard_text: str) -> int:
 def content_digest(storyboard_text: str) -> str:
     """A fingerprint of what the storyboard stage owns.
 
-    It covers every premise bullet except the seed and the sign-off itself, and every
+    It covers every premise bullet except the seed, the sign-off itself and the pictures'
+    source (the design stage's to write), and every
     row's cells except the design columns; inside 畫面內容 it reads the text, not the slot
     names, so the design stage may move a row's content into another layout's slots but
     may not reword it.
     """
     h = hashlib.sha256()
     for line in section(storyboard_text, "前提").splitlines():
-        if re.match(r"[-*]\s", line) and not re.match(rf"[-*]\s*(?:\*\*)?(?:Seed|{SIGN_KEY})\b", line):
+        if re.match(r"[-*]\s", line) and not re.match(rf"[-*]\s*(?:\*\*)?(?:Seed|{SIGN_KEY}|{ART_KEY})\b", line):
             h.update(_squash(line).encode("utf-8") + b"\x1e")
     for row in extract_storyboard_rows(storyboard_text):
         for column, cell in row.items():
@@ -214,6 +217,12 @@ def content_digest(storyboard_text: str) -> str:
             h.update(column.encode("utf-8") + b"\x1f" + _squash(cell).encode("utf-8") + b"\x1e")
         h.update(b"\x1d")
     return h.hexdigest()[:12]
+
+
+def art_credit(storyboard_text: str) -> str:
+    """The 前提 bullet that says where the deck's pictures come from ("情境圖：…"), "" when there is none."""
+    m = re.search(rf"(?m)^[-*]\s*(?:\*\*)?({ART_KEY})(?:\*\*)?\s*[:：]\s*(.+)$", section(storyboard_text, "前提"))
+    return f"{m.group(1)}：{m.group(2).strip()}" if m else ""
 
 
 def signed_digest(storyboard_text: str) -> str | None:

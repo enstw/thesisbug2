@@ -115,7 +115,7 @@ The storyboard arrives with every row's content decided and 版型 and 動態
 still `—`. This stage chooses how each row looks. It owns exactly three
 things in `storyboard.md`: the **版型** cell, the **動態** cell, and the
 layout slots inside 畫面內容 (`variant`, `title_lines`, `sub_lines`,
-`matrix_width`, `label_width`, `points_align`, `html`). It may also rename a
+`matrix_width`, `label_width`, `points_align`, `html`, `art`, `art_ground`). It may also rename a
 row's slots to the ones the chosen layout reads (`cards` to `stages`). It
 never rewords, shortens, merges or drops what a row says, and it never adds
 or removes a row, because how much the audience is shown was decided with the
@@ -158,6 +158,12 @@ For each row:
    take. `./fw deck-motion-pick <talk>` instead turns each row into a bounded
    choice for Jev and writes the picks back, a paid call that needs the
    author's acknowledgement (`--ack`); the catalogue explains both routes.
+1. **Add a picture only where the row leaves room.** `art: <file in the talk>`
+   puts a generated scene in the band below the content, drawn in the
+   chapter colour so it follows every theme. It is atmosphere and never
+   evidence: no map, chart, flag or lettering, because the audience reads a
+   picture on a slide as a claim. [`reference/art-plate.md`](reference/art-plate.md)
+   has the rules, the tested prompts and the source line 前提 must carry.
 
 Run `./fw deck-compile <talk>` to compile the slides deterministically with
 seeded depth variants. The variants' styles live in `asset/deck.css`, so when
@@ -293,14 +299,14 @@ as literal text, so use one of these instead.
    SVG markup into the `<section>` so it scales with the canvas and inherits
    theme colour, or `<img src="<name>.svg">` it. The Quarto `![](…)` figure
    form is for `.qmd` documents, not the deck.
-1. **Raster art** (painterly or photographic backgrounds, textures) comes from
-   supplied images or Codex image generation — the provider exception the
-   framework `AGENTS.md` records; report the asset as pending when no backend
-   works instead of switching providers. Save it under `<talk>/` so the deck
-   stays self-contained, and name the deck's palette and mood in the prompt,
-   because a bitmap cannot inherit `--chapter` and must be regenerated when
-   the theme changes. Diagrams and icons stay SVG; whole-slide bitmaps are
-   deck-image's job.
+1. **Raster art** (a photographic or engraved scene) comes from supplied
+   images or Codex image generation — the provider exception the framework
+   `AGENTS.md` records; report the asset as pending when no backend works
+   instead of switching providers. In a compiled deck it goes in through
+   `art:` ([`reference/art-plate.md`](reference/art-plate.md)): a grayscale
+   file under `<talk>/` that the slide tints with `--chapter`, so it is not
+   regenerated when the theme changes. Diagrams and icons stay SVG;
+   whole-slide bitmaps are deck-image's job.
 
 ## Hard rules
 

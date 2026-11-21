@@ -25,8 +25,10 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 from _deck import NOTES_FILE, deck_assets, notes_source, unmanaged_notes  # noqa: E402
-from _deck_catalog import CATALOG, VisualRhythmResolver, get_layout, parse_slot_payload  # noqa: E402
-from _deck_content import FLOORS, lost_content, missing_required, sign_problem, type_floor  # noqa: E402
+from _deck_catalog import (CATALOG, VisualRhythmResolver, art_names, get_layout,  # noqa: E402
+                           parse_slot_payload, with_art)
+from _deck_content import (FLOORS, art_credit, lost_content, missing_required,  # noqa: E402
+                           sign_problem, type_floor)
 from _deck_motion import apply_motion, split_codes  # noqa: E402
 from _deck_outline import ensure_seed, extract_seed, extract_storyboard_rows, row_eyebrow, row_title  # noqa: E402
 from _deck_steps import step_names, strip_html  # noqa: E402
@@ -190,7 +192,7 @@ def render_row(row: dict[str, str], idx: int, total: int,
     # The step strip goes in the top bar only when the storyboard declares 流程步驟 and has
     # a 環節 column, so a storyboard without them compiles exactly as before.
     ctx.pmap = strip_html(row["環節"], steps) if steps and "環節" in row else ""
-    rendered = layout_def.render_func(slots, chosen_variant, ctx)
+    rendered = with_art(layout_def.render_func(slots, chosen_variant, ctx), slots, talk, slide_num)
     for msg in WARNING_RE.findall(rendered):
         warnings.append(f"投影片 #{slide_num}: {html_lib.unescape(msg)}")
     rendered = WARNING_RE.sub("", rendered)
@@ -239,6 +241,18 @@ def compile_checked(talk: Path) -> tuple[str, list[str], list[str]]:
     changed = sign_problem(text)
     if changed:
         problems.insert(0, changed)
+
+    # Whoever watches the deck is told once, on the last slide, where its pictures come from.
+    if slides_html and any(art_names(parse_slot_payload(row.get("畫面內容", ""))) for row in rows):
+        credit = art_credit(text)
+        if credit:
+            head, _, tail = slides_html[-1].rpartition("  </section>")
+            mark = '    <div class="plate'
+            body, plate, rest = head.partition(mark)
+            slides_html[-1] = f'{body}    <p class="art-credit">{html_lib.escape(credit)}</p>\n{plate}{rest}  </section>{tail}'
+        else:
+            warnings.append("有投影片用了 art: 圖片，但前提沒有說明來源；加一行「- 情境圖：AI 生成（工具名稱），"
+                            "僅作氣氛，不代表實際場景」，這句話會印在最後一頁")
 
     compiled_block = "\n\n".join(slides_html)
     return compiled_block, warnings, problems

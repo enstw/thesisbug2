@@ -29,6 +29,8 @@ and run `./fw deck-refresh`, never bend the content into the nearest class.
 In a course, where the framework is a read-only submodule, write the slide
 body as an `L-CUSTOM` file in the talk instead (layout catalogue § L-CUSTOM).
 
+`.plate` is the picture band of a slide with `art:` (`.slide.has-art`): a flex child after `.content` that takes the height the content leaves, holding one to three grayscale `<img>` drawn in the chapter colour by the slide's own SVG filter. Write it through the `art:` slot, not by hand, because the compiler also checks the file and prints the source line ([`art-plate.md`](art-plate.md)).
+
 Every class below is defined in `template/asset/deck.css`. Colours come from
 house-style tokens — drive accents off `var(--chapter)` (set per slide via
 `style="--chapter:var(--cN)"`, N = 1–4), never hard-coded hex.

@@ -363,7 +363,7 @@ class Spec:
 
 
 # `variant` pins a slide's depth variant; it steers the HTML layout only, so no outline carries it.
-COMMON = ("title", "label", "data_label", "eyebrow", "verdict_label", "variant")
+COMMON = ("title", "label", "data_label", "eyebrow", "verdict_label", "variant", "art", "art_ground")
 
 SPECS: dict[str, Spec] = {
     "L-HERO-TITLE": Spec(lead=("sub", "subtitle"), meta=("meta", "author"),

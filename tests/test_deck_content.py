@@ -144,6 +144,90 @@ class CustomLayoutTests(unittest.TestCase):
         self.assertEqual(len(o.items), 2)
 
 
+class ArtPlateTests(unittest.TestCase):
+    """A generated picture sets the scene under a slide's content, and never changes or covers a word."""
+
+    def setUp(self):
+        self.talk = Path(tempfile.mkdtemp(prefix="thesisbug2-test-art-"))
+        (self.talk / "art").mkdir()
+        for name in ("a.jpg", "b.jpg", "c.jpg", "d.jpg"):
+            (self.talk / "art" / name).write_bytes(b"\xff\xd8\xff" + b"0" * 64)
+
+    def tearDown(self):
+        shutil.rmtree(self.talk, ignore_errors=True)
+
+    def test_picture_is_a_band_after_the_content(self):
+        html, warnings, losses = compile_row("L-3CARD-VERDICT", CARDS + "<br>art: art/a.jpg", self.talk)
+        self.assertEqual((warnings, losses), ([], []))
+        self.assertIn('<section class="slide has-art"', html)
+        self.assertIn('<img src="art/a.jpg" alt="" style="filter:url(#plate-1)">', html)
+        self.assertIn('<filter id="plate-1"', html)
+        self.assertLess(html.index("效率下降"), html.index('class="plate '))
+        self.assertIn('class="plate rise d4" aria-hidden="true"', html)
+
+    def test_up_to_three_pictures_sit_side_by_side(self):
+        html, warnings, _ = compile_row("L-3CARD-VERDICT", CARDS + "<br>art: art/a.jpg, art/b.jpg，art/c.jpg", self.talk)
+        self.assertEqual(warnings, [])
+        self.assertIn('class="plate plate--cols', html)
+        self.assertEqual(html.count("<img "), 3)
+        html, warnings, _ = compile_row("L-3CARD-VERDICT", CARDS + "<br>art:<br>- art/a.jpg<br>- art/b.jpg<br>- art/c.jpg<br>- art/d.jpg", self.talk)
+        self.assertEqual(html.count("<img "), 3)
+        self.assertTrue(any("最多 3 張" in w for w in warnings), warnings)
+
+    def test_ground_says_which_way_the_file_was_made(self):
+        dark, _, _ = compile_row("L-3CARD-VERDICT", CARDS + "<br>art: art/a.jpg", self.talk)
+        light, _, _ = compile_row("L-3CARD-VERDICT", CARDS + "<br>art: art/a.jpg<br>art_ground: light", self.talk)
+        self.assertNotEqual(re.search(r'values="([^"]+)"', dark).group(1), re.search(r'values="([^"]+)"', light).group(1))
+        _, warnings, _ = compile_row("L-3CARD-VERDICT", CARDS + "<br>art: art/a.jpg<br>art_ground: sepia", self.talk)
+        self.assertTrue(any("不是 dark 或 light" in w for w in warnings), warnings)
+
+    def test_a_file_that_cannot_be_used_leaves_the_slide_without_a_picture(self):
+        (self.talk / "art" / "notes.txt").write_text("x", encoding="utf-8")
+        (self.talk / "art" / "big.png").write_bytes(b"0" * 700_000)
+        for name, said in (("art/none.jpg", "找不到"), ("../a.jpg", "不在 talk 目錄裡"), ("art/notes.txt", "圖檔")):
+            html, warnings, losses = compile_row("L-3CARD-VERDICT", CARDS + f"<br>art: {name}", self.talk)
+            self.assertNotIn("has-art", html, name)
+            self.assertTrue(any(said in w for w in warnings), (name, warnings))
+            self.assertEqual(losses, [])
+        html, warnings, _ = compile_row("L-3CARD-VERDICT", CARDS + "<br>art: art/big.png", self.talk)
+        self.assertIn("has-art", html)
+        self.assertTrue(any("700 KB" in w for w in warnings), warnings)
+
+    def test_pictures_and_their_source_line_are_outside_the_sign_off(self):
+        plain = storyboard([("L-3CARD-VERDICT", "—", CARDS)])
+        pictured = with_premise(storyboard([("L-3CARD-VERDICT", "—", CARDS + "<br>art: art/a.jpg<br>art_ground: light")]),
+                                "- 情境圖：AI 生成，僅作氣氛")
+        self.assertEqual(content_digest(pictured), content_digest(plain))
+        self.assertEqual(char_count(CARDS + "<br>art: art/a.jpg"), char_count(CARDS))
+
+    def test_the_last_slide_says_where_the_pictures_come_from(self):
+        rows = [("L-3CARD-VERDICT", "—", CARDS + "<br>art: art/a.jpg"), ("L-FINALE-SUMMARY", "—", "heading: 結語<br>points:<br>- 一")]
+        (self.talk / "storyboard.md").write_text(storyboard(rows), encoding="utf-8")
+        slides, warnings, problems = deck_compile.compile_checked(self.talk)
+        self.assertEqual(problems, [])
+        self.assertNotIn("art-credit", slides)
+        self.assertTrue(any("前提沒有說明來源" in w for w in warnings), warnings)
+        (self.talk / "storyboard.md").write_text(
+            with_premise(storyboard(rows), "- 情境圖：AI 生成（工具），僅作氣氛，不代表實際場景"), encoding="utf-8")
+        slides, warnings, problems = deck_compile.compile_checked(self.talk)
+        self.assertEqual((warnings, problems), ([], []))
+        self.assertEqual(slides.count('<p class="art-credit">情境圖：AI 生成（工具），僅作氣氛，不代表實際場景</p>'), 1)
+        self.assertGreater(slides.index("art-credit"), slides.index("結語"))
+        # a deck without pictures says nothing
+        (self.talk / "storyboard.md").write_text(storyboard([("L-3CARD-VERDICT", "—", CARDS)]), encoding="utf-8")
+        self.assertEqual(deck_compile.compile_checked(self.talk)[1], [])
+
+    def test_deck_assets_lay_out_and_check_the_band(self):
+        asset = SKILLS / "deck-svg/template/asset"
+        css = (asset / "deck.css").read_text(encoding="utf-8")
+        self.assertIn(".slide.has-art > .content { flex: 0 0 auto; }", css)
+        self.assertIn(".plate__tint { flood-color: var(--chapter", css)
+        check = (asset / "deck-check.js").read_text(encoding="utf-8")
+        self.assertIn("data.artBad", check)
+        # a mask image is refused when the deck is opened from file://, so the plate must not be drawn with one
+        self.assertNotRegex(css, r"\.plate[^{]*\{[^}]*mask-image:\s*url")
+
+
 class SignOffTests(unittest.TestCase):
     """The design stage may give a row a form; it may not change what the row says."""
 

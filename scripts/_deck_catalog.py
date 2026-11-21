@@ -1430,15 +1430,83 @@ def render_banner_grid(slots: dict[str, Any], variant: str, ctx: SlideContext) -
   </section>"""
 
 
-def _talk_fragment(rel_path: str, base: Path | None) -> tuple[str, str]:
-    """(text, warning) of an HTML fragment named relative to the talk; files outside the talk are refused."""
+def _talk_file(slot: str, rel_path: str, base: Path | None) -> tuple[Path | None, str]:
+    """(path, warning) of a file a slot names relative to the talk; files outside the talk are refused."""
     if base is None:
-        return "", warn(f"html: {rel_path} 無法讀取（沒有 talk 目錄）")
+        return None, warn(f"{slot}: {rel_path} 無法讀取（沒有 talk 目錄）")
     path = (base / rel_path).resolve()
     if base.resolve() not in path.parents:
-        return "", warn(f"html: {rel_path} 不在 talk 目錄裡")
+        return None, warn(f"{slot}: {rel_path} 不在 talk 目錄裡")
     if not path.is_file():
-        return "", warn(f"html: 找不到 {rel_path}")
+        return None, warn(f"{slot}: 找不到 {rel_path}")
+    return path, ""
+
+
+ART_TYPES = (".jpg", ".jpeg", ".png", ".webp")
+ART_MAX_BYTES = 600_000
+ART_MAX = 3
+# The tint's alpha from the picture's luminance: a light subject on a black ground, or a dark one on white.
+# Luminance is multiplied by 1.6 because a misty photograph seldom goes above mid-grey, and black must stay 0.
+ART_ALPHA = {"dark": "0.3402 1.1443 0.1155 0 0", "light": "-0.3402 -1.1443 -0.1155 0 1.6"}
+
+
+def art_names(slots: dict[str, Any]) -> list[str]:
+    """The picture files a row's `art:` slot names (one line, comma-separated, or a list)."""
+    raw = slots.get("art")
+    lines = _slot_lines(raw) if isinstance(raw, list) else [str(raw or "")]
+    return [name.strip() for line in lines for name in re.split(r"[,，、]", line) if name.strip()]
+
+
+def with_art(rendered: str, slots: dict[str, Any], base: Path | None, uid: int) -> str:
+    """The slide with its `art:` pictures in the band its content leaves free.
+
+    A picture never sits under text: the band is laid out below the content, so the words
+    keep the plain slide colour the contrast check reads. Measured 2026-11-21 on a slide
+    of 404 characters: a picture behind the text had to stay under 20% strength to keep the
+    weakest text colour at 4.5:1, and at that strength a photograph is all but invisible.
+    The picture is drawn as one theme colour whose alpha is the picture's luminance (an SVG
+    filter), so it follows the chapter colour and the `c` theme key without a new file.
+    """
+    names = art_names(slots)
+    if not names:
+        return rendered
+    notes = []
+    if len(names) > ART_MAX:
+        notes.append(warn(f"art: 最多 {ART_MAX} 張，只用前 {ART_MAX} 張"))
+        names = names[:ART_MAX]
+    ground = str(slots.get("art_ground") or "dark").strip()
+    if ground not in ART_ALPHA:
+        notes.append(warn(f"art_ground: '{ground}' 不是 dark 或 light，改用 dark"))
+        ground = "dark"
+    images = []
+    for name in names:
+        path, note = _talk_file("art", name, base)
+        if not path:
+            notes.append(note)
+        elif path.suffix.lower() not in ART_TYPES:
+            notes.append(warn(f"art: {name} 不是 {'、'.join(ART_TYPES)} 圖檔"))
+        else:
+            if path.stat().st_size > ART_MAX_BYTES:
+                notes.append(warn(f"art: {name} 有 {path.stat().st_size // 1000} KB，"
+                                  f"請轉成 {ART_MAX_BYTES // 1000} KB 以下的 JPEG（1600px 寬就夠）"))
+            images.append(f'<img src="{esc(name)}" alt="" style="filter:url(#plate-{uid})">')
+    if not images:
+        return "".join(notes) + rendered
+    cols = " plate--cols" if len(images) > 1 else ""
+    plate = f"""    <div class="plate{cols} rise d4" aria-hidden="true">
+      <svg><filter id="plate-{uid}" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  {ART_ALPHA[ground]}" result="a"/><feFlood class="plate__tint" result="c"/><feComposite in="c" in2="a" operator="in"/></filter></svg>
+      {"".join(images)}
+    </div>
+"""
+    head, _, tail = rendered.rpartition("  </section>")
+    return "".join(notes) + head.replace('<section class="slide', '<section class="slide has-art', 1) + plate + "  </section>" + tail
+
+
+def _talk_fragment(rel_path: str, base: Path | None) -> tuple[str, str]:
+    """(text, warning) of an HTML fragment named relative to the talk; files outside the talk are refused."""
+    path, note = _talk_file("html", rel_path, base)
+    if not path:
+        return "", note
     text = path.read_text(encoding="utf-8").strip()
     if re.search(r"<(section|deck-stage|script)\b", text):
         return "", warn(f"html: {rel_path} 只寫投影片內文，不含 <section>、<deck-stage> 或 <script>；外框由 L-CUSTOM 產生")

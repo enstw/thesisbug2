@@ -11,6 +11,8 @@
      contrastBad  不合格處，例如「5 td.dim 3.9:1」
      contrastNote 內文字級（標稱 38–42px）卻 < body 門檻（7:1）者，提醒但不算不合格
      contrastUnknown 背景是圖片、或顏色格式無法換算，無法判斷者（不猜）
+     art          ok ＝ 情境圖（.plate）都有 ART_MIN 以上的高度；否則 thin
+     artBad       太窄處，例如「4 .plate 只有 150px 高」：這一頁的內容沒留空間給圖，拿掉圖
      checked      已檢查的頁碼
    背景的找法：從文字往外找第一層不透明的背景色，途中半透明的顏色與漸層逐層疊上；漸層取各色標
    與中點、取最差者，所以是保守估計。SVG 文字另以 elementsFromPoint 找壓在底下的圖形。
@@ -21,6 +23,7 @@
   // 下限由場地決定：<html data-deck-type-floor="30">（分鏡前提的「字級下限」，只有 34／30／27）；沒寫就是教室投影機的 34。
   const declaredFloor = Number(document.documentElement.dataset.deckTypeFloor);
   const FLOOR = [27, 30, 34].includes(declaredFloor) ? declaredFloor : 34;   // 表格與標籤的下限；內文預設 40
+  const ART_MIN = 240;   // 設計像素；情境圖的主體在圖的下三分之一，再窄就只剩地面
   const EXEMPT = '.hero__hint';            // 講者用的按鍵提示，觀眾不需要讀
   const results = new Map();               // 頁碼 → { small: [], overflow: [] }
 
@@ -209,7 +212,11 @@
       const clips = style.overflowX !== 'visible' || style.overflowY !== 'visible';
       if (!clips && !el.classList.contains('content')) continue;
       let extra = Math.max(el.scrollHeight - el.clientHeight, el.scrollWidth - el.clientWidth);
-      if (!clips) {
+      if (!clips && slide.classList.contains('has-art')) {
+        // 有情境圖時 .content 的高度就是內容的高度，沒有東西會從裡面溢出；塞不下時是它自己超出投影片的內距。
+        const pad = parseFloat(getComputedStyle(slide).paddingBottom) || 0;
+        extra = (el.getBoundingClientRect().bottom - frame.bottom) / scale + pad;
+      } else if (!clips) {
         // .content 置中：塞不下時上下各溢出一半，scrollHeight 只看得到往下那一半，改量子元素。
         const box = el.getBoundingClientRect();
         for (const child of el.children) {
@@ -219,13 +226,20 @@
       }
       if (extra > 2) overflow.push(`${number} ${describe(el)} ${clips ? '被裁' : '溢出'} ${Math.round(extra)}px`);
     }
-    return { small, overflow, low, note, unknown };
+    // 情境圖排在內容下方、佔剩下的高度；內容把頁面佔滿時它只剩一條，看不出是什麼。
+    const thin = [];
+    for (const plate of slide.querySelectorAll('.plate')) {
+      const h = plate.getBoundingClientRect().height / scale;
+      if (h < ART_MIN) thin.push(`${number} .plate 只有 ${Math.round(h)}px 高`);
+    }
+    return { small, overflow, low, note, unknown, thin };
   }
 
   function publish() {
-    const small = [], overflow = [], low = [], note = [], unknown = [];
+    const small = [], overflow = [], low = [], note = [], unknown = [], thin = [];
     for (const r of results.values()) {
       small.push(...r.small); overflow.push(...r.overflow); low.push(...r.low); note.push(...r.note); unknown.push(...r.unknown);
+      thin.push(...r.thin);
     }
     const data = document.body.dataset;
     data.minfont = small.length ? 'small' : 'ok';
@@ -236,6 +250,8 @@
     data.contrastBad = low.join('; ');
     data.contrastNote = note.join('; ');
     data.contrastUnknown = unknown.join('; ');
+    data.art = thin.length ? 'thin' : 'ok';
+    data.artBad = thin.join('; ');
     data.checked = [...results.keys()].sort((a, b) => a - b).join(',');
   }
 
@@ -253,7 +269,7 @@
     const r = check(slide, number);
     results.set(number, r);
     publish();
-    for (const line of [...r.small, ...r.overflow]) console.warn('[deck-check]', line);
+    for (const line of [...r.small, ...r.overflow, ...r.thin]) console.warn('[deck-check]', line);
     for (const line of r.low) console.warn('[deck-check] 對比不足', line);
     for (const line of r.note) console.info('[deck-check] 內文對比 < body 門檻', line);
     for (const line of r.unknown) console.info('[deck-check] 對比無法判斷', line);

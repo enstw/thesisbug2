@@ -56,7 +56,9 @@ Use deck-image when slides are genuinely images: AI-generated art, or
 authored compositions you want frozen as images. It suits narrative,
 showcase talks whose copy is **locked**; a working deck, precise charts, or
 anything still being edited stays in deck-svg, because here changing one
-bullet costs a page regeneration rather than a one-line edit.
+bullet costs a page regeneration rather than a one-line edit. A live slide
+that only wants a generated scene under its text is deck-svg's `art:` slot,
+not this skill.
 
 ## Pre-flight (per renderer actually used)
 

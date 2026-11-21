@@ -51,7 +51,8 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 from _deck import SKILLS  # noqa: E402
 from _deck_catalog import VisualRhythmResolver  # noqa: E402
-from _deck_content import char_count, density, sign_problem, signed_digest, type_floor  # noqa: E402
+from _deck_catalog import art_names, parse_slot_payload  # noqa: E402
+from _deck_content import art_credit, char_count, density, sign_problem, signed_digest, type_floor  # noqa: E402
 from _deck_steps import premise_value, section, step_names, steps_decl, steps_of  # noqa: E402  (shared with deck-compile)
 from _paths import (course_root, find_talk, included_files, manuscript_files, rel,  # noqa: E402
                     resolve_unit, talk_model_files)
@@ -327,12 +328,15 @@ def sketch(layout: str, shape: str, tok: dict[str, str]) -> str:
 
 def preview(row: dict[str, str], idx: int, total: int, resolver: VisualRhythmResolver,
             css_hrefs: list[str], tok: dict[str, str], talk: Path | None = None,
-            steps: dict[str, str] | None = None, losses: list[str] | None = None) -> tuple[str, str]:
+            steps: dict[str, str] | None = None, losses: list[str] | None = None,
+            art_prefix: str = "") -> tuple[str, str]:
     """(preview html, caption): the compiled slide when 版型 is a catalog code.
 
     Content the slide does not show is added to `losses`, so the card can say it."""
     rendered, _ = deck_compile.render_row(row, idx, total, resolver, talk, steps, losses)
     if rendered:
+        # the page is written under the talk's output folder; the slide names its pictures from the talk
+        rendered = re.sub(r'(<img src=")(?![a-z]+:|/)', rf"\1{html.escape(art_prefix)}", rendered)
         rendered = re.sub(r'<section\b', '<section data-deck-active=""', rendered, count=1)
         doc = ("<!doctype html><html><head><meta charset='utf-8'>"
                + "".join(f"<link rel='stylesheet' href='{h}'>" for h in css_hrefs)
@@ -414,6 +418,10 @@ def build(unit: Path, talk: Path, root: Path) -> tuple[Path, int]:
             else '<span class="bad">簽核後內容改過，要重新簽核</span>' if sign_problem(md)
             else "內容與簽核時相同")
     undesigned = [s["#"] for s in rows if s.get("版型", "").strip() in deck_compile.NO_LAYOUT]
+    pictured = [s["#"] for s in rows if art_names(parse_slot_payload(s.get("畫面內容", "")))]
+    credit = art_credit(md)
+    art = (f"{len(pictured)} 頁有圖；" + (html.escape(credit.split("：", 1)[1]) if credit
+           else '<span class="bad">前提沒有說明來源（加一行「- 情境圖：…」）</span>')) if pictured else ""
     body.append('<div class="brief">'
                 f"<p><b>密度</b>{html.escape(reason) if stated else level + '（前提沒寫，採預設）'}</p>"
                 f"<p><b>各頁字數</b>中位數 {ordered[len(ordered) // 2]}，最多 {most[0]}"
@@ -421,6 +429,7 @@ def build(unit: Path, talk: Path, root: Path) -> tuple[Path, int]:
                 f"<p><b>字級下限</b>{type_floor(md)}px</p>"
                 f"<p><b>簽核</b>{sign}</p>"
                 + (f"<p><b>版型</b>{len(undesigned)} 頁還沒選（設計階段）</p>" if undesigned else "")
+                + (f"<p><b>情境圖</b>{art}</p>" if art else "")
                 + "</div>")
 
     note = re.search(r"<!--(.*?)-->", md, re.S)
@@ -496,6 +505,8 @@ def build(unit: Path, talk: Path, root: Path) -> tuple[Path, int]:
         chips += [f'<span class="chip{" tag" if backup else ""}">{inline(s.get("講", ""))}</span>',
                   f'<span class="chip">{inline(s.get("來源論點", ""))}</span>',
                   f'<span class="chip">{char_count(s.get("畫面內容", ""))} 字</span>']
+        if s["#"] in pictured:
+            chips.append('<span class="chip">情境圖</span>')
         dl = ""
         for k in fields:
             dl += f"<dt>{html.escape(k)}</dt><dd>{inline(s.get(k, ''))}</dd>"
@@ -506,7 +517,8 @@ def build(unit: Path, talk: Path, root: Path) -> tuple[Path, int]:
                + "".join(f'<p class="point"><b>{r}</b> {inline(pts.get(r, "（points.md 沒有這一點）"))}</p>' for r in refs)
                + "</details>") if refs and pts else ""
         lost: list[str] = []
-        pv, cap = preview(s, idx, len(rows), resolver, css_hrefs, tok, talk, step_names(md), lost)
+        pv, cap = preview(s, idx, len(rows), resolver, css_hrefs, tok, talk, step_names(md), lost,
+                          os.path.relpath(talk, out.parent) + "/")
         lost_html = "".join(f'<p class="lost">內容沒有上畫面：{html.escape(m.split(": ", 1)[-1])}</p>' for m in lost)
         side = ""
         if keys:

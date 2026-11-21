@@ -350,6 +350,22 @@
      selector under a class of its own so it cannot restyle another slide. */
   .custom { margin-top: 28px; min-height: 0; }
 
+  /* ---------- .plate: a picture in the band the content leaves free (`art:`) ----------
+     The content keeps its own height and the plate takes the rest, so no text sits on a picture.
+     The file is grayscale; the SVG filter in the slide draws it as the chapter colour. */
+  .slide.has-art > .content { flex: 0 0 auto; }
+  .plate { flex: 1 1 0; min-height: 0; display: flex; margin: 28px -96px -64px; overflow: hidden;
+    mask-image: linear-gradient(to top, #000 50%, transparent 100%); }
+  .plate img { flex: 1 1 0; min-width: 0; height: 100%; object-fit: cover; object-position: center bottom;
+    opacity: .8; }
+  .plate--cols img { mask-image: linear-gradient(to right, transparent, #000 14%, #000 86%, transparent); }
+  .plate svg { position: absolute; width: 0; height: 0; }
+  .plate__tint { flood-color: var(--chapter, var(--accent)); }
+  .hero.has-art { justify-content: flex-start; }
+  .hero.has-art .hero__inner { flex: 0 0 auto; padding-top: 150px; }
+  .hero .plate { margin: 40px 0 0; position: relative; z-index: 1; }
+  .art-credit { flex: none; margin: 20px 0 0; color: var(--muted); font-size: calc(34px * var(--deck-font-scale, 1)); line-height: 1.4; }
+
   /* ---------- formula line (storyboard 公式 column → p.fx, typeset by asset/katex) ----------
      One line under the slide body, at body size, for an audience that reads the formula
      faster than the prose; .sep separates several formulas, small is a gloss. */

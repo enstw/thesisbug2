@@ -2,12 +2,12 @@
 name: read-check
 description: >
   Paragraph-level cold read for manuscripts written with AI help: isolated
-  readers, each given one paragraph and at most the author-approved glossary,
-  pick the fragments that are hard to read, so the manuscript's own coined
-  terms and over-compressed phrasing surface. Use for /check_read, when the author says the text 讀起來
+  readers, each given one paragraph and at most the approved glossary, pick
+  the fragments that are hard to read, so coined terms and over-compressed
+  phrasing surface. Use for /check_read, when the author says the text 讀起來
   像 AI / AI 味 / 難讀 / 自造詞 / 太濃縮, before a rewrite pass, and to accept one.
-  ./fw read-check writes the prompts and builds the report; the readers only
-  pick, and nothing is rewritten.
+  ./fw read-check builds prompts and report, ./fw word-freq ranks words by a
+  Taiwanese corpus; nothing is rewritten.
 ---
 
 # read-check — 段落冷讀挑錯 (isolated paragraph read)
@@ -87,7 +87,45 @@ glossary the readers see the paragraph alone, which is the right run for a
 manuscript that defines nothing, and for measuring what the definitions buy.
 
 Ordinary vocabulary cannot be listed, so the readers below are what detects a
-term that is neither ordinary nor approved.
+term that is neither ordinary nor approved, with the corpus frequency check as
+the one judge that is not a model.
+
+## Corpus frequency: the judge that is not a model
+
+The readers are models, and so is the agent who would otherwise say whether a
+word is "ordinary": both carry the same training-text sense of fluency, which
+mixes registers and both sides of the strait. A corpus count is evidence
+neither of them supplies. `./fw word-freq` uses the NAER COCT written corpus
+(國教院 COCT 書面語語料庫, 2014–2024, about 300 million words of books and
+news written in Taiwan; its frequency list is downloaded once into the user
+cache), because the first author calibrated against it found its ranking
+closest to their own sense of the words, closer than the older Sinica Balanced
+Corpus.
+
+- **`./fw word-freq scan [<unit>] --glossary <file>`** segments the manuscript
+  with CKIP (the corpus's own segmenter family) and lists the words used at
+  least twice that the corpus has fewer than two per million of, leaving out
+  quotations, titles, approved glossary terms and their parts, proper nouns,
+  and the words the author approved. Run it before the readers: it covers the
+  whole manuscript at no model cost, and it catches the coinage readers have
+  grown used to.
+- **`./fw word-freq lookup <word> …`** gives the count and rate of single
+  words: attach it to a picked fragment and to its plain alternative before
+  the author decides, and check every new word a rewrite introduces.
+- **Compare a word with its plain alternative, not with a threshold.** Every
+  word the first author dropped was at least five times rarer than its
+  replacement (競逐 1.9 per million against 競爭 109), while a rare word with no
+  plainer equivalent stayed. The gap matters most at the rare end, where a
+  halving of frequency loses a far larger share of readers.
+- **A general corpus under-represents every field.** The first scan of a
+  thesis opens with the field's own terms (洗錢, 監理); the author sorts them
+  once into the 學門用語 line of `<unit>/word-frequency.md`, and later scans
+  show what the manuscript coined (守門層, 凍結權). The list knows single
+  segmented words only: a phrase such as 重複出現 is absent because it is two
+  words, not because it is rare.
+- The site blocks automated concordance queries (reCAPTCHA); the frequency
+  list is the only part fetched. Ask the author to look up example sentences
+  in a browser.
 
 ## Procedure
 
@@ -281,7 +319,9 @@ do not make the pass wait for one.
 
 Readers do not know the author's taste. Words the author dislikes for reasons
 of style (a regional usage, a habitual abbreviation) may never be picked, so
-keep the author's own word list in `DECISIONS.md` and scan for it directly.
+keep the author's own word list in `<unit>/word-frequency.md` (a table under
+`## 作者不用的詞`: the word, then its replacement); `./fw word-freq scan`
+lists every paragraph where one still occurs.
 
 ## What it does NOT do
 

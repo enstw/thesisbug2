@@ -53,7 +53,7 @@ Use your environment's file, shell, browser, and delegation capabilities. Extern
 | Finding, fetching, writing stable per-source summaries, and auditing sources | `source-kit` |
 | Multi-spot edits to manuscript text | `safe-edit` |
 | Terminology (Traditional Chinese, Taiwan usage) | `fix-terms` |
-| Hard-to-read wording and the manuscript's own coined terms | `read-check` (`./fw read-check`) |
+| Hard-to-read wording and the manuscript's own coined terms | `read-check` (`./fw read-check`, `./fw word-freq`) |
 | Argument flow and coherence | `flow-check` |
 | Citation consistency | `cite-check` |
 | External cross-model review, at milestones | `gpt-review` |

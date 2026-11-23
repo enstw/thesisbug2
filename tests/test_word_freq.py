@@ -61,6 +61,14 @@ class ParseFreq(unittest.TestCase):
         self.assertNotIn("Total:", counts)
 
 
+class CorpusCount(unittest.TestCase):
+    def test_verb_with_resultative_takes_the_verbs_count(self):
+        counts = {"定性": 444, "定性為": 3, "守門層": 0}
+        self.assertEqual(word_freq.corpus_count("定性為", counts), 444)
+        self.assertEqual(word_freq.corpus_count("守門層", counts), 0)
+        self.assertEqual(word_freq.corpus_count("成為", {"成": 9, "成為": 5}), 5)
+
+
 class AuthorLists(unittest.TestCase):
     def test_dropped_words_come_from_the_table_body(self):
         dropped, _ = word_freq.author_lists(WORDLIST)

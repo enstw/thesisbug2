@@ -153,6 +153,20 @@ def glossary_parts(terms: list[dict]) -> set[str]:
     return parts
 
 
+RESULTATIVE = "為到給成"
+
+
+def corpus_count(w: str, counts: dict[str, int]) -> int:
+    """A word's corpus count. CKIP joins a verb to a following 為／到／給／成
+    (定性為, 移轉到) more often in the manuscript than the corpus list records
+    the pair as one word; such a word is as ordinary as its verb, so it takes
+    the verb's count when that is higher."""
+    c = counts.get(w, 0)
+    if len(w) >= 3 and w[-1] in RESULTATIVE:
+        c = max(c, counts.get(w[:-1], 0))
+    return c
+
+
 def has_cjk(w: str) -> bool:
     return any("一" <= ch <= "鿿" for ch in w)
 
@@ -197,9 +211,10 @@ def cmd_scan(args: argparse.Namespace) -> None:
     for w, n in uses.items():
         if n < args.min_uses or pos[w].most_common(1)[0][0] in SKIP_POS:
             continue
-        rate = counts.get(w, 0) / total * 1e6
+        c = corpus_count(w, counts)
+        rate = c / total * 1e6
         if rate < args.max_per_million:
-            rows.append((n, w, counts.get(w, 0), rate))
+            rows.append((n, w, c, rate))
     rows.sort(key=lambda r: (-r[0], r[3]))
 
     out = Path(args.out) if args.out else unit / "gpt-review" / f"{dt.date.today():%Y-%m-%d}-word-freq.md"
